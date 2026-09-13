@@ -303,7 +303,7 @@ def main():
     side += ['</nav>'
              '<button class="theme-btn" id="theme">◐ toggle theme</button>'
              '<div class="side-foot">'
-             '<a href="https://github.com/Lfan-ke/moonzero/actions"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/Lfan-ke/moonzero/ci.yml?branch=master&label=CI&logo=github"></a>'
+             '<a href="https://github.com/moonbitstack/moonzero/actions"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/moonbitstack/moonzero/ci.yml?branch=master&label=CI&logo=github"></a>'
              '<a href="https://mooncakes.io/docs/Lfan-ke/moonzero"><img alt="mooncakes" src="https://img.shields.io/badge/mooncakes-Lfan--ke%2Fmoonzero-1f6feb"></a>'
              '</div></aside>']
 
@@ -312,9 +312,9 @@ def main():
             'app with middleware into a runnable AsgiApp, the way go-zero does for Go. '
             'Backend-agnostic; served by mooncat.</p>'
             '<div class="badges">'
-            '<a href="https://github.com/Lfan-ke/moonzero/actions"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/Lfan-ke/moonzero/ci.yml?branch=master&label=CI&logo=github"></a>'
+            '<a href="https://github.com/moonbitstack/moonzero/actions"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/moonbitstack/moonzero/ci.yml?branch=master&label=CI&logo=github"></a>'
             '<img alt="tests" src="https://img.shields.io/badge/tests-110%20passing-0ca678">'
-            '<a href="https://github.com/Lfan-ke/moonzero"><img alt="GitHub" src="https://img.shields.io/badge/GitHub-source-24292f?logo=github"></a>'
+            '<a href="https://github.com/moonbitstack/moonzero"><img alt="GitHub" src="https://img.shields.io/badge/GitHub-source-24292f?logo=github"></a>'
             '<img alt="license" src="https://img.shields.io/badge/license-Apache--2.0-6d5efc"></div>'
             '<div class="install"><span class="prompt">$</span><code>moon add Lfan-ke/moonzero</code>'
             '<button class="copy" data-copy="moon add Lfan-ke/moonzero">copy</button></div>'
@@ -335,7 +335,7 @@ def main():
         body.append('</section>')
     body.append('<footer>Generated from source <code>///</code> doc-comments · '
                 '<a href="https://mooncakes.io/docs/Lfan-ke/moonzero">mooncakes</a> · '
-                '<a href="https://github.com/Lfan-ke/moonzero">GitHub</a> · Apache-2.0 &#169; Leo Cheng</footer>')
+                '<a href="https://github.com/moonbitstack/moonzero">GitHub</a> · Apache-2.0 &#169; Leo Cheng</footer>')
     body.append('</main></div><script>' + JS + '</script></body></html>')
 
     out = ROOT / "docs" / "index.html"

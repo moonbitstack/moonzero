@@ -4,13 +4,13 @@
 
 **A service framework for MoonBit — `← go-zero`.**
 
-[![Check and Test](https://github.com/Lfan-ke/moonzero/actions/workflows/ci.yml/badge.svg)](https://github.com/Lfan-ke/moonzero/actions/workflows/ci.yml)
+[![Check and Test](https://github.com/moonbitstack/moonzero/actions/workflows/ci.yml/badge.svg)](https://github.com/moonbitstack/moonzero/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](./LICENSE)
 [![mooncakes](https://img.shields.io/badge/mooncakes-Lfan--ke%2Fmoonzero-brightgreen)](https://mooncakes.io/docs/Lfan-ke/moonzero)
 
 </div>
 
-`moonzero` is the integration layer of the **moon\*** suite — the role `go-zero` plays for Go. It assembles a [`moonapi`](https://github.com/Lfan-ke/moonapi) application from config, wraps it in middleware, and produces a runnable [`moonasgi`](https://github.com/Lfan-ke/moonasgi) `AsgiApp` that a server (`mooncat`) runs. It depends only on `moonapi` + `moonasgi`, so it stays backend-agnostic.
+`moonzero` is the integration layer of the **moon\*** suite — the role `go-zero` plays for Go. It assembles a [`moonapi`](https://github.com/moonbitstack/moonapi) application from config, wraps it in middleware, and produces a runnable [`moonasgi`](https://github.com/moonbitstack/moonasgi) `AsgiApp` that a server (`mooncat`) runs. It depends only on `moonapi` + `moonasgi`, so it stays backend-agnostic.
 
 ```mermaid
 flowchart LR
@@ -105,7 +105,7 @@ call.close_send()     // -> Ok([on_end replies...]) | Err(status)
 - **`Conf`** — the [`conf.Load` port](./conf.mbt): keys match canonically (lowercase, `_` and `-` ignored), so a goctl-written `Name`/`MaxBytes`/`Log.Level` loads as readily as `name`/`max_bytes`/`log_level`; dotted paths reach nested blocks; `,env=` lets a variable override the file; and `default=` / `options=` / `range=[a:b)` behave as go-zero's tags do — a missing required field or a value outside its constraint is an error, never a quiet default.
 - **`RestConf` / `RestEngine`** — [config-driven assembly](./restconf.mbt) (← `rest.RestConf` and `newEngine`): host, port, TLS files, `MaxConns`, `MaxBytes`, `Timeout`, `CpuThreshold`, `Signature`, `TraceIgnorePaths` and the eleven `Middlewares` flags load from one `etc/*.yaml`, and the engine installs exactly the layers those flags ask for, in go-zero's order, over shared connection permits / breaker window / metric set. `Metrics` and `Gunzip` load but install nothing — see [AGENTS.md](./AGENTS.md).
 - **`logx`** — a [leveled structured logger](./logx.mbt): entries below the configured level are dropped unrendered, everything else is one JSON object per line with `@timestamp`, `level`, `content`, an optional `WithDuration`, and typed fields. `RestEngine::new` points it at the config's `Log.Level`, which is what finally makes that setting mean something.
-- **`RpcServer` / `RpcGroup`** — [config-driven zRPC groups](./rpc.mbt) that register [`moonrpc`](https://github.com/Lfan-ke/moonrpc) `Method` handlers by gRPC path.
+- **`RpcServer` / `RpcGroup`** — [config-driven zRPC groups](./rpc.mbt) that register [`moonrpc`](https://github.com/moonbitstack/moonrpc) `Method` handlers by gRPC path.
 - **`RpcChannel`** — a [client over the h2c transport](./zrpc.mbt): `to_h2` turns the registered handlers into a `moonrpc` `H2Server`, and the `call` family runs real exchanges through it — HPACK-coded HEADERS, length-prefixed DATA frames, and the `grpc-status` trailer read back off the reply. Unary (`call`), server-streaming (`call_server_streaming`, one request then every framed reply in order), client-streaming (`call_client_streaming`, each request as its own DATA frame then one reply after half-close), and bidirectional streaming all round-trip through the same engine. A call to an unregistered path comes back `UNIMPLEMENTED`, the trailers-only response a gRPC server sends for an unknown method.
 - **Bidi streaming** — `open_bidi` opens a stream that stays open both ways: each `BidiCall::send` writes one request message and returns the replies the server produced right then (an echo handler answers each message as it arrives), and `close_send` half-closes, runs the server's `on_end`, and reports the final `grpc-status`. `call_bidi_streaming` drives a whole exchange in one shot, returning the interleaved replies followed by the `on_end` messages. The channel's HPACK decoder is advanced across every reply block, so its dynamic table stays in lockstep with the engine's encoder for the life of the call.
 - **`ShutdownCoordinator`** — [graceful shutdown](./shutdown.mbt) for a serving zRPC server: `dispatch_graceful` counts each call as in-flight for its duration, `initiate_shutdown` makes new calls come back `Unavailable` (a stopped listener) while in-flight ones run to completion, and `is_drained` reports when the last one has finished so the process may exit.

@@ -1,10 +1,10 @@
 name = "Lfan-ke/moonzero"
 
-version = "0.7.2"
+version = "0.7.3"
 
 readme = "README.md"
 
-repository = "https://github.com/Lfan-ke/moonzero"
+repository = "https://github.com/moonbitstack/moonzero"
 
 license = "Apache-2.0"
 
