@@ -6,9 +6,11 @@
 
 [![Check and Test](https://github.com/moonbitstack/moonzero/actions/workflows/ci.yml/badge.svg)](https://github.com/moonbitstack/moonzero/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](./LICENSE)
-[![mooncakes](https://img.shields.io/badge/mooncakes-Lfan--ke%2Fmoonzero-brightgreen)](https://mooncakes.io/docs/Lfan-ke/moonzero)
+[![mooncakes](https://img.shields.io/badge/mooncakes-Lfan--ke%2Fmoonzero-brightgreen)](https://mooncakes.io/docs/moonbitstack/moonzero)
 
 </div>
+
+> Moved on mooncakes from `Lfan-ke/moonzero` to `moonbitstack/moonzero`.
 
 `moonzero` is the integration layer of the **moon\*** suite — the role `go-zero` plays for Go. It assembles a [`moonapi`](https://github.com/moonbitstack/moonapi) application from config, wraps it in middleware, and produces a runnable [`moonasgi`](https://github.com/moonbitstack/moonasgi) `AsgiApp` that a server (`mooncat`) runs. It depends only on `moonapi` + `moonasgi`, so it stays backend-agnostic.
 

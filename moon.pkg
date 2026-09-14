@@ -2,9 +2,9 @@
 // middleware into a runnable moonasgi AsgiApp. Depends only on moonapi + moonasgi,
 // so it stays backend-agnostic; a server (mooncat) runs the produced app.
 import {
-  "Lfan-ke/moonapi",
-  "Lfan-ke/moonasgi",
-  "Lfan-ke/moonrpc",
+  "moonbitstack/moonapi",
+  "moonbitstack/moonasgi",
+  "moonbitstack/moonrpc",
   "moonbitlang/core/env",
   "moonbitlang/core/json",
   "moonbitlang/core/encoding/base64",

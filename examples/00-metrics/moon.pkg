@@ -3,9 +3,9 @@
 supported_targets = "native"
 
 import {
-  "Lfan-ke/moonzero",
-  "Lfan-ke/moonapi",
-  "Lfan-ke/moonasgi",
+  "moonbitstack/moonzero",
+  "moonbitstack/moonapi",
+  "moonbitstack/moonasgi",
   "moonbitlang/async",
 }
 

@@ -3,8 +3,8 @@
 supported_targets = "native"
 
 import {
-  "Lfan-ke/moonzero",
-  "Lfan-ke/moonzero/discov",
+  "moonbitstack/moonzero",
+  "moonbitstack/moonzero/discov",
   "moonbitlang/async",
 }
 

@@ -1,6 +1,6 @@
 import {
-  "Lfan-ke/moonzero",
-  "Lfan-ke/moonrpc",
+  "moonbitstack/moonzero",
+  "moonbitstack/moonrpc",
   "moonbitlang/core/encoding/utf8",
 }
 
