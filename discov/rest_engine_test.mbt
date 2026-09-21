@@ -56,7 +56,10 @@ fn assemble(
   lines : Array[String],
 ) -> @moonasgi.AsgiApp raise @moonzero.ConfigError {
   let clock = @moonzero.ManualClock::new().as_clock()
-  let logger = @moonzero.Logger::new(clock, writer=line => lines.push(line))
+  let logger = @moonzero.Logger::new(
+    clock,
+    sink=@moonlog.Lines::new(line => lines.push(line), format=@moonzero.entry),
+  )
   let app = @moonapi.App::new()
   app.get("/ping", _ctx => @moonapi.text(200, "pong"))
   app.get("/healthz", _ctx => @moonapi.text(200, "ok"))
@@ -156,7 +159,7 @@ async test "the prometheus layer records into the engine's own metric set" {
   let engine = @moonzero.RestEngine::new(
     @moonzero.RestConf::from_yaml("Name: api\nPort: 8888\n"),
     clock~,
-    logger=@moonzero.Logger::new(clock, writer=_ => ()),
+    logger=@moonzero.Logger::new(clock, sink=@moonlog.Discard::{ }),
   )
   assert_eq(engine.conf().port(), 8888)
   let app = @moonapi.App::new()

@@ -199,3 +199,22 @@ pub fn tracing(
     }
   }
 }
+
+///|
+/// Split on a single ASCII delimiter. `traceparent` is four `-`-separated
+/// fields, and core ships no `String::split`.
+fn split_char(s : String, delim : Char) -> Array[String] {
+  let out : Array[String] = []
+  let sb = StringBuilder()
+  let d = delim.to_int()
+  for i = 0; i < s.length(); i = i + 1 {
+    if s[i].to_int() == d {
+      out.push(sb.to_string())
+      sb.reset()
+    } else {
+      sb.write_char(s[i].unsafe_to_char())
+    }
+  }
+  out.push(sb.to_string())
+  out
+}

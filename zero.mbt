@@ -1,4 +1,20 @@
 ///|
+/// The default port a moonzero service listens on.
+///
+/// 12000 is the family's number, not go-zero's 8888: every example, every
+/// document and every local run in this ecosystem points at the same place, and
+/// on a development machine 8888 is somebody else's already.
+pub let port : Int = 12000
+
+///|
+/// The default port the zRPC server listens on.
+///
+/// gRPC shares 12000 with HTTP wherever one listener carries both, but a
+/// moonzero process binds `RestEngine` and `RpcServer` separately — two
+/// listeners cannot hold one port — so the second takes the next number.
+pub let rpc_port : Int = 12001
+
+///|
 /// Log verbosity (← go-zero's `LogConf.Level`), ordered from most to least
 /// verbose. `Compare` follows that order so thresholds can be tested directly.
 pub(all) enum LogLevel {
@@ -16,6 +32,19 @@ pub fn LogLevel::to_string(self : LogLevel) -> String {
     Info => "info"
     Error => "error"
     Severe => "severe"
+  }
+}
+
+///|
+/// The `moonlog` level this one records as. go-zero's ladder has four rungs and
+/// `moonlog`'s has six, so the map is one-way: `Severe` records as `Fatal`, and
+/// [`level_name`] writes it back out as `severe`.
+pub fn LogLevel::as_level(self : LogLevel) -> @moonlog.Level {
+  match self {
+    Debug => Debug
+    Info => Info
+    Error => Error
+    Severe => Fatal
   }
 }
 
@@ -44,11 +73,11 @@ pub(all) struct ServiceConf {
 } derive(FromJson, Eq)
 
 ///|
-/// Build a config with sensible defaults (`0.0.0.0:8888`, 3s timeout, `info`).
+/// Build a config with sensible defaults (`0.0.0.0:12000`, 3s timeout, `info`).
 pub fn ServiceConf::new(
   name? : String = "app",
   host? : String = "0.0.0.0",
-  port? : Int = 8888,
+  port? : Int = port,
   timeout_ms? : Int = 3000,
   log_level? : LogLevel = Info,
 ) -> ServiceConf {

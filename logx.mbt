@@ -1,29 +1,10 @@
-///|
-/// One extra key/value on a log entry (← `logx.LogField`). Fields are rendered
-/// alongside the message inside the same JSON object, so a collector can index
-/// them without parsing the message text.
-pub(all) struct LogField {
-  key : String
-  value : Json
-}
-
-///|
-/// Build a log field.
-pub fn LogField::new(key : String, value : Json) -> LogField {
-  { key, value, }
-}
-
-///|
-/// Build a string-valued log field.
-pub fn LogField::str(key : String, value : String) -> LogField {
-  { key, value: Json::string(value), }
-}
-
-///|
-/// Build a number-valued log field.
-pub fn LogField::num(key : String, value : Double) -> LogField {
-  { key, value: Json::number(value), }
-}
+// go-zero's `logx`, over `moonlog`'s sink.
+//
+// What stays here is go-zero's: the four level names its `etc/*.yaml` carries,
+// the `@timestamp`/`content` keys its collectors index, the `WithDuration`
+// view, and a process-wide logger whose level and destination move at runtime.
+// What a record is, and where one goes, is `moonlog`'s — so a service can point
+// moonzero, mooncat and anything else in the family at one sink.
 
 ///|
 /// The bits of a logger that are shared by every view derived from it, so
@@ -31,14 +12,14 @@ pub fn LogField::num(key : String, value : Double) -> LogField {
 /// before it (← logx's package-level level and writer).
 struct LogState {
   mut level : LogLevel
-  mut writer : (String) -> Unit
+  mut sink : &@moonlog.Sink
 }
 
 ///|
 /// A leveled, structured logger (← go-zero's `logx`): entries below the
-/// configured level are dropped without being rendered, and everything else is
-/// written as one JSON object per line carrying `@timestamp`, `level`, `content`,
-/// an optional `duration`, and any extra fields.
+/// configured level are dropped without being rendered, and everything else
+/// reaches the sink as one record carrying `@timestamp`, `level`, `content`, an
+/// optional `duration`, and any extra fields.
 ///
 /// The timestamp is milliseconds from the injected `Clock`, not a formatted
 /// calendar time: MoonBit has no portable date formatter, and the clock is
@@ -50,13 +31,70 @@ pub struct Logger {
 }
 
 ///|
-/// A logger writing to `writer` (`println` by default) at `level` and above.
+/// The key the entry's time is written under (← go-zero's `logx`, which names
+/// it for Elasticsearch's own field).
+pub let stamp_key : String = "@timestamp"
+
+///|
+/// The key the message is written under (← go-zero's `logx.content`, where zap
+/// and `slog` would write `msg`).
+pub let message_key : String = "content"
+
+///|
+/// The key the elapsed time is written under.
+pub let duration_key : String = "duration"
+
+///|
+/// One entry as the single-line JSON object go-zero emits: `@timestamp`,
+/// `level`, `content`, then whatever else the entry carries.
+///
+/// This is the default sink's format, not a rule — hand `Logger::new` another
+/// `moonlog` sink and the same records are rendered that sink's way.
+pub fn entry(record : @moonlog.Record) -> String {
+  let out : Map[String, Json] = Map([])
+  for field in record.fields {
+    if field.0 == stamp_key {
+      out[stamp_key] = field.1
+    }
+  }
+  out[@moonlog.level_key] = Json::string(level_name(record.level))
+  out[message_key] = Json::string(record.message)
+  for field in record.fields {
+    if field.0 != stamp_key {
+      out[field.0] = field.1
+    }
+  }
+  Json::object(out).stringify()
+}
+
+///|
+/// go-zero's name for a level. `Fatal` reads as `severe`, which is what go-zero
+/// calls its top level and what its collectors filter on.
+pub fn level_name(level : @moonlog.Level) -> String {
+  match level {
+    Trace => "trace"
+    Debug => "debug"
+    Info => "info"
+    Warning => "warn"
+    Error => "error"
+    Fatal => "severe"
+  }
+}
+
+///|
+/// A logger writing to `sink` at `level` and above.
+///
+/// The default sink prints one [`entry`] per line. `Logger::new(clock,
+/// sink=@moonlog.Discard::{  })` is how a test silences one.
 pub fn Logger::new(
   clock : Clock,
   level? : LogLevel = Info,
-  writer? : (String) -> Unit = line => println(line),
+  sink? : &@moonlog.Sink = @moonlog.Lines::new(
+    line => println(line),
+    format=entry,
+  ),
 ) -> Logger {
-  { state: { level, writer, }, clock, duration_ms: None, }
+  { state: { level, sink, }, clock, duration_ms: None, }
 }
 
 ///|
@@ -73,10 +111,17 @@ pub fn Logger::set_level(self : Logger, level : LogLevel) -> Unit {
 }
 
 ///|
-/// Send entries somewhere other than stdout (← `logx.SetWriter`) — a file sink,
-/// a buffer under test, a collector client.
+/// Send entries to another sink, for this logger and every view derived from
+/// it — a file, a collector client, a buffer under test.
+pub fn Logger::set_sink(self : Logger, sink : &@moonlog.Sink) -> Unit {
+  self.state.sink = sink
+}
+
+///|
+/// Send entries somewhere other than stdout (← `logx.SetWriter`), keeping
+/// go-zero's line format. [`Logger::set_sink`] changes the format too.
 pub fn Logger::set_writer(self : Logger, writer : (String) -> Unit) -> Unit {
-  self.state.writer = writer
+  self.state.sink = @moonlog.Lines::new(writer, format=entry)
 }
 
 ///|
@@ -87,7 +132,7 @@ pub fn Logger::enabled(self : Logger, level : LogLevel) -> Bool {
 
 ///|
 /// A view of this logger that stamps `duration` on every entry (←
-/// `logx.WithDuration`), sharing the level and writer with the original.
+/// `logx.WithDuration`), sharing the level and sink with the original.
 pub fn Logger::with_duration(self : Logger, ms : Int64) -> Logger {
   { state: self.state, clock: self.clock, duration_ms: Some(ms), }
 }
@@ -98,24 +143,26 @@ pub fn Logger::log(
   self : Logger,
   level : LogLevel,
   content : String,
-  fields? : Array[LogField] = [],
+  fields? : Array[(String, Json)] = [],
 ) -> Unit {
   if !self.enabled(level) {
     return
   }
-  let entry : Map[String, Json] = Map([
-    ("@timestamp", Json::number(self.clock.now().to_double())),
-    ("level", Json::string(level.to_string())),
-    ("content", Json::string(content)),
-  ])
+  let carried : Array[(String, Json)] = [
+    (stamp_key, Json::number(self.clock.now().to_double())),
+  ]
   match self.duration_ms {
-    Some(ms) => entry["duration"] = Json::number(ms.to_double())
+    Some(ms) => carried.push((duration_key, Json::number(ms.to_double())))
     None => ()
   }
-  for f in fields {
-    entry[f.key] = f.value
+  for field in fields {
+    carried.push(field)
   }
-  (self.state.writer)(Json::object(entry).stringify())
+  self.state.sink.write({
+    level: level.as_level(),
+    message: content,
+    fields: carried,
+  })
 }
 
 ///|
@@ -123,7 +170,7 @@ pub fn Logger::log(
 pub fn Logger::debug(
   self : Logger,
   content : String,
-  fields? : Array[LogField] = [],
+  fields? : Array[(String, Json)] = [],
 ) -> Unit {
   self.log(Debug, content, fields~)
 }
@@ -133,7 +180,7 @@ pub fn Logger::debug(
 pub fn Logger::info(
   self : Logger,
   content : String,
-  fields? : Array[LogField] = [],
+  fields? : Array[(String, Json)] = [],
 ) -> Unit {
   self.log(Info, content, fields~)
 }
@@ -143,7 +190,7 @@ pub fn Logger::info(
 pub fn Logger::error(
   self : Logger,
   content : String,
-  fields? : Array[LogField] = [],
+  fields? : Array[(String, Json)] = [],
 ) -> Unit {
   self.log(Error, content, fields~)
 }
@@ -153,7 +200,7 @@ pub fn Logger::error(
 pub fn Logger::severe(
   self : Logger,
   content : String,
-  fields? : Array[LogField] = [],
+  fields? : Array[(String, Json)] = [],
 ) -> Unit {
   self.log(Severe, content, fields~)
 }
@@ -174,4 +221,10 @@ pub fn set_log_level(level : LogLevel) -> Unit {
 /// Send the process logger's entries to `writer` (← `logx.SetWriter`).
 pub fn set_log_writer(writer : (String) -> Unit) -> Unit {
   logx.set_writer(writer)
+}
+
+///|
+/// Send the process logger's entries to `sink`.
+pub fn set_log_sink(sink : &@moonlog.Sink) -> Unit {
+  logx.set_sink(sink)
 }

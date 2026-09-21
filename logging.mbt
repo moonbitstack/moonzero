@@ -40,13 +40,13 @@ pub fn RequestLog::render(self : RequestLog) -> String {
 ///|
 /// The record as `logx` fields, for logging it through a `Logger` — the method
 /// and path make the entry's message, so they are not repeated here.
-pub fn RequestLog::fields(self : RequestLog) -> Array[LogField] {
+pub fn RequestLog::fields(self : RequestLog) -> Array[(String, Json)] {
   [
-    LogField::num("status", self.status.to_double()),
-    LogField::num("duration_ms", self.duration_ms.to_double()),
-    LogField::str("request_id", self.request_id),
-    LogField::str("client_ip", self.client_ip),
-    LogField::str("user_agent", self.user_agent),
+    ("status", Json::number(self.status.to_double())),
+    ("duration_ms", Json::number(self.duration_ms.to_double())),
+    ("request_id", Json::string(self.request_id)),
+    ("client_ip", Json::string(self.client_ip)),
+    ("user_agent", Json::string(self.user_agent)),
   ]
 }
 

@@ -66,6 +66,7 @@ pub fn period_limit(
   limiter : PeriodLimit,
   clock : Clock,
   key? : String = "global",
+  refusal? : Refusal = too_many,
 ) -> Middleware {
   inner => {
     (scope, receive, send) => {
@@ -73,7 +74,7 @@ pub fn period_limit(
         Http(_) =>
           match limiter.take(key, clock.now()) {
             PeriodOverQuota =>
-              for event in too_many_requests_events() {
+              for event in refusal.events() {
                 send(event)
               }
             _ => inner(scope, receive, send)
@@ -170,6 +171,7 @@ pub async fn RedisPeriodLimit::take(
 pub fn redis_period_limit(
   limiter : RedisPeriodLimit,
   key? : String = "global",
+  refusal? : Refusal = too_many,
 ) -> Middleware {
   inner => {
     (scope, receive, send) => {
@@ -180,7 +182,7 @@ pub fn redis_period_limit(
           }
           match outcome {
             PeriodOverQuota =>
-              for event in too_many_requests_events() {
+              for event in refusal.events() {
                 send(event)
               }
             _ => inner(scope, receive, send)

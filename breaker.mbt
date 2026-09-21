@@ -217,24 +217,6 @@ pub fn[T] Breaker::run(self : Breaker, req : () -> T raise) -> T raise {
 }
 
 ///|
-/// The event stream a request rejected by the breaker receives: a `503
-/// Service Unavailable` with a short plain-text body. A pure value so the
-/// breaker's response is testable without driving the async transport.
-fn service_unavailable_events() -> Array[@moonasgi.Event] {
-  [
-    @moonasgi.Event::HttpResponseStart(
-      status=503,
-      headers=[("content-type", "text/plain; charset=utf-8")],
-      trailers=false,
-    ),
-    @moonasgi.Event::HttpResponseBody(
-      body=b"503 Service Unavailable",
-      more_body=false,
-    ),
-  ]
-}
-
-///|
 /// Circuit-breaker middleware (← go-zero's `breaker` interceptor): gate each
 /// HTTP request through a shared `Breaker`. An admitted request's outbound
 /// `HttpResponseStart` status is observed — a `5xx` settles its promise as a
@@ -246,7 +228,7 @@ fn service_unavailable_events() -> Array[@moonasgi.Event] {
 /// success, on a `defer` — the same shape go-zero's `doReq` uses, so a handler
 /// that raises or is cancelled before answering counts against the window
 /// instead of quietly not counting at all.
-pub fn breaker(b : Breaker) -> Middleware {
+pub fn breaker(b : Breaker, refusal? : Refusal = unavailable) -> Middleware {
   inner => {
     (scope, receive, send) => {
       match scope {
@@ -273,7 +255,7 @@ pub fn breaker(b : Breaker) -> Middleware {
               inner(scope, receive, observed)
             }
             None =>
-              for event in service_unavailable_events() {
+              for event in refusal.events() {
                 send(event)
               }
           }

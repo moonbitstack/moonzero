@@ -38,21 +38,6 @@ pub fn Deadline::remaining(self : Deadline, now : Int64) -> Int64 {
 }
 
 ///|
-/// The event stream a timed-out request receives: a `503 Service Unavailable`
-/// with go-zero's plain-text timeout body. (go-zero's timeout middleware answers
-/// `503`.) A pure value so the response is testable without the async transport.
-fn timeout_events() -> Array[@moonasgi.Event] {
-  [
-    @moonasgi.Event::HttpResponseStart(
-      status=503,
-      headers=[("content-type", "text/plain; charset=utf-8")],
-      trailers=false,
-    ),
-    @moonasgi.Event::HttpResponseBody(body=b"service timeout", more_body=false),
-  ]
-}
-
-///|
 /// Timeout middleware (← go-zero's `TimeoutHandler`): establish a per-request
 /// `Deadline` of `budget_ms` at `clock.now()` for the wrapped app.
 ///
@@ -67,7 +52,11 @@ fn timeout_events() -> Array[@moonasgi.Event] {
 /// suppressed. The remaining gap (a handler that hangs and never emits) is closed
 /// by the race/cancel wired at the async server edge. A `budget_ms <= 0` disables
 /// the timeout, passing straight through.
-pub fn timeout(budget_ms : Int64, clock : Clock) -> Middleware {
+pub fn timeout(
+  budget_ms : Int64,
+  clock : Clock,
+  refusal? : Refusal = timed_out,
+) -> Middleware {
   inner => {
     (scope, receive, send) => {
       match scope {
@@ -80,7 +69,7 @@ pub fn timeout(budget_ms : Int64, clock : Clock) -> Middleware {
               ()
             } else if deadline.expired(clock.now()) {
               done.val = true
-              for e in timeout_events() {
+              for e in refusal.events() {
                 send(e)
               }
             } else {
@@ -137,32 +126,15 @@ fn content_length_exceeds(scope : @moonasgi.Scope, limit : Int) -> Bool {
 }
 
 ///|
-/// The event stream an over-limit request receives: a `413 Payload Too Large`
-/// with a short plain-text body. A pure value, testable without the transport.
-fn payload_too_large_events() -> Array[@moonasgi.Event] {
-  [
-    @moonasgi.Event::HttpResponseStart(
-      status=413,
-      headers=[("content-type", "text/plain; charset=utf-8")],
-      trailers=false,
-    ),
-    @moonasgi.Event::HttpResponseBody(
-      body=b"413 Payload Too Large",
-      more_body=false,
-    ),
-  ]
-}
-
-///|
 /// Max-bytes middleware (← go-zero's `MaxBytesHandler`): reject any HTTP request
 /// whose declared `Content-Length` exceeds `limit` bytes with `413 Payload Too
 /// Large`, before the wrapped app runs. A `limit <= 0` disables the check. Non-
 /// HTTP scopes pass through untouched.
-pub fn maxbytes(limit : Int) -> Middleware {
+pub fn maxbytes(limit : Int, refusal? : Refusal = too_large) -> Middleware {
   inner => {
     (scope, receive, send) => {
       if limit > 0 && content_length_exceeds(scope, limit) {
-        for event in payload_too_large_events() {
+        for event in refusal.events() {
           send(event)
         }
       } else {

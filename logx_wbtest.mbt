@@ -8,7 +8,7 @@ fn collecting(
   Logger::new(
     clock.unwrap_or(ManualClock::new(start=233L).as_clock()),
     level~,
-    writer=line => lines.push(line),
+    sink=@moonlog.Lines::new(line => lines.push(line), format=entry),
   )
 }
 
@@ -48,8 +48,8 @@ test "an entry carries timestamp, level, content, duration and fields" {
   lg
   .with_duration(66L)
   .info("GET /ping", fields=[
-    LogField::num("status", 200.0),
-    LogField::str("request_id", "req-233"),
+    ("status", Json::number(200.0)),
+    ("request_id", Json::string("req-233")),
   ])
   let j = @json.parse(lines[0])
   assert_eq(json_num(j, "@timestamp"), 233.0)

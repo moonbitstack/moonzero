@@ -5,18 +5,17 @@ import {
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
   "moonbitstack/moonapi",
-  "moonbitstack/moonasgi",
+  "moonbitstack/moonasgi/http",
+  "moonbitstack/moonasgi/spec",
+  "moonbitstack/mooncred/jwt",
+  "moonbitstack/moonlog",
   "moonbitstack/moonrpc",
 }
 
 // Values
-pub fn auth(String, Clock) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+pub fn auth(String, Clock) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
-pub fn base64url_decode(String) -> Bytes
-
-pub fn base64url_encode(Bytes) -> String
-
-pub fn breaker(Breaker) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+pub fn breaker(Breaker, refusal? : Refusal) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
 pub fn canonical_key(String) -> String
 
@@ -28,9 +27,13 @@ pub fn consul_parse_health(Bytes) -> Array[Endpoint] raise ConsulError
 
 pub fn consul_register_body(String, String, String, Int, Int) -> Bytes
 
-pub fn cors(CorsConf) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+pub fn cors(CorsConf) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
 pub let default_latency_buckets : Array[Double]
+
+pub let duration_key : String
+
+pub fn entry(@moonlog.Record) -> String
 
 pub fn etcd_prefix_end(Bytes) -> Bytes
 
@@ -50,21 +53,25 @@ pub fn http1_request(String, String, String, Bytes, content_type? : String) -> B
 
 pub fn jwt_authorized(String?, String, Int64) -> Bool
 
-pub fn jwt_sign(Map[String, Json], String) -> String
+pub fn jwt_sign(Map[String, Json], String, typ? : String?, extra? : Map[String, Json], wins? : @jwt.Wins, clash? : @jwt.OnClash[Map[String, Json]]) -> String
 
-pub fn jwt_verify(String, String, Int64) -> Map[String, Json] raise JwtError
+pub fn jwt_verify(String, String, Int64, policy? : @jwt.Policy) -> Map[String, Json] raise @jwt.Rejected
 
-pub fn logging(async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+pub fn level_name(@moonlog.Level) -> String
+
+pub fn logging(async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
 pub let logx : Logger
 
-pub fn max_conns(MaxConns) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+pub fn max_conns(MaxConns, refusal? : Refusal) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
-pub fn maxbytes(Int) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+pub fn maxbytes(Int, refusal? : Refusal) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
-pub fn metrics(ServerMetrics, Clock) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+pub let message_key : String
 
-pub fn metrics_handler(ServerMetrics) -> (@moonapi.Context) -> @moonasgi.Response raise
+pub fn metrics(ServerMetrics, Clock) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+
+pub fn metrics_handler(ServerMetrics) -> (@moonapi.Context) -> @http.Response raise
 
 pub fn mount_metrics(@moonapi.App, ServerMetrics) -> Unit
 
@@ -72,27 +79,33 @@ pub fn next_trace_context(String?, Int64) -> TraceContext
 
 pub fn parse_traceparent(String) -> TraceContext?
 
-pub fn period_limit(PeriodLimit, Clock, key? : String) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+pub fn period_limit(PeriodLimit, Clock, key? : String, refusal? : Refusal) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
 pub let period_script : String
 
 pub fn pick_first(Array[Endpoint]) -> Endpoint?
 
-pub fn rate_limit(TokenBucket, Clock) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+pub let plain_text : Array[(String, String)]
 
-pub fn recovery(async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+pub let port : Int
+
+pub fn rate_limit(TokenBucket, Clock, refusal? : Refusal) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+
+pub fn recovery(async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
 pub fn redis_instance_key(String, String, Endpoint) -> String
 
-pub fn redis_period_limit(RedisPeriodLimit, key? : String) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+pub fn redis_period_limit(RedisPeriodLimit, key? : String, refusal? : Refusal) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
-pub fn redis_rate_limit(RedisTokenLimit, Clock) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+pub fn redis_rate_limit(RedisTokenLimit, Clock, refusal? : Refusal) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
 pub fn redis_service_pattern(String, String) -> String
 
 pub fn redis_service_prefix(String, String) -> String
 
-pub fn request_id(header? : String) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+pub let refusal : Refusal
+
+pub fn request_id(header? : String) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
 pub fn resolve_one(InMemoryRegistry, String, RoundRobin) -> Endpoint?
 
@@ -102,25 +115,37 @@ pub fn resp_encode_command(Array[Bytes]) -> Bytes
 
 pub fn resp_kind(RespValue) -> String
 
+pub let rpc_port : Int
+
 pub fn set_log_level(LogLevel) -> Unit
+
+pub fn set_log_sink(&@moonlog.Sink) -> Unit
 
 pub fn set_log_writer((String) -> Unit) -> Unit
 
 pub fn sha256(Bytes) -> Bytes
 
-pub fn shedding(Shedder) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+pub fn shedding(Shedder, refusal? : Refusal) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+
+pub let stamp_key : String
 
 pub fn status_of_code(Int) -> @moonrpc.Status
 
-pub fn structured_logging(Clock, logger? : Logger) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+pub fn structured_logging(Clock, logger? : Logger) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
-pub fn timeout(Int64, Clock) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+pub let timed_out : Refusal
+
+pub fn timeout(Int64, Clock, refusal? : Refusal) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
 pub let token_script : String
 
-pub fn tracing(header? : String, ignore_paths? : Array[String]) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+pub let too_large : Refusal
 
-pub fn yaml_parse(String) -> Json raise ConfigError
+pub let too_many : Refusal
+
+pub fn tracing(header? : String, ignore_paths? : Array[String]) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+
+pub let unavailable : Refusal
 
 // Errors
 pub suberror ConfigError {
@@ -137,14 +162,6 @@ pub suberror EtcdError {
 
 pub suberror Http1Error {
   Http1Error(String)
-}
-
-pub suberror JwtError {
-  MalformedToken(String)
-  UnsupportedAlg(String)
-  BadSignature
-  Expired
-  NotYetValid
 }
 
 pub suberror RedisError {
@@ -474,14 +491,14 @@ pub struct Group {
   app : @moonapi.App
   prefix : String
 }
-pub fn Group::delete(Self, String, (@moonapi.Context) -> @moonasgi.Response raise, summary? : String) -> Unit
-pub fn Group::get(Self, String, (@moonapi.Context) -> @moonasgi.Response raise, summary? : String) -> Unit
+pub fn Group::delete(Self, String, (@moonapi.Context) -> @http.Response raise, summary? : String) -> Unit
+pub fn Group::get(Self, String, (@moonapi.Context) -> @http.Response raise, summary? : String) -> Unit
 pub fn Group::new(@moonapi.App, String) -> Self
-pub fn Group::patch(Self, String, (@moonapi.Context) -> @moonasgi.Response raise, summary? : String) -> Unit
-pub fn Group::post(Self, String, (@moonapi.Context) -> @moonasgi.Response raise, summary? : String) -> Unit
+pub fn Group::patch(Self, String, (@moonapi.Context) -> @http.Response raise, summary? : String) -> Unit
+pub fn Group::post(Self, String, (@moonapi.Context) -> @http.Response raise, summary? : String) -> Unit
 pub fn Group::prefix(Self) -> String
-pub fn Group::put(Self, String, (@moonapi.Context) -> @moonasgi.Response raise, summary? : String) -> Unit
-pub fn Group::route(Self, @moonapi.Method, String, (@moonapi.Context) -> @moonasgi.Response raise, summary? : String) -> Unit
+pub fn Group::put(Self, String, (@moonapi.Context) -> @http.Response raise, summary? : String) -> Unit
+pub fn Group::route(Self, @moonapi.Method, String, (@moonapi.Context) -> @http.Response raise, summary? : String) -> Unit
 
 pub struct Histogram {
   bounds : Array[Double]
@@ -522,7 +539,7 @@ pub fn InMemoryRegistry::services(Self) -> Array[String]
 
 pub(all) struct Layer {
   name : String
-  middleware : (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+  middleware : (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 }
 
 pub struct LoadBalancedChannel {
@@ -536,20 +553,13 @@ pub fn LoadBalancedChannel::call_bidi_streaming(Self, String, Array[Bytes]) -> R
 pub fn LoadBalancedChannel::call_server_streaming(Self, String, Bytes) -> Result[Array[Bytes], @moonrpc.Status] raise
 pub fn LoadBalancedChannel::new((String) -> Array[Endpoint], RpcCluster, String, balancer? : Balancer) -> Self
 
-pub(all) struct LogField {
-  key : String
-  value : Json
-}
-pub fn LogField::new(String, Json) -> Self
-pub fn LogField::num(String, Double) -> Self
-pub fn LogField::str(String, String) -> Self
-
 pub(all) enum LogLevel {
   Debug
   Info
   Error
   Severe
 } derive(Compare, Eq, @debug.Debug)
+pub fn LogLevel::as_level(Self) -> @moonlog.Level
 pub fn LogLevel::compare(Self, Self) -> Int
 pub fn LogLevel::equal(Self, Self) -> Bool
 pub fn LogLevel::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
@@ -570,16 +580,17 @@ pub struct Logger {
   clock : Clock
   duration_ms : Int64?
 }
-pub fn Logger::debug(Self, String, fields? : Array[LogField]) -> Unit
+pub fn Logger::debug(Self, String, fields? : Array[(String, Json)]) -> Unit
 pub fn Logger::enabled(Self, LogLevel) -> Bool
-pub fn Logger::error(Self, String, fields? : Array[LogField]) -> Unit
-pub fn Logger::info(Self, String, fields? : Array[LogField]) -> Unit
+pub fn Logger::error(Self, String, fields? : Array[(String, Json)]) -> Unit
+pub fn Logger::info(Self, String, fields? : Array[(String, Json)]) -> Unit
 pub fn Logger::level(Self) -> LogLevel
-pub fn Logger::log(Self, LogLevel, String, fields? : Array[LogField]) -> Unit
-pub fn Logger::new(Clock, level? : LogLevel, writer? : (String) -> Unit) -> Self
+pub fn Logger::log(Self, LogLevel, String, fields? : Array[(String, Json)]) -> Unit
+pub fn Logger::new(Clock, level? : LogLevel, sink? : &@moonlog.Sink) -> Self
 pub fn Logger::set_level(Self, LogLevel) -> Unit
+pub fn Logger::set_sink(Self, &@moonlog.Sink) -> Unit
 pub fn Logger::set_writer(Self, (String) -> Unit) -> Unit
-pub fn Logger::severe(Self, String, fields? : Array[LogField]) -> Unit
+pub fn Logger::severe(Self, String, fields? : Array[(String, Json)]) -> Unit
 pub fn Logger::with_duration(Self, Int64) -> Self
 
 pub struct ManualClock {
@@ -738,6 +749,14 @@ pub async fn RedisTokenLimit::allow_n(Self, Int, Int64) -> Bool
 pub fn RedisTokenLimit::new(RedisClient, rate~ : Int, burst~ : Int, key~ : String) -> Self
 pub fn RedisTokenLimit::rescue(Self) -> TokenBucket
 
+pub(all) struct Refusal {
+  status : Int
+  body : Bytes
+  headers : Array[(String, String)]
+}
+pub fn Refusal::events(Self) -> Array[@spec.Event]
+pub fn Refusal::new(status? : Int, body? : Bytes, headers? : Array[(String, String)]) -> Self
+
 pub(all) enum RegistryEvent {
   Put(key~ : String, endpoint~ : Endpoint, revision~ : Int64)
   Delete(key~ : String, revision~ : Int64)
@@ -756,7 +775,7 @@ pub(all) struct RequestLog {
   client_ip : String
   user_agent : String
 }
-pub fn RequestLog::fields(Self) -> Array[LogField]
+pub fn RequestLog::fields(Self) -> Array[(String, Json)]
 pub fn RequestLog::render(Self) -> String
 pub fn RequestLog::to_json(Self) -> Json
 
@@ -898,12 +917,12 @@ pub fn RpcServerConf::to_repr(Self) -> @debug.Repr
 
 pub struct Server {
   conf : ServiceConf
-  handler : async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+  handler : async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 }
 pub fn Server::describe(Self) -> String
 pub fn Server::new(ServiceConf, @moonapi.App) -> Self
-pub fn Server::to_asgi(Self) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
-pub fn Server::use_(Self, (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> Self
+pub fn Server::to_asgi(Self) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+pub fn Server::use_(Self, (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> Self
 
 pub struct ServerMetrics {
   requests : CounterVec
@@ -999,7 +1018,7 @@ pub type BidiStreamFactory = () -> BidiStreamHandler
 
 pub type ClientStreamHandler = (Array[Bytes]) -> Bytes
 
-pub type Middleware = (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+pub type Middleware = (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
 pub type Resolve = (String) -> Array[Endpoint]
 

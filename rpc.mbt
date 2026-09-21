@@ -16,7 +16,7 @@ pub(all) struct RpcServerConf {
 pub fn RpcServerConf::new(
   name? : String = "rpc",
   host? : String = "0.0.0.0",
-  port? : Int = 8080,
+  port? : Int = rpc_port,
   timeout_ms? : Int = 2000,
 ) -> RpcServerConf {
   { name, host, port, timeout_ms, }

@@ -35,7 +35,7 @@ test "an rpc config loads go-zero's key spelling as readily as moonzero's" {
     "{\"name\":\"greeter\",\"timeout_ms\":1200}",
   )
   assert_eq(flat.timeout_ms, 1200)
-  assert_eq(flat.port, 8080)
+  assert_eq(flat.port, 12001)
 }
 
 ///|

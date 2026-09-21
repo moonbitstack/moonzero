@@ -58,16 +58,3 @@ test "constant_time_eq compares content, rejects length mismatch" {
   assert_eq(constant_time_eq(b"abc", b"abcd"), false)
   assert_eq(constant_time_eq(b"", b""), true)
 }
-
-///|
-test "base64url is url-safe and round-trips without padding" {
-  let orig = b"\x01\x02\x03\x04\x05"
-  assert_eq(base64url_decode(base64url_encode(orig)), orig)
-  // a value whose standard base64 contains + and / must come out - and _
-  let e = base64url_encode(b"\xfb\xff\xbf")
-  assert_eq(e.contains("+"), false)
-  assert_eq(e.contains("/"), false)
-  assert_eq(e.contains("="), false)
-  assert_eq(e.contains("-") || e.contains("_"), true)
-  assert_eq(base64url_decode(e), b"\xfb\xff\xbf")
-}

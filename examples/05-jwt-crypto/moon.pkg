@@ -1,6 +1,6 @@
 import {
   "moonbitstack/moonzero",
-  "moonbitlang/core/encoding/utf8",
+  "moonbitstack/mooncred/jwt",
 }
 
 pkgtype(kind: "executable")

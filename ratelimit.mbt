@@ -77,24 +77,6 @@ pub fn TokenBucket::available(self : TokenBucket, now : Int64) -> Double {
 }
 
 ///|
-/// The event stream a rejected request receives: a `429 Too Many Requests` with a
-/// short plain-text body. A pure value so the limiter's response is testable
-/// without driving the async transport.
-fn too_many_requests_events() -> Array[@moonasgi.Event] {
-  [
-    @moonasgi.Event::HttpResponseStart(
-      status=429,
-      headers=[("content-type", "text/plain; charset=utf-8")],
-      trailers=false,
-    ),
-    @moonasgi.Event::HttpResponseBody(
-      body=b"429 Too Many Requests",
-      more_body=false,
-    ),
-  ]
-}
-
-///|
 /// Rate-limit middleware over the process-local bucket: admit each HTTP request
 /// against a shared `TokenBucket` read at `clock.now()`, answering `429 Too Many
 /// Requests` when the bucket is empty and otherwise delegating to the wrapped app.
@@ -102,7 +84,11 @@ fn too_many_requests_events() -> Array[@moonasgi.Event] {
 /// request this layer serves — but only within this process; use
 /// `redis_rate_limit` to share it across replicas. Non-HTTP scopes (lifespan,
 /// websocket) pass through untouched.
-pub fn rate_limit(bucket : TokenBucket, clock : Clock) -> Middleware {
+pub fn rate_limit(
+  bucket : TokenBucket,
+  clock : Clock,
+  refusal? : Refusal = too_many,
+) -> Middleware {
   inner => {
     (scope, receive, send) => {
       match scope {
@@ -110,7 +96,7 @@ pub fn rate_limit(bucket : TokenBucket, clock : Clock) -> Middleware {
           if bucket.allow(clock.now()) {
             inner(scope, receive, send)
           } else {
-            for event in too_many_requests_events() {
+            for event in refusal.events() {
               send(event)
             }
           }
@@ -242,7 +228,11 @@ pub async fn RedisTokenLimit::allow_n(
 /// replicas behind one redis spend from one bucket. A redis that cannot be reached
 /// leaves the limiter running on its local bucket, so the layer keeps limiting either
 /// way. Non-HTTP scopes pass through untouched.
-pub fn redis_rate_limit(limiter : RedisTokenLimit, clock : Clock) -> Middleware {
+pub fn redis_rate_limit(
+  limiter : RedisTokenLimit,
+  clock : Clock,
+  refusal? : Refusal = too_many,
+) -> Middleware {
   inner => {
     (scope, receive, send) => {
       match scope {
@@ -250,7 +240,7 @@ pub fn redis_rate_limit(limiter : RedisTokenLimit, clock : Clock) -> Middleware 
           if limiter.allow(clock.now()) {
             inner(scope, receive, send)
           } else {
-            for event in too_many_requests_events() {
+            for event in refusal.events() {
               send(event)
             }
           }

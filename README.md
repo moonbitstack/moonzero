@@ -31,7 +31,7 @@ let api = @moonzero.Group::new(app, "/api/v1")     // prefix a set of routes
 api.get("/ping", _ctx => @moonapi.text(200, "pong"))
 
 let conf = @moonzero.ServiceConf::new(
-  name="greet", host="127.0.0.1", port=8888, timeout_ms=3000, log_level=Info,
+  name="greet", host="127.0.0.1", port=12000, timeout_ms=3000, log_level=Info,
 )
 let server = @moonzero.Server::new(conf, app)
   .use_(@moonzero.cors(@moonzero.CorsConf::new()))   // Access-Control-* headers
@@ -39,11 +39,21 @@ let server = @moonzero.Server::new(conf, app)
   .use_(@moonzero.recovery)                           // 500 instead of a panic
   .use_(@moonzero.logging)
 
-server.describe()        // "greet listening on 127.0.0.1:8888"
+server.describe()        // "greet listening on 127.0.0.1:12000"
 @mooncat.serve(server.to_asgi(), host=conf.host, port=conf.port)   // run it (native)
 ```
 
 Verified across all backends (`wasm`, `wasm-gc`, `js`, `native`) in CI, 0 warnings under `--deny-warn`.
+
+## Ports
+
+The default listen port is **12000** for the REST engine and **12001** for the zRPC server — the family's numbers rather than go-zero's 8888 and 8080, so every example and every local run in this ecosystem points at the same place. gRPC shares a port with HTTP wherever one listener carries both; a moonzero process binds its REST and zRPC servers separately, and two listeners cannot hold one port, so the second takes the next number.
+
+Both are ordinary parameters over public presets (`@moonzero.port`, `@moonzero.rpc_port`): changing one is `ServiceConf::new(port=8888)`.
+
+## Refusals
+
+Every middleware that can turn a request away takes a `refusal` — the status, body and headers a rejected request receives. The presets are go-zero's (`unavailable` 503, `too_many` 429, `timed_out` 503, `too_large` 413); a gateway that answers 429 where the service alone answers 503 writes `shedding(s, refusal=Refusal::new(status=429))`.
 
 ## Resilience middleware
 
@@ -68,7 +78,7 @@ let server = @moonzero.Server::new(conf, app)
 ## Auth, YAML config, and zRPC over the h2c transport
 
 ```moonbit
-// JWT HS256 — self-built SHA-256/HMAC (verified against NIST/RFC vectors)
+// JWT HS256, on mooncred and mooncrypt
 let token = @moonzero.jwt_sign(
   Map([("sub", Json::string("alice")), ("exp", Json::number(1893456000.0))]),
   "topsecret",
@@ -101,12 +111,12 @@ call.send(a)          // -> the replies produced right then (interleaved)
 call.close_send()     // -> Ok([on_end replies...]) | Err(status)
 ```
 
-- **`jwt_sign` / `jwt_verify`** — compact HS256 tokens on a [self-built SHA-256 + HMAC-SHA256](./crypto.mbt), signatures compared in constant time, `exp`/`nbf` enforced, and the `alg:none` downgrade refused. Interop-verified against the canonical jwt.io token.
+- **`jwt_sign` / `jwt_verify`** — compact HS256 tokens through [`mooncred/jwt`](https://github.com/moonbitstack/mooncred) over [`mooncrypt`](https://github.com/moonbitstack/mooncrypt)'s SHA-256 and HMAC: signatures compared in constant time, `exp`/`nbf` enforced, the `alg:none` downgrade refused, and every check a field of the `policy` record. Interop-verified against the canonical jwt.io token.
 - **`auth`** — the [middleware](./auth.mbt) that requires `Authorization: Bearer <jwt>` and answers `401` for an absent, malformed, tampered, or expired token.
-- **`ServiceConf::from_yaml`** — a [minimal-subset YAML parser](./yaml.mbt) (block maps, nesting, sequences, typed scalars, comments) feeding the same field reader as the JSON loader, so both formats agree field-for-field.
+- **`ServiceConf::from_yaml`** — [`moonjson/yaml`](https://github.com/moonbitstack/moonjson) reads the `etc/*.yaml` into the same `Json` tree the JSON loader produces, so both formats agree field-for-field.
 - **`Conf`** — the [`conf.Load` port](./conf.mbt): keys match canonically (lowercase, `_` and `-` ignored), so a goctl-written `Name`/`MaxBytes`/`Log.Level` loads as readily as `name`/`max_bytes`/`log_level`; dotted paths reach nested blocks; `,env=` lets a variable override the file; and `default=` / `options=` / `range=[a:b)` behave as go-zero's tags do — a missing required field or a value outside its constraint is an error, never a quiet default.
 - **`RestConf` / `RestEngine`** — [config-driven assembly](./restconf.mbt) (← `rest.RestConf` and `newEngine`): host, port, TLS files, `MaxConns`, `MaxBytes`, `Timeout`, `CpuThreshold`, `Signature`, `TraceIgnorePaths` and the eleven `Middlewares` flags load from one `etc/*.yaml`, and the engine installs exactly the layers those flags ask for, in go-zero's order, over shared connection permits / breaker window / metric set. `Metrics` and `Gunzip` load but install nothing.
-- **`logx`** — a [leveled structured logger](./logx.mbt): entries below the configured level are dropped unrendered, everything else is one JSON object per line with `@timestamp`, `level`, `content`, an optional `WithDuration`, and typed fields. `RestEngine::new` points it at the config's `Log.Level`, which is what finally makes that setting mean something.
+- **`logx`** — go-zero's [leveled structured logger](./logx.mbt) over [`moonlog`](https://github.com/moonbitstack/moonlog)'s sink: entries below the configured level are dropped unrendered, everything else is one JSON object per line with `@timestamp`, `level`, `content`, an optional `WithDuration`, and typed fields. `RestEngine::new` points it at the config's `Log.Level`, which is what finally makes that setting mean something. Point it at another `moonlog` sink and every other library in the family writes to the same place.
 - **`RpcServer` / `RpcGroup`** — [config-driven zRPC groups](./rpc.mbt) that register [`moonrpc`](https://github.com/moonbitstack/moonrpc) `Method` handlers by gRPC path.
 - **`RpcChannel`** — a [client over the h2c transport](./zrpc.mbt): `to_h2` turns the registered handlers into a `moonrpc` `H2Server`, and the `call` family runs real exchanges through it — HPACK-coded HEADERS, length-prefixed DATA frames, and the `grpc-status` trailer read back off the reply. Unary (`call`), server-streaming (`call_server_streaming`, one request then every framed reply in order), client-streaming (`call_client_streaming`, each request as its own DATA frame then one reply after half-close), and bidirectional streaming all round-trip through the same engine. A call to an unregistered path comes back `UNIMPLEMENTED`, the trailers-only response a gRPC server sends for an unknown method.
 - **Bidi streaming** — `open_bidi` opens a stream that stays open both ways: each `BidiCall::send` writes one request message and returns the replies the server produced right then (an echo handler answers each message as it arrives), and `close_send` half-closes, runs the server's `on_end`, and reports the final `grpc-status`. `call_bidi_streaming` drives a whole exchange in one shot, returning the interleaved replies followed by the `on_end` messages. The channel's HPACK decoder is advanced across every reply block, so its dynamic table stays in lockstep with the engine's encoder for the life of the call.

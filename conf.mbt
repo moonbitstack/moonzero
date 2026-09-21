@@ -46,7 +46,16 @@ pub fn Conf::of_json(src : String) -> Conf raise ConfigError {
 /// Load a document from the YAML go-zero ships as `etc/*.yaml`. Raises
 /// `ConfigError` on malformed YAML or a non-mapping root.
 pub fn Conf::of_yaml(src : String) -> Conf raise ConfigError {
-  match yaml_parse(src) {
+  let doc = @yaml.loads(src) catch {
+    err =>
+      raise ConfigError(
+        "invalid YAML at line " +
+        err.at().line.to_string() +
+        ", column " +
+        err.at().column.to_string(),
+      )
+  }
+  match doc {
     Object(m) => { root: m, }
     _ => raise ConfigError("config root must be a YAML mapping")
   }
@@ -217,8 +226,8 @@ fn range_parse(spec : String) -> RangeSpec raise ConfigError {
   if colon < 0 {
     raise bad
   }
-  let low_src = yaml_trim(body[0:colon].to_owned())
-  let high_src = yaml_trim(body[colon + 1:].to_owned())
+  let low_src = trim(body[0:colon].to_owned())
+  let high_src = trim(body[colon + 1:].to_owned())
   let low = if low_src.length() == 0 {
     None
   } else {
@@ -419,7 +428,7 @@ fn split_commas(s : String) -> Array[String] {
   let out : Array[String] = []
   let sb = StringBuilder()
   fn flush() {
-    let item = yaml_trim(sb.to_string())
+    let item = trim(sb.to_string())
     if item.length() > 0 {
       out.push(item)
     }
@@ -459,4 +468,73 @@ pub fn Conf::list(self : Conf, path : String) -> Array[Conf] raise ConfigError {
     Some(_) =>
       raise ConfigError("field " + path + " must be a list of mappings")
   }
+}
+
+///|
+/// Strip leading and trailing spaces and tabs. The `default=`/`options=`/
+/// `range=` tag bodies are go-zero's own grammar, not YAML, so the trimming
+/// they need lives with them.
+fn trim(s : String) -> String {
+  let mut start = 0
+  let mut end = s.length()
+  fn blank(c : Int) -> Bool {
+    c == ' '.to_int() || c == '	'.to_int()
+  }
+
+  while start < end && blank(s[start].to_int()) {
+    start = start + 1
+  }
+  while end > start && blank(s[end - 1].to_int()) {
+    end = end - 1
+  }
+  s[start:end].to_owned()
+}
+
+///|
+/// Read a decimal number, or `None` if the whole string is not one.
+///
+/// It is written out rather than taken from a library because core ships no
+/// float parser (`strconv` is empty in this toolchain), and because what it
+/// accepts is go-zero's `range=` tag grammar, not JSON's number grammar.
+fn parse_number(s : String) -> Double? {
+  if s.length() == 0 {
+    return None
+  }
+  let mut i = 0
+  let mut neg = false
+  if s[0].to_int() == '-'.to_int() {
+    neg = true
+    i = 1
+  }
+  if i >= s.length() {
+    return None
+  }
+  let mut int_part = 0.0
+  let mut seen_digit = false
+  while i < s.length() &&
+        s[i].to_int() >= '0'.to_int() &&
+        s[i].to_int() <= '9'.to_int() {
+    int_part = int_part * 10.0 + (s[i].to_int() - '0'.to_int()).to_double()
+    seen_digit = true
+    i = i + 1
+  }
+  let mut value = int_part
+  if i < s.length() && s[i].to_int() == '.'.to_int() {
+    i = i + 1
+    let mut frac = 0.0
+    let mut scale = 1.0
+    while i < s.length() &&
+          s[i].to_int() >= '0'.to_int() &&
+          s[i].to_int() <= '9'.to_int() {
+      frac = frac * 10.0 + (s[i].to_int() - '0'.to_int()).to_double()
+      scale = scale * 10.0
+      seen_digit = true
+      i = i + 1
+    }
+    value = value + frac / scale
+  }
+  if !seen_digit || i != s.length() {
+    return None
+  }
+  Some(if neg { -value } else { value })
 }

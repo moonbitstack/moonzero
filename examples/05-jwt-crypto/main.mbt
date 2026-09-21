@@ -1,13 +1,13 @@
 ///|
-/// Exercise the self-built crypto behind JWT auth — SHA-256, HMAC-SHA256, and the
-/// constant-time comparison — then sign and verify a compact HS256 token,
+/// The primitives behind JWT auth — SHA-256, HMAC-SHA256 and the constant-time
+/// comparison, all `mooncrypt`'s — then sign and verify a compact HS256 token,
 /// including the ways verification is meant to fail: a tampered signature, an
 /// expired token, and the `alg: none` downgrade.
 ///
 ///     moon run examples/05-jwt-crypto
 #coverage.skip
 fn main {
-  // SHA-256 of "abc" — the FIPS 180-4 vector the primitive is checked against.
+  // SHA-256 of "abc" — the FIPS 180-4 vector mooncrypt is checked against.
   println("sha256(\"abc\") = " + to_hex(@moonzero.sha256(b"abc")))
   println("hmac_sha256 = " + to_hex(@moonzero.hmac_sha256(b"key", b"heke1228")))
 
@@ -19,14 +19,6 @@ fn main {
     " (a,b)=" +
     @moonzero.constant_time_eq(a, @moonzero.sha256(b"qwq")).to_string(),
   )
-
-  // base64url (JWT's segment alphabet) round-trips arbitrary bytes.
-  let seg = @moonzero.base64url_encode(b"heke1228")
-  let back = @moonzero.base64url_decode(seg)
-  println(
-    "base64url \"heke1228\" -> " + seg + " -> len " + back.length().to_string(),
-  )
-
   let secret = "topsecret"
   let claims : Map[String, Json] = Map([
     ("sub", Json::string("lfanke")),
@@ -43,17 +35,27 @@ fn main {
     e => println("unexpected verify failure: " + jwt_reason(e))
   }
 
-  // Each rejection path reports its own JwtError.
+  // Each rejection path reports its own reason.
   println("wrong secret -> " + reject(token, "wrong", 1000L))
   println("expired (t=3000 >= exp=2000) -> " + reject(token, secret, 3000L))
-  let none_hdr = @moonzero.base64url_encode(@utf8.encode("{\"alg\":\"none\"}"))
-  let none_pl = @moonzero.base64url_encode(
-    @utf8.encode("{\"sub\":\"mallory\"}"),
-  )
   println(
     "alg:none downgrade -> " +
-    reject(none_hdr + "." + none_pl + ".", secret, 1000L),
+    reject("eyJhbGciOiJub25lIn0.eyJzdWIiOiJtYWxsb3J5In0.QUFB", secret, 1000L),
   )
+
+  // The claim checks are a record: the same expired token passes with `exp`
+  // switched off.
+  try {
+    let lenient = @moonzero.jwt_verify(
+      token,
+      secret,
+      3000L,
+      policy=@jwt.Policy::new(expiry=false),
+    )
+    println("expired but expiry=false -> sub=" + sub_of(lenient))
+  } catch {
+    e => println("unexpected: " + jwt_reason(e))
+  }
 
   // The middleware's accept/reject decision, as a pure predicate.
   println(
@@ -67,7 +69,7 @@ fn main {
 }
 
 ///|
-/// Verify a token expected to fail, returning the JwtError's name.
+/// Verify a token expected to fail, returning the rejection's name.
 fn reject(token : String, secret : String, now : Int64) -> String {
   try {
     let _ = @moonzero.jwt_verify(token, secret, now)
@@ -78,13 +80,19 @@ fn reject(token : String, secret : String, now : Int64) -> String {
 }
 
 ///|
-fn jwt_reason(e : @moonzero.JwtError) -> String {
+fn jwt_reason(e : @jwt.Rejected) -> String {
   match e {
-    MalformedToken(m) => "malformed: " + m
-    UnsupportedAlg(a) => "unsupported-alg: " + a
-    BadSignature => "bad-signature"
-    Expired => "expired"
-    NotYetValid => "not-yet-valid"
+    Shape(m) => "malformed: " + m
+    Algorithm(want~, got~) => "unsupported-alg: " + got + " (want " + want + ")"
+    Signature => "bad-signature"
+    Expired(..) => "expired"
+    TooEarly(..) => "not-yet-valid"
+    Issuer(..) => "wrong-issuer"
+    Audience(..) => "wrong-audience"
+    Subject(..) => "wrong-subject"
+    IssuedAt(..) => "issued-in-the-future"
+    Type(..) => "wrong-typ"
+    Missing(claim~) => "missing claim: " + claim
   }
 }
 

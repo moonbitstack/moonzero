@@ -28,7 +28,7 @@ test "PeriodLimit tracks each key independently" {
 
 ///|
 test "period_limit rejects with 429, and assembles as a Server layer" {
-  assert_eq(start_status(too_many_requests_events()), 429)
+  assert_eq(start_status(too_many.events()), 429)
   let app = @moonapi.App::new()
   app.get("/ping", _ctx => @moonapi.text(200, "pong"))
   let mc = ManualClock::new()

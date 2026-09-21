@@ -33,7 +33,7 @@ test "lenient loader fills omitted fields from new() defaults" {
   let partial = ServiceConf::from_json("{\"name\":\"only-name\"}")
   assert_eq(partial.name, "only-name")
   assert_eq(partial.host, "0.0.0.0")
-  assert_eq(partial.port, 8888)
+  assert_eq(partial.port, 12000)
   assert_eq(partial.timeout_ms, 3000)
   assert_eq(partial.log_level, Info)
   // an empty object yields exactly the defaults

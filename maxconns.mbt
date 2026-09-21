@@ -47,7 +47,10 @@ pub fn MaxConns::in_flight(self : MaxConns) -> Int {
 /// Max-connections middleware (← go-zero's `MaxConns`): hold a permit for the wrapped app's
 /// duration, or answer `503 Service Unavailable` when every permit is taken. Non-HTTP scopes
 /// (lifespan, websocket) pass through untouched.
-pub fn max_conns(limit : MaxConns) -> Middleware {
+pub fn max_conns(
+  limit : MaxConns,
+  refusal? : Refusal = unavailable,
+) -> Middleware {
   inner => {
     (scope, receive, send) => {
       match scope {
@@ -59,7 +62,7 @@ pub fn max_conns(limit : MaxConns) -> Middleware {
             defer limit.release()
             inner(scope, receive, send)
           } else {
-            for event in service_unavailable_events() {
+            for event in refusal.events() {
               send(event)
             }
           }

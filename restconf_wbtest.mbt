@@ -3,7 +3,11 @@
 /// never touches the process logger.
 fn test_engine(conf : RestConf) -> RestEngine raise ConfigError {
   let clock = ManualClock::new().as_clock()
-  RestEngine::new(conf, clock~, logger=Logger::new(clock, writer=_ => ()))
+  RestEngine::new(
+    conf,
+    clock~,
+    logger=Logger::new(clock, sink=@moonlog.Discard::{ }),
+  )
 }
 
 ///|
@@ -190,7 +194,7 @@ test "a strict signature with no keys is refused" {
 ///|
 test "the engine points the logger at the configured level" {
   let clock = ManualClock::new().as_clock()
-  let logger = Logger::new(clock, writer=_ => ())
+  let logger = Logger::new(clock, sink=@moonlog.Discard::{ })
   let conf = RestConf::from_yaml(gozero_yaml())
   let _ = RestEngine::new(conf, clock~, logger~)
   assert_eq(logger.level(), Error)

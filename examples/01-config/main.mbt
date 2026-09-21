@@ -1,7 +1,7 @@
 ///|
 /// Load a `ServiceConf` three ways — the `new()` defaults, a partial JSON config
 /// filled from those defaults, and the YAML `etc/*.yaml` format go-zero ships —
-/// then read the `LogLevel` ordering and the raw `yaml_parse` output.
+/// then read the `LogLevel` ordering and a YAML document as a `Json` tree.
 ///
 ///     moon run examples/01-config
 #coverage.skip
@@ -38,14 +38,20 @@ fn main {
       "unknown level falls back to: " +
       @moonzero.LogLevel::parse("verbose").to_string(),
     )
-
-    // The self-built YAML parser lowered to the same Json the JSON loader reads.
-    let doc = @moonzero.yaml_parse(
-      "name: greet\nnested:\n  port: 9000\n  tags:\n    - a\n    - b\n",
-    )
-    println("yaml_parse -> " + doc.stringify())
   } catch {
     ConfigError(msg) => println("config error: " + msg)
+  }
+
+  // The YAML go-zero's etc/*.yaml is written in, read by moonjson into the same
+  // Json tree the JSON loader produces. It reports its own error, with a
+  // position, so it is caught where it is raised.
+  try {
+    let doc = @yaml.loads(
+      "name: greet\nnested:\n  port: 9000\n  tags:\n    - a\n    - b\n",
+    )
+    println("yaml -> " + doc.stringify())
+  } catch {
+    bad => println("bad YAML at line " + bad.at().line.to_string())
   }
 }
 
