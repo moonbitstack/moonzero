@@ -191,3 +191,9 @@ pub fn redis_period_limit(
     }
   }
 }
+
+///|
+pub extend PeriodResult with Debug::{to_repr}
+
+///|
+pub extend PeriodResult with Eq::{not_equal, equal}

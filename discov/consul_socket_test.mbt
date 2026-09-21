@@ -17,7 +17,7 @@ fn consul_test_host() -> String {
 ///|
 /// Register `endpoint` for `service` and pass its TTL check so it is healthy at once.
 async fn consul_put_healthy(
-  sock : ConsulSocket,
+  sock : @discov.ConsulSocket,
   service : String,
   id : String,
   host : String,
@@ -36,7 +36,7 @@ async fn consul_put_healthy(
 ///|
 async test "integration: consul discovery register/resolve/deregister over a real consul" {
   guard @env.get_env_var("MOON_CONSUL_TEST") is Some(_) else { return }
-  let sock = ConsulSocket::new(consul_test_host())
+  let sock = @discov.ConsulSocket::new(consul_test_host())
   let id1 = "greeter-10.0.0.1-9090"
   let id2 = "greeter-10.0.0.2-9090"
   // Clean any leftover from a prior run.

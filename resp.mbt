@@ -325,3 +325,9 @@ fn resp_write_crlf(buf : Buffer) -> Unit {
   buf.write_byte(b'\r')
   buf.write_byte(b'\n')
 }
+
+///|
+pub extend RespValue with Debug::{to_repr}
+
+///|
+pub extend RespValue with Eq::{not_equal, equal}

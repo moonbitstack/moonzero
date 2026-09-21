@@ -18,7 +18,10 @@ fn redis_test_host() -> String {
 ///|
 /// SCAN the whole `pattern` keyspace, following the cursor to completion, returning the
 /// matched keys as text.
-async fn scan_all(sock : RedisSocket, pattern : String) -> Array[String] {
+async fn scan_all(
+  sock : @discov.RedisSocket,
+  pattern : String,
+) -> Array[String] {
   let out : Array[String] = []
   let mut cursor = "0"
   let mut first = true
@@ -50,7 +53,7 @@ async fn scan_all(sock : RedisSocket, pattern : String) -> Array[String] {
 
 ///|
 /// Delete every key under `pattern` (idempotent cleanup before a run).
-async fn scan_clean(sock : RedisSocket, pattern : String) -> Unit {
+async fn scan_clean(sock : @discov.RedisSocket, pattern : String) -> Unit {
   let keys = scan_all(sock, pattern)
   if keys.length() > 0 {
     let args = ["DEL"]
@@ -64,7 +67,7 @@ async fn scan_clean(sock : RedisSocket, pattern : String) -> Unit {
 ///|
 async test "integration: RESP discovery register/resolve/deregister over a real redis" {
   guard @env.get_env_var("MOON_REDIS_TEST") is Some(_) else { return }
-  let sock = RedisSocket::connect(redis_test_host(), 6379)
+  let sock = @discov.RedisSocket::connect(redis_test_host(), 6379)
   defer sock.close()
   // Liveness over the real socket.
   assert_eq(sock.command(["PING"]), @moonzero.SimpleString("PONG"))

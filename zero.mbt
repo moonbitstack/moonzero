@@ -109,3 +109,18 @@ pub fn logging(inner : @moonasgi.AsgiApp) -> @moonasgi.AsgiApp {
     inner(scope, receive, send)
   }
 }
+
+///|
+pub extend LogLevel with Compare::{op_lt, op_le, op_ge, compare, op_gt}
+
+///|
+pub extend LogLevel with Debug::{to_repr}
+
+///|
+pub extend LogLevel with Eq::{not_equal, equal}
+
+///|
+pub extend LogLevel with FromJson::{from_json}
+
+///|
+pub extend ServiceConf with Eq::{not_equal, equal}

@@ -283,7 +283,10 @@ pub(all) struct Endpoint {
   weight : Int
 } derive(Eq, @debug.Debug)
 pub fn Endpoint::address(Self) -> String
+pub fn Endpoint::equal(Self, Self) -> Bool
 pub fn Endpoint::new(String, Int, weight? : Int) -> Self
+pub fn Endpoint::not_equal(Self, Self) -> Bool
+pub fn Endpoint::to_repr(Self) -> @debug.Repr
 
 pub struct EtcdClient {
   channel : RpcChannel
@@ -302,6 +305,8 @@ pub(all) struct EtcdDeleteRangeRequest {
 } derive(Eq)
 pub fn EtcdDeleteRangeRequest::decode(Bytes) -> Self raise @moonrpc.PbError
 pub fn EtcdDeleteRangeRequest::encode(Self) -> Bytes
+pub fn EtcdDeleteRangeRequest::equal(Self, Self) -> Bool
+pub fn EtcdDeleteRangeRequest::not_equal(Self, Self) -> Bool
 
 pub(all) struct EtcdDeleteRangeResponse {
   deleted : Int64
@@ -309,6 +314,8 @@ pub(all) struct EtcdDeleteRangeResponse {
 } derive(Eq)
 pub fn EtcdDeleteRangeResponse::decode(Bytes) -> Self raise @moonrpc.PbError
 pub fn EtcdDeleteRangeResponse::encode(Self) -> Bytes
+pub fn EtcdDeleteRangeResponse::equal(Self, Self) -> Bool
+pub fn EtcdDeleteRangeResponse::not_equal(Self, Self) -> Bool
 
 pub struct EtcdDiscovery {
   client : EtcdClient
@@ -326,12 +333,16 @@ pub(all) struct EtcdEvent {
 } derive(Eq)
 pub fn EtcdEvent::decode(Bytes) -> Self raise @moonrpc.PbError
 pub fn EtcdEvent::encode(Self) -> Bytes
+pub fn EtcdEvent::equal(Self, Self) -> Bool
+pub fn EtcdEvent::not_equal(Self, Self) -> Bool
 
 pub(all) enum EtcdEventType {
   Put
   Delete
 } derive(Eq)
+pub fn EtcdEventType::equal(Self, Self) -> Bool
 pub fn EtcdEventType::from_int(Int) -> Self
+pub fn EtcdEventType::not_equal(Self, Self) -> Bool
 pub fn EtcdEventType::to_int(Self) -> Int
 
 pub(all) struct EtcdKeyValue {
@@ -345,6 +356,8 @@ pub(all) struct EtcdKeyValue {
 pub fn EtcdKeyValue::decode(Bytes) -> Self raise @moonrpc.PbError
 pub fn EtcdKeyValue::empty() -> Self
 pub fn EtcdKeyValue::encode(Self) -> Bytes
+pub fn EtcdKeyValue::equal(Self, Self) -> Bool
+pub fn EtcdKeyValue::not_equal(Self, Self) -> Bool
 
 pub(all) struct EtcdLeaseGrantRequest {
   ttl : Int64
@@ -352,6 +365,8 @@ pub(all) struct EtcdLeaseGrantRequest {
 } derive(Eq)
 pub fn EtcdLeaseGrantRequest::decode(Bytes) -> Self raise @moonrpc.PbError
 pub fn EtcdLeaseGrantRequest::encode(Self) -> Bytes
+pub fn EtcdLeaseGrantRequest::equal(Self, Self) -> Bool
+pub fn EtcdLeaseGrantRequest::not_equal(Self, Self) -> Bool
 
 pub(all) struct EtcdLeaseGrantResponse {
   id : Int64
@@ -360,12 +375,16 @@ pub(all) struct EtcdLeaseGrantResponse {
 } derive(Eq)
 pub fn EtcdLeaseGrantResponse::decode(Bytes) -> Self raise @moonrpc.PbError
 pub fn EtcdLeaseGrantResponse::encode(Self) -> Bytes
+pub fn EtcdLeaseGrantResponse::equal(Self, Self) -> Bool
+pub fn EtcdLeaseGrantResponse::not_equal(Self, Self) -> Bool
 
 pub(all) struct EtcdLeaseKeepAliveRequest {
   id : Int64
 } derive(Eq)
 pub fn EtcdLeaseKeepAliveRequest::decode(Bytes) -> Self raise @moonrpc.PbError
 pub fn EtcdLeaseKeepAliveRequest::encode(Self) -> Bytes
+pub fn EtcdLeaseKeepAliveRequest::equal(Self, Self) -> Bool
+pub fn EtcdLeaseKeepAliveRequest::not_equal(Self, Self) -> Bool
 
 pub(all) struct EtcdLeaseKeepAliveResponse {
   id : Int64
@@ -373,6 +392,8 @@ pub(all) struct EtcdLeaseKeepAliveResponse {
 } derive(Eq)
 pub fn EtcdLeaseKeepAliveResponse::decode(Bytes) -> Self raise @moonrpc.PbError
 pub fn EtcdLeaseKeepAliveResponse::encode(Self) -> Bytes
+pub fn EtcdLeaseKeepAliveResponse::equal(Self, Self) -> Bool
+pub fn EtcdLeaseKeepAliveResponse::not_equal(Self, Self) -> Bool
 
 pub(all) struct EtcdPutRequest {
   key : Bytes
@@ -381,12 +402,16 @@ pub(all) struct EtcdPutRequest {
 } derive(Eq)
 pub fn EtcdPutRequest::decode(Bytes) -> Self raise @moonrpc.PbError
 pub fn EtcdPutRequest::encode(Self) -> Bytes
+pub fn EtcdPutRequest::equal(Self, Self) -> Bool
+pub fn EtcdPutRequest::not_equal(Self, Self) -> Bool
 
 pub(all) struct EtcdPutResponse {
   prev_kv : EtcdKeyValue
 } derive(Eq)
 pub fn EtcdPutResponse::decode(Bytes) -> Self raise @moonrpc.PbError
 pub fn EtcdPutResponse::encode(Self) -> Bytes
+pub fn EtcdPutResponse::equal(Self, Self) -> Bool
+pub fn EtcdPutResponse::not_equal(Self, Self) -> Bool
 
 pub(all) struct EtcdRangeRequest {
   key : Bytes
@@ -395,6 +420,8 @@ pub(all) struct EtcdRangeRequest {
 } derive(Eq)
 pub fn EtcdRangeRequest::decode(Bytes) -> Self raise @moonrpc.PbError
 pub fn EtcdRangeRequest::encode(Self) -> Bytes
+pub fn EtcdRangeRequest::equal(Self, Self) -> Bool
+pub fn EtcdRangeRequest::not_equal(Self, Self) -> Bool
 
 pub(all) struct EtcdRangeResponse {
   kvs : Array[EtcdKeyValue]
@@ -402,12 +429,16 @@ pub(all) struct EtcdRangeResponse {
 } derive(Eq)
 pub fn EtcdRangeResponse::decode(Bytes) -> Self raise @moonrpc.PbError
 pub fn EtcdRangeResponse::encode(Self) -> Bytes
+pub fn EtcdRangeResponse::equal(Self, Self) -> Bool
+pub fn EtcdRangeResponse::not_equal(Self, Self) -> Bool
 
 pub(all) struct EtcdWatchCancelRequest {
   watch_id : Int64
 } derive(Eq)
 pub fn EtcdWatchCancelRequest::decode(Bytes) -> Self raise @moonrpc.PbError
 pub fn EtcdWatchCancelRequest::encode(Self) -> Bytes
+pub fn EtcdWatchCancelRequest::equal(Self, Self) -> Bool
+pub fn EtcdWatchCancelRequest::not_equal(Self, Self) -> Bool
 
 pub(all) struct EtcdWatchCreateRequest {
   key : Bytes
@@ -416,6 +447,8 @@ pub(all) struct EtcdWatchCreateRequest {
 } derive(Eq)
 pub fn EtcdWatchCreateRequest::decode(Bytes) -> Self raise @moonrpc.PbError
 pub fn EtcdWatchCreateRequest::encode(Self) -> Bytes
+pub fn EtcdWatchCreateRequest::equal(Self, Self) -> Bool
+pub fn EtcdWatchCreateRequest::not_equal(Self, Self) -> Bool
 
 pub(all) enum EtcdWatchRequest {
   Create(EtcdWatchCreateRequest)
@@ -423,6 +456,8 @@ pub(all) enum EtcdWatchRequest {
 } derive(Eq)
 pub fn EtcdWatchRequest::decode(Bytes) -> Self raise @moonrpc.PbError
 pub fn EtcdWatchRequest::encode(Self) -> Bytes
+pub fn EtcdWatchRequest::equal(Self, Self) -> Bool
+pub fn EtcdWatchRequest::not_equal(Self, Self) -> Bool
 
 pub(all) struct EtcdWatchResponse {
   watch_id : Int64
@@ -432,6 +467,8 @@ pub(all) struct EtcdWatchResponse {
 } derive(Eq)
 pub fn EtcdWatchResponse::decode(Bytes) -> Self raise @moonrpc.PbError
 pub fn EtcdWatchResponse::encode(Self) -> Bytes
+pub fn EtcdWatchResponse::equal(Self, Self) -> Bool
+pub fn EtcdWatchResponse::not_equal(Self, Self) -> Bool
 
 pub struct Group {
   app : @moonapi.App
@@ -513,7 +550,16 @@ pub(all) enum LogLevel {
   Error
   Severe
 } derive(Compare, Eq, @debug.Debug)
+pub fn LogLevel::compare(Self, Self) -> Int
+pub fn LogLevel::equal(Self, Self) -> Bool
+pub fn LogLevel::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn LogLevel::not_equal(Self, Self) -> Bool
+pub fn LogLevel::op_ge(Self, Self) -> Bool
+pub fn LogLevel::op_gt(Self, Self) -> Bool
+pub fn LogLevel::op_le(Self, Self) -> Bool
+pub fn LogLevel::op_lt(Self, Self) -> Bool
 pub fn LogLevel::parse(String) -> Self
+pub fn LogLevel::to_repr(Self) -> @debug.Repr
 pub fn LogLevel::to_string(Self) -> String
 pub impl @json.FromJson for LogLevel
 
@@ -565,13 +611,19 @@ pub(all) struct MiddlewaresConf {
   max_bytes : Bool
   gunzip : Bool
 } derive(Eq, @debug.Debug)
+pub fn MiddlewaresConf::equal(Self, Self) -> Bool
 pub fn MiddlewaresConf::new(trace? : Bool, log? : Bool, prometheus? : Bool, max_conns? : Bool, breaker? : Bool, shedding? : Bool, timeout? : Bool, recover? : Bool, metrics? : Bool, max_bytes? : Bool, gunzip? : Bool) -> Self
+pub fn MiddlewaresConf::not_equal(Self, Self) -> Bool
+pub fn MiddlewaresConf::to_repr(Self) -> @debug.Repr
 
 pub(all) enum Outcome {
   Succ
   Fail
   Drop
 } derive(Eq, @debug.Debug)
+pub fn Outcome::equal(Self, Self) -> Bool
+pub fn Outcome::not_equal(Self, Self) -> Bool
+pub fn Outcome::to_repr(Self) -> @debug.Repr
 
 pub struct PeriodLimit {
   period_ms : Int64
@@ -586,6 +638,9 @@ pub(all) enum PeriodResult {
   PeriodHitQuota
   PeriodOverQuota
 } derive(Eq, @debug.Debug)
+pub fn PeriodResult::equal(Self, Self) -> Bool
+pub fn PeriodResult::not_equal(Self, Self) -> Bool
+pub fn PeriodResult::to_repr(Self) -> @debug.Repr
 
 pub struct PersistentRegistry {
   instances : Map[String, Map[String, Endpoint]]
@@ -612,6 +667,9 @@ pub(all) struct PrivateKeyConf {
   fingerprint : String
   key_file : String
 } derive(Eq, @debug.Debug)
+pub fn PrivateKeyConf::equal(Self, Self) -> Bool
+pub fn PrivateKeyConf::not_equal(Self, Self) -> Bool
+pub fn PrivateKeyConf::to_repr(Self) -> @debug.Repr
 
 pub struct Promise {
   b : Breaker
@@ -684,7 +742,10 @@ pub(all) enum RegistryEvent {
   Put(key~ : String, endpoint~ : Endpoint, revision~ : Int64)
   Delete(key~ : String, revision~ : Int64)
 } derive(Eq, @debug.Debug)
+pub fn RegistryEvent::equal(Self, Self) -> Bool
+pub fn RegistryEvent::not_equal(Self, Self) -> Bool
 pub fn RegistryEvent::revision(Self) -> Int64
+pub fn RegistryEvent::to_repr(Self) -> @debug.Repr
 
 pub(all) struct RequestLog {
   http_method : String
@@ -724,6 +785,9 @@ pub(all) enum RespValue {
   Push(Array[RespValue])
 } derive(Eq, @debug.Debug)
 pub fn RespValue::decode(Bytes) -> Self raise RespError
+pub fn RespValue::equal(Self, Self) -> Bool
+pub fn RespValue::not_equal(Self, Self) -> Bool
+pub fn RespValue::to_repr(Self) -> @debug.Repr
 
 pub(all) struct RestConf {
   service : ServiceConf
@@ -825,9 +889,12 @@ pub(all) struct RpcServerConf {
   port : Int
   timeout_ms : Int
 } derive(Eq, @debug.Debug, @json.FromJson)
+pub fn RpcServerConf::equal(Self, Self) -> Bool
 pub fn RpcServerConf::from_json(String) -> Self raise ConfigError
 pub fn RpcServerConf::from_yaml(String) -> Self raise ConfigError
 pub fn RpcServerConf::new(name? : String, host? : String, port? : Int, timeout_ms? : Int) -> Self
+pub fn RpcServerConf::not_equal(Self, Self) -> Bool
+pub fn RpcServerConf::to_repr(Self) -> @debug.Repr
 
 pub struct Server {
   conf : ServiceConf
@@ -854,9 +921,11 @@ pub(all) struct ServiceConf {
   timeout_ms : Int
   log_level : LogLevel
 } derive(Eq, @json.FromJson)
+pub fn ServiceConf::equal(Self, Self) -> Bool
 pub fn ServiceConf::from_json(String) -> Self raise ConfigError
 pub fn ServiceConf::from_yaml(String) -> Self raise ConfigError
 pub fn ServiceConf::new(name? : String, host? : String, port? : Int, timeout_ms? : Int, log_level? : LogLevel) -> Self
+pub fn ServiceConf::not_equal(Self, Self) -> Bool
 
 pub struct Shedder {
   threshold : Int64
@@ -883,7 +952,10 @@ pub(all) struct SignatureConf {
   expiry_ms : Int64
   private_keys : Array[PrivateKeyConf]
 } derive(Eq, @debug.Debug)
+pub fn SignatureConf::equal(Self, Self) -> Bool
 pub fn SignatureConf::new(strict? : Bool, expiry_ms? : Int64, private_keys? : Array[PrivateKeyConf]) -> Self
+pub fn SignatureConf::not_equal(Self, Self) -> Bool
+pub fn SignatureConf::to_repr(Self) -> @debug.Repr
 
 pub struct TokenBucket {
   capacity : Double

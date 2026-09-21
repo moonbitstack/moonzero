@@ -493,3 +493,9 @@ pub fn LoadBalancedChannel::call_bidi_streaming(
     Err(status) => Err(status)
   }
 }
+
+///|
+pub extend RegistryEvent with Debug::{to_repr}
+
+///|
+pub extend RegistryEvent with Eq::{not_equal, equal}

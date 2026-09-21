@@ -136,3 +136,9 @@ pub fn Window::each(self : Window, now : Int64, f : (Bucket) -> Unit) -> Unit {
     f(self.buckets[(head + i) % self.size])
   }
 }
+
+///|
+pub extend Outcome with Debug::{to_repr}
+
+///|
+pub extend Outcome with Eq::{not_equal, equal}

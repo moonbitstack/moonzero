@@ -740,3 +740,54 @@ pub fn EtcdPutResponse::decode(
   }
   { prev_kv, }
 }
+
+///|
+pub extend EtcdKeyValue with Eq::{not_equal, equal}
+
+///|
+pub extend EtcdRangeRequest with Eq::{not_equal, equal}
+
+///|
+pub extend EtcdRangeResponse with Eq::{not_equal, equal}
+
+///|
+pub extend EtcdPutRequest with Eq::{not_equal, equal}
+
+///|
+pub extend EtcdLeaseGrantRequest with Eq::{not_equal, equal}
+
+///|
+pub extend EtcdLeaseGrantResponse with Eq::{not_equal, equal}
+
+///|
+pub extend EtcdLeaseKeepAliveRequest with Eq::{not_equal, equal}
+
+///|
+pub extend EtcdLeaseKeepAliveResponse with Eq::{not_equal, equal}
+
+///|
+pub extend EtcdEventType with Eq::{not_equal, equal}
+
+///|
+pub extend EtcdEvent with Eq::{not_equal, equal}
+
+///|
+pub extend EtcdWatchCreateRequest with Eq::{not_equal, equal}
+
+///|
+pub extend EtcdWatchCancelRequest with Eq::{not_equal, equal}
+
+///|
+pub extend EtcdWatchRequest with Eq::{not_equal, equal}
+
+///|
+pub extend EtcdWatchResponse with Eq::{not_equal, equal}
+
+///|
+pub extend EtcdDeleteRangeRequest with Eq::{not_equal, equal}
+
+///|
+pub extend EtcdDeleteRangeResponse with Eq::{not_equal, equal}
+
+///|
+pub extend EtcdPutResponse with Eq::{not_equal, equal}

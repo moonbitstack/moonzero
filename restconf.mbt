@@ -374,3 +374,21 @@ pub fn RestEngine::build(self : RestEngine, app : @moonapi.App) -> Server {
   }
   server
 }
+
+///|
+pub extend MiddlewaresConf with Debug::{to_repr}
+
+///|
+pub extend MiddlewaresConf with Eq::{not_equal, equal}
+
+///|
+pub extend PrivateKeyConf with Debug::{to_repr}
+
+///|
+pub extend PrivateKeyConf with Eq::{not_equal, equal}
+
+///|
+pub extend SignatureConf with Debug::{to_repr}
+
+///|
+pub extend SignatureConf with Eq::{not_equal, equal}

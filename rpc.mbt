@@ -273,3 +273,9 @@ pub fn RpcGroup::register_bidi_streaming(
 ) -> Unit {
   self.server.register_bidi_streaming({ service: self.service, name, }, factory)
 }
+
+///|
+pub extend RpcServerConf with Debug::{to_repr}
+
+///|
+pub extend RpcServerConf with Eq::{not_equal, equal}

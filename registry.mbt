@@ -227,3 +227,9 @@ pub fn pick_first(endpoints : Array[Endpoint]) -> Endpoint? {
     Some(endpoints[0])
   }
 }
+
+///|
+pub extend Endpoint with Debug::{to_repr}
+
+///|
+pub extend Endpoint with Eq::{not_equal, equal}

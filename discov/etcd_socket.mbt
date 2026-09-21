@@ -144,3 +144,6 @@ pub async fn EtcdSocket::lease_grant(
     self.unary_bytes("/etcdserverpb.Lease/LeaseGrant", req.encode()),
   )
 }
+
+///|
+pub extend EtcdSocket with LeaseKeeper::{forget, renew, grant}

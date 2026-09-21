@@ -3,19 +3,7 @@
 /// remapped to `-`/`_` and trailing `=` dropped — the alphabet JWT uses for its
 /// header, payload, and signature segments.
 pub fn base64url_encode(data : Bytes) -> String {
-  let std = @base64.encode(data[:], padding=false)
-  let sb = StringBuilder()
-  for i = 0; i < std.length(); i = i + 1 {
-    let c = std[i]
-    if c == '+' {
-      sb.write_char('-')
-    } else if c == '/' {
-      sb.write_char('_')
-    } else {
-      sb.write_char(c.unsafe_to_char())
-    }
-  }
-  sb.to_string()
+  @base64.encode(data[:], kind=Url, padding=false)
 }
 
 ///|
@@ -23,18 +11,7 @@ pub fn base64url_encode(data : Bytes) -> String {
 /// `-`/`_` to `+`/`/` before decoding. Lenient about missing padding, the way
 /// JWT segments are written.
 pub fn base64url_decode(s : String) -> Bytes {
-  let sb = StringBuilder()
-  for i = 0; i < s.length(); i = i + 1 {
-    let c = s[i]
-    if c == '-' {
-      sb.write_char('+')
-    } else if c == '_' {
-      sb.write_char('/')
-    } else {
-      sb.write_char(c.unsafe_to_char())
-    }
-  }
-  @base64.decode_lossy(sb.to_string())
+  @base64.decode_lossy(s, kind=Url)
 }
 
 ///|

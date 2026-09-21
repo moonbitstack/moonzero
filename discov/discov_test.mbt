@@ -9,14 +9,14 @@ async test "file registry round-trips a real file: reload picks up a persisted i
     let dir = @fs.tmpdir(prefix="mz-reg-rt")
     let path = dir + "/registry.json"
     let writer = @moonzero.PersistentRegistry::new()
-    persist_registry(path, writer)
-    let reader = FileRegistry::load(path)
+    @discov.persist_registry(path, writer)
+    let reader = @discov.FileRegistry::load(path)
     assert_eq(reader.resolve("greet.Greeter").length(), 0)
     let _ = writer.register(
       "greet.Greeter",
       @moonzero.Endpoint::new("10.0.0.7", 9001),
     )
-    persist_registry(path, writer)
+    @discov.persist_registry(path, writer)
     let events = reader.reload()
     assert_eq(events.length(), 1)
     match events[0] {
@@ -41,12 +41,12 @@ async test "file registry reload emits a Delete when an instance leaves" {
       "greet.Greeter",
       @moonzero.Endpoint::new("10.0.0.7", 9001),
     )
-    persist_registry(path, writer)
-    let reader = FileRegistry::load(path)
+    @discov.persist_registry(path, writer)
+    let reader = @discov.FileRegistry::load(path)
     assert_eq(reader.resolve("greet.Greeter").length(), 1)
     let removed = writer.deregister("greet.Greeter", key)
     assert_eq(removed, true)
-    persist_registry(path, writer)
+    @discov.persist_registry(path, writer)
     let events = reader.reload()
     assert_eq(events.length(), 1)
     match events[0] {
@@ -71,8 +71,8 @@ async test "file registry drives a balancer after a real reload" {
       "greet.Greeter",
       @moonzero.Endpoint::new("10.0.0.5", 8443),
     )
-    persist_registry(path, writer)
-    let reader = FileRegistry::load(path)
+    @discov.persist_registry(path, writer)
+    let reader = @discov.FileRegistry::load(path)
     let _ = reader.reload()
     let resolve = reader.resolver()
     match @moonzero.pick_first(resolve("greet.Greeter")) {
@@ -92,8 +92,8 @@ async test "file registry watcher fires on a real file change" {
     let dir = @fs.tmpdir(prefix="mz-watch")
     let path = dir + "/registry.json"
     let writer = @moonzero.PersistentRegistry::new()
-    persist_registry(path, writer)
-    let reader = FileRegistry::load(path)
+    @discov.persist_registry(path, writer)
+    let reader = @discov.FileRegistry::load(path)
     let watcher = @fs.Watcher(dir)
     let holder : Ref[Array[@moonzero.RegistryEvent]] = Ref([])
     let task = g.spawn(() => holder.val = reader.watch_once(watcher))
@@ -102,7 +102,7 @@ async test "file registry watcher fires on a real file change" {
       "greet.Greeter",
       @moonzero.Endpoint::new("10.0.0.9", 9100),
     )
-    persist_registry(path, writer)
+    @discov.persist_registry(path, writer)
     task.wait()
     watcher.close()
     let events = holder.val

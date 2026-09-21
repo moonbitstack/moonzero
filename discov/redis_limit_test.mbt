@@ -213,9 +213,9 @@ async test "redis_rate_limit: two assembled apps share one bucket" {
 /// arrangement two replicas have. Gated on `MOON_REDIS_TEST`.
 async test "integration: two period limiters on a live redis share the window" {
   guard @env.get_env_var("MOON_REDIS_TEST") is Some(_) else { return }
-  let s1 = RedisSocket::connect(redis_test_host(), 6379)
+  let s1 = @discov.RedisSocket::connect(redis_test_host(), 6379)
   defer s1.close()
-  let s2 = RedisSocket::connect(redis_test_host(), 6379)
+  let s2 = @discov.RedisSocket::connect(redis_test_host(), 6379)
   defer s2.close()
   let prefix = "moonzero-ci-limit/"
   let key = "period"
@@ -248,9 +248,9 @@ async test "integration: two period limiters on a live redis share the window" {
 /// clock so the refill step is exact. Gated on `MOON_REDIS_TEST`.
 async test "integration: two token limiters on a live redis share the bucket" {
   guard @env.get_env_var("MOON_REDIS_TEST") is Some(_) else { return }
-  let s1 = RedisSocket::connect(redis_test_host(), 6379)
+  let s1 = @discov.RedisSocket::connect(redis_test_host(), 6379)
   defer s1.close()
-  let s2 = RedisSocket::connect(redis_test_host(), 6379)
+  let s2 = @discov.RedisSocket::connect(redis_test_host(), 6379)
   defer s2.close()
   let key = "moonzero-ci-limit/token"
   let _ = s1.command(["DEL", "{" + key + "}.tokens", "{" + key + "}.ts"])

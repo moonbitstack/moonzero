@@ -1,5 +1,5 @@
 // The etcd Watch stream, driven against a mock etcd Watch RPC over a real socket: the
-// server streams a `created` acknowledgement then a PUT event, and `EtcdSocket::watch` reads
+// server streams a `created` acknowledgement then a PUT event, and `@discov.EtcdSocket::watch` reads
 // and decodes both off the wire. The real-etcd counterpart is gated in the integration test.
 
 ///|
@@ -35,7 +35,7 @@ async test "etcd watch: reads created then a PUT event off a streamed Watch RPC"
     })
     let ts = g.spawn(() => server.serve(port=18140))
     @async.sleep(300)
-    let sock = EtcdSocket::connect("127.0.0.1", 18140)
+    let sock = @discov.EtcdSocket::connect("127.0.0.1", 18140)
     let responses = sock.watch(
       { key: b"svc/", range_end: b"svc0", start_revision: 0L, },
       2,

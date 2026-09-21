@@ -1,6 +1,6 @@
 name = "moonbitstack/moonzero"
 
-version = "0.7.3"
+version = "0.7.4"
 
 readme = "README.md"
 
@@ -20,6 +20,7 @@ keywords = [
 description = "moonzero — a service framework for MoonBit (← go-zero): config-driven assembly of a moonapi application with middleware, producing a runnable moonasgi AsgiApp. v0.6.2 runs real unary, server/client-streaming, and bidirectional zRPC calls over moonrpc's h2c transport (an in-process RpcChannel drives HPACK HEADERS + length-prefixed DATA + grpc-status trailers through the H2Server engine), graceful shutdown draining in-flight calls, a persisted, watchable etcd v3-shaped registry (watch, events_since catch-up, snapshot/restore) with round-robin/pick-first balancers and a load-balanced client, real file-backed registry I/O over moonbitlang/async's fs with a live filesystem watcher (native discov driver), request metrics (counter + latency histogram), and W3C traceparent propagation."
 
 import {
+  "moonbitstack/moonbase@0.4.0",
   "moonbitstack/moonapi@0.8.1",
   "moonbitstack/moonasgi@0.8.2",
   "moonbitstack/moonrpc@0.10.1",
