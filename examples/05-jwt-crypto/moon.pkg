@@ -1,6 +1,7 @@
 import {
   "moonbitstack/moonzero",
   "moonbitstack/mooncred/jwt",
+  "moonbitstack/moonbase/base16",
 }
 
 pkgtype(kind: "executable")

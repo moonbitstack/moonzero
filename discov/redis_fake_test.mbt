@@ -277,23 +277,7 @@ fn split_script_args(args : Array[Bytes]) -> (Array[Bytes], Array[Bytes]) {
 /// A stable 40-hex-character digest standing in for the SHA1 redis addresses a script
 /// by; the shape is what matters, not the algorithm.
 fn digest(source : String) -> String {
-  let hash = @moonzero.sha256(@utf8.encode(source))
-  let hex = StringBuilder()
-  for i = 0; i < 20; i = i + 1 {
-    let b = hash[i].to_int()
-    hex.write_char(hex_digit(b / 16))
-    hex.write_char(hex_digit(b % 16))
-  }
-  hex.to_string()
-}
-
-///|
-fn hex_digit(n : Int) -> Char {
-  if n < 10 {
-    (48 + n).unsafe_to_char()
-  } else {
-    (87 + n).unsafe_to_char()
-  }
+  @base16.encode(@moonzero.sha256(@utf8.encode(source))[0:20])
 }
 
 ///|

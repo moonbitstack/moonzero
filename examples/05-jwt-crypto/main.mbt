@@ -8,8 +8,11 @@
 #coverage.skip
 fn main {
   // SHA-256 of "abc" — the FIPS 180-4 vector mooncrypt is checked against.
-  println("sha256(\"abc\") = " + to_hex(@moonzero.sha256(b"abc")))
-  println("hmac_sha256 = " + to_hex(@moonzero.hmac_sha256(b"key", b"heke1228")))
+  println("sha256(\"abc\") = " + @base16.encode(@moonzero.sha256(b"abc")))
+  println(
+    "hmac_sha256 = " +
+    @base16.encode(@moonzero.hmac_sha256(b"key", b"heke1228")),
+  )
 
   // Constant-time equality: same bytes match, different bytes do not.
   let a = @moonzero.sha256(b"qwe")
@@ -113,16 +116,4 @@ fn count_dots(s : String) -> Int {
     }
   }
   n
-}
-
-///|
-fn to_hex(b : Bytes) -> String {
-  let digits = "0123456789abcdef"
-  let sb = StringBuilder()
-  for i = 0; i < b.length(); i = i + 1 {
-    let v = b[i].to_int()
-    sb.write_char(digits[(v >> 4) & 0xF].to_int().unsafe_to_char())
-    sb.write_char(digits[v & 0xF].to_int().unsafe_to_char())
-  }
-  sb.to_string()
 }

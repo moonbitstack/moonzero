@@ -24,3 +24,7 @@ import {
   "moonbitlang/core/random",
   "moonbitlang/core/string",
 }
+
+import {
+  "moonbitstack/moonbase/base16",
+} for "wbtest"

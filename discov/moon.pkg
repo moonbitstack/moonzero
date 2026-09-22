@@ -23,4 +23,5 @@ import {
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/string",
   "moonbitstack/moonlog",
+  "moonbitstack/moonbase/base16",
 } for "test"

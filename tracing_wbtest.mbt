@@ -40,6 +40,9 @@ test "parse_traceparent round-trips a valid header and rejects malformed ones" {
     }
     None => fail("valid traceparent should parse")
   }
+  // The flags are one hexadecimal byte, both digits of it.
+  let high = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-a3"
+  assert_eq(parse_traceparent(high).map(ctx => ctx.flags), Some(0xa3))
   // wrong field count
   assert_eq(parse_traceparent("00-abc-01") is None, true)
   // trace-id too short

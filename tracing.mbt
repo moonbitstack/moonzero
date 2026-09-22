@@ -103,30 +103,9 @@ pub fn parse_traceparent(value : String) -> TraceContext? {
   if !is_hex(parts[3], 2) {
     return None
   }
-  Some({ trace_id: parts[1], span_id: parts[2], flags: hex_byte(parts[3]), })
-}
-
-///|
-/// Parse a two-hex-digit string as a byte (`0` on a bad digit).
-fn hex_byte(s : String) -> Int {
-  if s.length() != 2 {
-    return 0
-  }
-  (hex_digit(s[0].to_int()) << 4) | hex_digit(s[1].to_int())
-}
-
-///|
-/// A single hex digit's value (`0` on a non-hex code unit).
-fn hex_digit(c : Int) -> Int {
-  if c >= 0x30 && c <= 0x39 {
-    c - 0x30
-  } else if c >= 0x61 && c <= 0x66 {
-    c - 0x61 + 10
-  } else if c >= 0x41 && c <= 0x46 {
-    c - 0x41 + 10
-  } else {
-    0
-  }
+  // `is_hex` has vouched for both digits, so the parse cannot fail.
+  let flags = @string.parse_int(parts[3][:], base=16) catch { _ => 0 }
+  Some({ trace_id: parts[1], span_id: parts[2], flags, })
 }
 
 ///|
