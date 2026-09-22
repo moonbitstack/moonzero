@@ -21,10 +21,6 @@ SECTIONS = [
      "FromJson path plus lenient ServiceConf::from_json / from_yaml loaders that "
      "fill omitted fields from the new() defaults, the way go-zero's conf.Load "
      "applies ,optional/,default= tags."),
-    ("yaml", "yaml.mbt", "YAML config parser",
-     "A self-built minimal-subset YAML parser (block mappings, indentation "
-     "nesting, sequences, quoted/typed scalars, comments) into a Json value — "
-     "the etc/*.yaml format go-zero actually ships, complementing the JSON loader."),
     ("crypto", "crypto.mbt", "Crypto primitives",
      "Self-built SHA-256 (FIPS 180-4) and HMAC-SHA256 (RFC 2104), verified "
      "against NIST/RFC vectors, plus a constant-time byte comparison — the "
