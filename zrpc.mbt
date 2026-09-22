@@ -28,9 +28,9 @@ fn parse_ascii_int(b : Bytes) -> Int {
 }
 
 ///|
-/// The value of the first `@moonrpc.Header` whose name equals the ASCII `name`,
+/// The value of the first `@header.Header` whose name equals the ASCII `name`,
 /// or `None`.
-fn h2_header_value(headers : Array[@moonrpc.Header], name : String) -> Bytes? {
+fn h2_header_value(headers : Array[@header.Header], name : String) -> Bytes? {
   let want = ascii_bytes(name)
   for h in headers {
     if h.name == want {
@@ -102,8 +102,8 @@ pub fn RpcServer::to_h2(self : RpcServer) -> @moonrpc.H2Server {
 /// across every call on the channel.
 pub struct RpcChannel {
   engine : @moonrpc.H2Server
-  encoder : @moonrpc.HpackEncoder
-  decoder : @moonrpc.HpackDecoder
+  encoder : @hpack.Encoder
+  decoder : @hpack.Decoder
   authority : String
   mut next_stream_id : Int
 }
@@ -119,8 +119,8 @@ pub fn RpcChannel::connect(
   let engine = server.to_h2()
   let ch = {
     engine,
-    encoder: @moonrpc.HpackEncoder::new(),
-    decoder: @moonrpc.HpackDecoder::new(),
+    encoder: @hpack.Encoder::new(),
+    decoder: @hpack.Decoder::new(),
     authority,
     next_stream_id: 1,
   }
@@ -346,17 +346,14 @@ pub fn RpcChannel::call_bidi_streaming(
 ///|
 /// Split a run of concatenated gRPC length-prefixed messages into their payloads,
 /// returning the complete messages and any trailing partial-message octets that
-/// have not yet arrived in full. Like `decode_all_messages` but surfaces the
+/// have not yet arrived in full. Like `@moonrpc.split_messages` but surfaces the
 /// remainder so a streaming caller can carry it across DATA frames.
 fn drain_messages(body : Bytes) -> (Array[Bytes], Bytes) {
   let out : Array[Bytes] = []
   let n = body.length()
   let mut off = 0
   while n - off >= 5 {
-    let len = (body[off + 1].to_int() << 24) |
-      (body[off + 2].to_int() << 16) |
-      (body[off + 3].to_int() << 8) |
-      body[off + 4].to_int()
+    let len = @moonrpc.message_len(body[:], at=off).unwrap()
     if n - off < 5 + len {
       break
     }
@@ -379,12 +376,12 @@ fn RpcChannel::open(
   let sid = self.next_stream_id
   self.next_stream_id = self.next_stream_id + 2
   let block = self.encoder.encode([
-    { name: b":method", value: b"POST", },
-    { name: b":scheme", value: b"http", },
-    { name: b":path", value: ascii_bytes(path), },
-    { name: b":authority", value: ascii_bytes(self.authority), },
-    { name: b"content-type", value: b"application/grpc", },
-    { name: b"te", value: b"trailers", },
+    @header.Header::of(":method", "POST"),
+    @header.Header::of(":scheme", "http"),
+    @header.Header::of(":path", path),
+    @header.Header::of(":authority", self.authority),
+    @header.Header::of("content-type", "application/grpc"),
+    @header.Header::of("te", "trailers"),
   ])
   let frames = self.engine.feed(
     Headers(
@@ -441,27 +438,5 @@ fn RpcChannel::collect_reply(
       _ => ()
     }
   }
-  (status_code, decode_all_messages(body.to_bytes()))
-}
-
-///|
-/// Split a run of concatenated gRPC length-prefixed messages into their payloads,
-/// stopping at the first truncated frame. Each message is a 1-byte compression flag
-/// plus a 4-byte big-endian length plus that many payload octets.
-fn decode_all_messages(body : Bytes) -> Array[Bytes] {
-  let out : Array[Bytes] = []
-  let n = body.length()
-  let mut off = 0
-  while n - off >= 5 {
-    let len = (body[off + 1].to_int() << 24) |
-      (body[off + 2].to_int() << 16) |
-      (body[off + 3].to_int() << 8) |
-      body[off + 4].to_int()
-    if n - off < 5 + len {
-      break
-    }
-    out.push(body[off + 5:off + 5 + len].to_owned())
-    off = off + 5 + len
-  }
-  out
+  (status_code, @moonrpc.split_messages(body.to_bytes()))
 }

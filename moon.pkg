@@ -5,6 +5,8 @@ import {
   "moonbitstack/moonapi",
   "moonbitstack/moonasgi",
   "moonbitstack/moonrpc",
+  "moonbitstack/moonhttp/header",
+  "moonbitstack/moonhttp/hpack",
   "moonbitstack/mooncrypt/hash/sha2",
   "moonbitstack/mooncrypt/mac/hmac",
   "moonbitstack/mooncrypt/spec",

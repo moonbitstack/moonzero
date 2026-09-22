@@ -8,6 +8,7 @@ import {
   "moonbitstack/moonasgi/http",
   "moonbitstack/moonasgi/spec",
   "moonbitstack/mooncred/jwt",
+  "moonbitstack/moonhttp/hpack",
   "moonbitstack/moonlog",
   "moonbitstack/moonrpc",
 }
@@ -852,8 +853,8 @@ pub fn RoundRobin::pick(Self, Array[Endpoint]) -> Endpoint?
 
 pub struct RpcChannel {
   engine : @moonrpc.H2Server
-  encoder : @moonrpc.HpackEncoder
-  decoder : @moonrpc.HpackDecoder
+  encoder : @hpack.Encoder
+  decoder : @hpack.Decoder
   authority : String
   mut next_stream_id : Int
 }
