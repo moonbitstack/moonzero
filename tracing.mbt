@@ -12,15 +12,12 @@ fn splitmix64(x : UInt64) -> UInt64 {
 }
 
 ///|
-/// The 16 lowercase hex digits of a 64-bit value, most-significant nibble first.
+/// A 64-bit value as its eight big-endian octets in lowercase base16, which is how
+/// W3C Trace Context writes a span id and each half of a trace id.
 fn hex16(v : UInt64) -> String {
-  let digits = "0123456789abcdef"
-  let sb = StringBuilder()
-  for i = 15; i >= 0; i = i - 1 {
-    let nibble = ((v >> (i * 4)) & 0xFUL).to_int()
-    sb.write_char(digits[nibble].to_int().unsafe_to_char())
-  }
-  sb.to_string()
+  let buf = Buffer()
+  @fixed.write_u64(buf, v)
+  @base16.encode(buf.to_bytes()[:])
 }
 
 ///|
@@ -66,15 +63,11 @@ pub fn TraceContext::span_id(self : TraceContext) -> String {
 }
 
 ///|
-/// A two-hex-digit rendering of a byte (the `traceparent` version/flags fields).
+/// One octet in lowercase base16 (the `traceparent` version and flags fields).
 fn two_hex(n : Int) -> String {
-  let digits = "0123456789abcdef"
-  let hi = digits[(n >> 4) & 0xF].to_int().unsafe_to_char()
-  let lo = digits[n & 0xF].to_int().unsafe_to_char()
-  let sb = StringBuilder()
-  sb.write_char(hi)
-  sb.write_char(lo)
-  sb.to_string()
+  let buf = Buffer()
+  @fixed.write_u8(buf, n)
+  @base16.encode(buf.to_bytes()[:])
 }
 
 ///|

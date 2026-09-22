@@ -25,7 +25,6 @@ moon run --target native examples/00-metrics    # native-only ones await the asy
 | 10 | [`etcd`](10-etcd/) | The `etcdserverpb` messages round-tripping, and `EtcdDiscovery` / `EtcdClient` over an in-process mock etcd | `EtcdKeyValue`, `EtcdClient`, `EtcdDiscovery`, `etcd_prefix_end` |
 | 11 | [`consul`](11-consul/) | The consul driver's wire surface: the register body, the check id, and the `health/service` parser | `consul_register_body`, `consul_check_id`, `consul_parse_health`, `ConsulResponse` |
 | 12 | [`redis`](12-redis/) | The RESP codec: encode a command, decode every RESP2/RESP3 reply shape, stream pipelined replies, build discovery keys | `resp_command`, `RespValue::decode`, `RespReader`, `redis_instance_key` |
-| 13 | [`http1`](13-http1/) | The HTTP/1 client codec: build a close-delimited request, parse a response, trim the body to Content-Length | `http1_request`, `http1_parse_response`, `Http1Response` |
 | 14 | [`discov-file`](14-discov-file/) | The native `discov` driver over a real file: publish a snapshot, load it, and reload the Put/Delete diff | `@discov.persist_registry`, `@discov.FileRegistry::load`/`reload`/`resolver` |
 
 ## Native-only examples

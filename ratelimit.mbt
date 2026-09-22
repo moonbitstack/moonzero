@@ -10,43 +10,35 @@
 /// one serves a single process, and is what `RedisTokenLimit` itself falls back to
 /// when redis is unreachable (← go-zero's `rescueLimiter`).
 pub struct TokenBucket {
-  capacity : Double
-  refill_per_ms : Double
-  mut tokens : Double
-  mut last_ms : Int64
+  bucket : @moonpool.Bucket
 }
 
 ///|
 /// Build a bucket admitting `rate` requests per second on average with room for a
 /// `burst` of that many back-to-back (default `burst = rate`). It starts full at
-/// time `now`. A non-positive `rate`/`burst` is clamped to a minimum so the
-/// bucket always has a defined capacity.
+/// time `now`, in milliseconds.
+///
+/// The bucket is moonpool's; this keeps go-zero's shape and its millisecond clock.
+/// A capacity below one token is raised to one, because a bucket that can never hold
+/// a whole token admits nothing at all — which is what a fractional `rate` with no
+/// `burst` used to give.
 pub fn TokenBucket::new(
   rate : Double,
   burst? : Double = -1.0,
   now? : Int64 = 0,
 ) -> TokenBucket {
-  let cap = if burst <= 0.0 { rate } else { burst }
-  let cap = if cap <= 0.0 { 1.0 } else { cap }
-  { capacity: cap, refill_per_ms: rate / 1000.0, tokens: cap, last_ms: now, }
-}
-
-///|
-/// Add the tokens accrued since `last_ms` up to `now`, capped at `capacity`. A
-/// clock that moves backwards is treated as no elapsed time.
-fn TokenBucket::refill(self : TokenBucket, now : Int64) -> Unit {
-  let elapsed = now - self.last_ms
-  if elapsed > 0L {
-    let added = elapsed.to_double() * self.refill_per_ms
-    let filled = self.tokens + added
-    self.tokens = if filled > self.capacity { self.capacity } else { filled }
-    self.last_ms = now
+  {
+    bucket: @moonpool.Bucket::new(
+      rate,
+      burst=if burst <= 0.0 { 0.0 } else { burst },
+      at=nanos(now),
+    ),
   }
 }
 
 ///|
-/// Try to admit one request at time `now`: refill, then spend a token if one is
-/// available. Returns `true` when admitted, `false` when the bucket is empty.
+/// Try to admit one request at time `now`. Returns `true` when admitted, `false`
+/// when the bucket is empty.
 pub fn TokenBucket::allow(self : TokenBucket, now : Int64) -> Bool {
   self.allow_n(1.0, now)
 }
@@ -59,21 +51,20 @@ pub fn TokenBucket::allow_n(
   n : Double,
   now : Int64,
 ) -> Bool {
-  self.refill(now)
-  if self.tokens >= n {
-    self.tokens = self.tokens - n
-    true
-  } else {
-    false
-  }
+  self.bucket.take(nanos(now), n~)
 }
 
 ///|
-/// The (fractional) number of tokens currently available, after refilling to
-/// `now`. Useful for metrics and tests.
+/// The (fractional) number of tokens currently available at `now`. Useful for
+/// metrics and tests.
 pub fn TokenBucket::available(self : TokenBucket, now : Int64) -> Double {
-  self.refill(now)
-  self.tokens
+  self.bucket.tokens(nanos(now))
+}
+
+///|
+/// A millisecond reading as the nanoseconds moonpool's clock is read in.
+fn nanos(ms : Int64) -> Int64 {
+  ms * 1_000_000L
 }
 
 ///|

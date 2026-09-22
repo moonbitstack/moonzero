@@ -10,6 +10,7 @@ import {
   "moonbitstack/mooncred/jwt",
   "moonbitstack/moonhttp/hpack",
   "moonbitstack/moonlog",
+  "moonbitstack/moonpool",
   "moonbitstack/moonrpc",
 }
 
@@ -47,10 +48,6 @@ pub fn generate_span_id(Int64) -> String
 pub fn generate_trace_id(Int64) -> String
 
 pub fn hmac_sha256(Bytes, Bytes) -> Bytes
-
-pub fn http1_parse_response(Bytes) -> Http1Response raise Http1Error
-
-pub fn http1_request(String, String, String, Bytes, content_type? : String) -> Bytes
 
 pub fn jwt_authorized(String?, String, Int64) -> Bool
 
@@ -159,10 +156,6 @@ pub suberror ConsulError {
 
 pub suberror EtcdError {
   EtcdError(String)
-}
-
-pub suberror Http1Error {
-  Http1Error(String)
 }
 
 pub suberror RedisError {
@@ -515,15 +508,6 @@ pub fn Histogram::observe(Self, Double) -> Unit
 pub fn Histogram::sum_value(Self) -> Double
 pub fn Histogram::to_exposition(Self, name~ : String, help~ : String) -> String
 pub fn Histogram::total(Self) -> Int64
-
-pub struct Http1Response {
-  status : Int
-  headers : Array[(String, String)]
-  body : Bytes
-}
-pub fn Http1Response::body(Self) -> Bytes
-pub fn Http1Response::header(Self, String) -> String?
-pub fn Http1Response::status(Self) -> Int
 
 pub struct InMemoryRegistry {
   instances : Map[String, Map[String, Endpoint]]
@@ -978,10 +962,7 @@ pub fn SignatureConf::not_equal(Self, Self) -> Bool
 pub fn SignatureConf::to_repr(Self) -> @debug.Repr
 
 pub struct TokenBucket {
-  capacity : Double
-  refill_per_ms : Double
-  mut tokens : Double
-  mut last_ms : Int64
+  bucket : @moonpool.Bucket
 }
 pub fn TokenBucket::allow(Self, Int64) -> Bool
 pub fn TokenBucket::allow_n(Self, Double, Int64) -> Bool

@@ -106,10 +106,10 @@ SECTIONS = [
     ("redis", ("redis.mbt", "redis_discovery.mbt", "resp.mbt"), "redis",
      "The RESP protocol codec, the redis client over it, and the discovery driver "
      "that keeps instances in a keyed set with an expiry."),
-    ("transports", ("discov/etcd_socket.mbt", "discov/consul_socket.mbt", "discov/redis_socket.mbt", "http1c.mbt"),
+    ("transports", ("discov/etcd_socket.mbt", "discov/consul_socket.mbt", "discov/redis_socket.mbt"),
      "Native transports",
      "What actually talks to a real server: the etcd gRPC socket, the consul HTTP "
-     "socket, the redis socket, and the minimal HTTP/1.1 client under them. "
+     "socket and the redis socket. The HTTP/1.1 messages are moonhttp's. "
      "Native-only, which is why the portable core is written against traits instead."),
     ("limiting", ("maxconns.mbt", "periodlimit.mbt"), "Admission control",
      "The concurrency limiter that sheds load past a ceiling — releasing its permit "

@@ -7,6 +7,8 @@ supported_targets = "native"
 import {
   "moonbitstack/moonzero",
   "moonbitstack/moonrpc/net",
+  "moonbitstack/moonhttp/http1",
+  "moonbitstack/moonhttp/header",
   "moonbitlang/async",
   "moonbitlang/async/fs",
   "moonbitlang/async/io",

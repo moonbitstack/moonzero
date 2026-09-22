@@ -1,10 +1,9 @@
 // HTTP over a real TCP socket: a consul agent transport the discovery flow drives
 // against a live consul. moonzero's root `ConsulHttp` is synchronous (so the driver and
 // its mock run on every backend), but socket I/O is async, so the real transport is a
-// separate native-only path here — it reuses the root's pure HTTP/1 codec
-// (`http1_request` to frame the request, `http1_parse_response` to parse the reply) and
-// only adds the async connect/send/receive. Native-only, because `moonbitlang/async`
-// has no JS/Wasm backend.
+// separate native-only path here. The messages are moonhttp's; this adds only the
+// async connect, send and receive. Native-only, because `moonbitlang/async` has no
+// JS/Wasm backend.
 
 ///|
 /// A consul agent reachable over HTTP at `host:port`. Each request opens a fresh
@@ -31,20 +30,60 @@ pub async fn ConsulSocket::request(
 ) -> @moonzero.ConsulResponse {
   let addr = @socket.Addr::resolve(self.host, port=self.port)
   let tcp = @socket.Tcp::connect(addr)
-  let content_type = if body.length() > 0 { "application/json" } else { "" }
-  let host_header = self.host + ":" + self.port.to_string()
-  let request = @moonzero.http1_request(
+  let fields = if body.length() > 0 {
+    [@header.Header::of("content-type", "application/json")]
+  } else {
+    []
+  }
+  // HTTP/1.0 with the connection closing, so the reply is delimited by the close
+  // and there is no chunked framing to unpick for a short JSON round trip.
+  let head = @http1.Request::of(
     verb,
     path,
-    host_header,
-    body,
-    content_type~,
+    version="HTTP/1.0",
+    host=self.host + ":" + self.port.to_string(),
+    body=Sized(body.length()),
+    fields~,
+    keep_alive=false,
   )
   // The socket has to close on every path, cancellation included — there is no fd
   // finalizer to reclaim it otherwise.
   defer tcp.close()
-  (tcp : &@io.Writer).write(request)
-  let raw = (tcp : &@io.Reader).read_all()
-  let parsed = @moonzero.http1_parse_response(raw.binary())
-  @moonzero.ConsulResponse::new(parsed.status(), parsed.body())
+  (tcp : &@io.Writer).write(head.encode())
+  (tcp : &@io.Writer).write(body)
+  let raw = (tcp : &@io.Reader).read_all().binary()
+  let (resp, used) = @http1.response(raw[:], verb~)
+  @moonzero.ConsulResponse::new(resp.status, content(raw, used, resp.body))
+}
+
+///|
+/// The body of a reply that has been read to its close, framed as the reply said.
+///
+/// A length longer than what arrived keeps what arrived rather than failing: the
+/// agent closed the connection, so there is no more coming.
+fn content(raw : Bytes, used : Int, body : @http1.Body) -> Bytes raise {
+  match body {
+    Sized(n) =>
+      if used + n <= raw.length() {
+        raw[used:used + n].to_owned()
+      } else {
+        raw[used:].to_owned()
+      }
+    Closed => raw[used:].to_owned()
+    Empty => b""
+    Chunked => {
+      let out = Buffer()
+      let mut at = used
+      for ;; {
+        match @http1.chunked(raw[at:]) {
+          Piece(part, n) => {
+            out.write_bytes(part)
+            at = at + n
+          }
+          Done(_, _) => break
+        }
+      }
+      out.to_bytes()
+    }
+  }
 }

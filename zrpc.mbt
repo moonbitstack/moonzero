@@ -257,7 +257,7 @@ pub fn RpcChannel::open_bidi(
 /// buffered.
 fn BidiCall::absorb(
   self : BidiCall,
-  frames : Array[@moonrpc.Frame],
+  frames : Array[@http2.Frame],
 ) -> Array[Bytes] raise {
   let acc = Buffer()
   acc.write_bytes(self.pending)
@@ -372,7 +372,7 @@ fn drain_messages(body : Bytes) -> (Array[Bytes], Bytes) {
 fn RpcChannel::open(
   self : RpcChannel,
   path : String,
-) -> (Int, Array[@moonrpc.Frame]) {
+) -> (Int, Array[@http2.Frame]) {
   let sid = self.next_stream_id
   self.next_stream_id = self.next_stream_id + 2
   let block = self.encoder.encode([
@@ -404,7 +404,7 @@ fn RpcChannel::feed_data(
   sid : Int,
   payload : Bytes,
   end : Bool,
-) -> Array[@moonrpc.Frame] {
+) -> Array[@http2.Frame] {
   self.engine.feed(Data(stream_id=sid, data=payload, end_stream=end, padding=0))
 }
 
@@ -417,7 +417,7 @@ fn RpcChannel::feed_data(
 fn RpcChannel::collect_reply(
   self : RpcChannel,
   sid : Int,
-  frames : Array[@moonrpc.Frame],
+  frames : Array[@http2.Frame],
 ) -> (Int, Array[Bytes]) raise {
   let body = Buffer()
   let mut status_code : Int = -1

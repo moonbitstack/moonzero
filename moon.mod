@@ -1,6 +1,6 @@
 name = "moonbitstack/moonzero"
 
-version = "0.10.0"
+version = "0.11.0"
 
 readme = "README.md"
 
@@ -22,12 +22,15 @@ description = "moonzero — a service framework for MoonBit (← go-zero): confi
 import {
   "moonbitstack/moonapi@0.11.0",
   "moonbitstack/moonasgi@0.10.0",
-  "moonbitstack/moonrpc@0.17.0",
+  "moonbitstack/moonrpc@0.18.0",
   "moonbitstack/mooncrypt@0.3.0",
   "moonbitstack/mooncred@0.6.0",
-  "moonbitstack/moonhttp@0.7.0",
+  "moonbitstack/moonhttp@0.8.0",
   "moonbitstack/moonjson@0.4.0",
   "moonbitstack/moonyaml@0.1.1",
   "moonbitstack/moonlog@0.1.0",
+  "moonbitstack/moonpool@0.1.0",
+  "moonbitstack/moonvar@0.2.0",
+  "moonbitstack/moonbase@0.4.0",
   "moonbitlang/async@0.20.3",
 }
