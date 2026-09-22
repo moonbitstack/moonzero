@@ -46,7 +46,7 @@ fn main {
   // Json tree the JSON loader produces. It reports its own error, with a
   // position, so it is caught where it is raised.
   try {
-    let doc = @yaml.loads(
+    let doc = @moonyaml.loads(
       "name: greet\nnested:\n  port: 9000\n  tags:\n    - a\n    - b\n",
     )
     println("yaml -> " + doc.stringify())

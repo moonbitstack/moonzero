@@ -46,7 +46,7 @@ pub fn Conf::of_json(src : String) -> Conf raise ConfigError {
 /// Load a document from the YAML go-zero ships as `etc/*.yaml`. Raises
 /// `ConfigError` on malformed YAML or a non-mapping root.
 pub fn Conf::of_yaml(src : String) -> Conf raise ConfigError {
-  let doc = @yaml.loads(src) catch {
+  let doc = @moonyaml.loads(src) catch {
     err =>
       raise ConfigError(
         "invalid YAML at line " +

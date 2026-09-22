@@ -1,6 +1,6 @@
 import {
   "moonbitstack/moonzero",
-  "moonbitstack/moonjson/yaml",
+  "moonbitstack/moonyaml",
 }
 
 pkgtype(kind: "executable")
