@@ -115,6 +115,26 @@ SECTIONS = [
      "The concurrency limiter that sheds load past a ceiling — releasing its permit "
      "with defer, so cancellation cannot wedge it shut — and the period limiter that "
      "counts requests per window."),
+    ("conf", "conf.mbt", "Config keys",
+     "go-zero's canonical key form: lowercased, `_` and `-` dropped, so MaxBytes, "
+     "maxBytes, max_bytes and max-bytes all name one field and a genuine etc/*.yaml "
+     "loads unchanged."),
+    ("restconf", "restconf.mbt", "Engine configuration",
+     "Which built-in layers the engine installs (<- MiddlewaresConf), every flag on by "
+     "default, so an etc/*.yaml that says nothing about middleware still gets the whole "
+     "chain."),
+    ("logx", "logx.mbt", "Logging",
+     "go-zero's logx over moonlog's sink: the four level names its etc/*.yaml carries, "
+     "the @timestamp / content keys its collectors index, the WithDuration view, and a "
+     "logger whose level and destination move at runtime."),
+    ("refusal", "refusal.mbt", "Turning a request away",
+     "What a request refused by a middleware receives: 503 for an open breaker, a spent "
+     "connection budget or a passed deadline, 429 for a rate limit, 413 for a body too "
+     "large. Each is a parameter."),
+    ("shedder", "shedder.mbt", "Load shedding",
+     "Shedding under CPU pressure (<- load.AdaptiveShedder, wired from "
+     "RestConf.CpuThreshold): admit at or below the threshold, shed above it, both "
+     "numbers per-mille as go-zero writes them."),
 ]
 KIND = {"struct": "struct", "enum": "enum", "fn": "fn", "type": "type", "let": "let"}
 
