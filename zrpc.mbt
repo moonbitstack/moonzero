@@ -12,7 +12,7 @@ fn ascii_bytes(s : String) -> Bytes {
 ///|
 /// Parse an ASCII decimal byte string (a `grpc-status` header value) as an `Int`.
 /// A non-digit octet or an empty value yields `-1`, which maps to `Unknown`.
-fn parse_ascii_int(b : Bytes) -> Int {
+fn parse_ascii_int(b : Bytes) -> Int32 {
   if b.length() == 0 {
     return -1
   }
@@ -44,7 +44,7 @@ fn h2_header_value(headers : Array[@header.Header], name : String) -> Bytes? {
 /// Map a numeric `grpc-status` code back to a `@moonrpc.Status`. Anything outside
 /// the canonical 0–16 range is reported as `Unknown`, matching how a gRPC client
 /// treats an unrecognised code.
-pub fn status_of_code(code : Int) -> @moonrpc.Status {
+pub fn status_of_code(code : Int32) -> @moonrpc.Status {
   match code {
     0 => Ok
     1 => Cancelled
@@ -105,7 +105,7 @@ pub struct RpcChannel {
   encoder : @hpack.Encoder
   decoder : @hpack.Decoder
   authority : String
-  mut next_stream_id : Int
+  mut next_stream_id : Int32
 }
 
 ///|
@@ -114,7 +114,7 @@ pub struct RpcChannel {
 /// odd identifiers (RFC 7540 §5.1.1), starting at 1.
 pub fn RpcChannel::connect(
   server : RpcServer,
-  authority? : String = "localhost",
+  authority~ : String = "localhost",
 ) -> RpcChannel {
   let engine = server.to_h2()
   let ch = {
@@ -222,9 +222,9 @@ pub fn RpcChannel::call_client_streaming(
 /// frames under flow control).
 pub struct BidiCall {
   channel : RpcChannel
-  sid : Int
+  sid : Int32
   mut pending : Bytes
-  mut status_code : Int
+  mut status_code : Int32
   mut ended : Bool
 }
 
@@ -372,7 +372,7 @@ fn drain_messages(body : Bytes) -> (Array[Bytes], Bytes) {
 fn RpcChannel::open(
   self : RpcChannel,
   path : String,
-) -> (Int, Array[@http2.Frame]) {
+) -> (Int32, Array[@http2.Frame]) {
   let sid = self.next_stream_id
   self.next_stream_id = self.next_stream_id + 2
   let block = self.encoder.encode([
@@ -401,7 +401,7 @@ fn RpcChannel::open(
 /// when `end` is set, and return the reply frames the engine emitted.
 fn RpcChannel::feed_data(
   self : RpcChannel,
-  sid : Int,
+  sid : Int32,
   payload : Bytes,
   end : Bool,
 ) -> Array[@http2.Frame] {
@@ -416,11 +416,11 @@ fn RpcChannel::feed_data(
 /// `grpc-status` was seen) and the decoded messages in order.
 fn RpcChannel::collect_reply(
   self : RpcChannel,
-  sid : Int,
+  sid : Int32,
   frames : Array[@http2.Frame],
-) -> (Int, Array[Bytes]) raise {
+) -> (Int32, Array[Bytes]) raise {
   let body = Buffer()
-  let mut status_code : Int = -1
+  let mut status_code : Int32 = -1
   for f in frames {
     match f {
       Headers(stream_id~, fragment~, ..) =>

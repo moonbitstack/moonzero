@@ -20,7 +20,7 @@ pub struct RedisSocket {
 
 ///|
 /// Open a RESP connection to `host:port`.
-pub async fn RedisSocket::connect(host : String, port : Int) -> RedisSocket {
+pub async fn RedisSocket::connect(host : String, port : Int32) -> RedisSocket {
   let addr = @socket.Addr::resolve(host, port~)
   let tcp = @socket.Tcp::connect(addr)
   { tcp, }
@@ -134,7 +134,7 @@ async fn RedisSocket::read_line(self : RedisSocket, buf : Buffer) -> Bytes {
 
 ///|
 /// Parse the signed integer following a RESP length/count marker (`$5`, `*-1`, ...).
-fn resp_socket_parse_len(line : Bytes) -> Int {
+fn resp_socket_parse_len(line : Bytes) -> Int32 {
   let mut i = 1
   let mut neg = false
   if i < line.length() && line[i] == b'-' {

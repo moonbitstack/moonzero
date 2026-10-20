@@ -40,7 +40,7 @@ pub struct ManualClock {
 
 ///|
 /// A manual clock starting at `start` milliseconds (default `0`).
-pub fn ManualClock::new(start? : Int64 = 0) -> ManualClock {
+pub fn ManualClock::new(start~ : Int64 = 0) -> ManualClock {
   { ms: start, }
 }
 

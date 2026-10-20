@@ -79,7 +79,7 @@ pub fn ServiceConf::from_yaml(src : String) -> ServiceConf raise ConfigError {
 fn service_conf_of(
   c : Conf,
   name_default? : String,
-  port_default? : Int,
+  port_default? : Int32,
 ) -> ServiceConf raise ConfigError {
   let def = ServiceConf::new()
   let name = c.string("Name", default?=name_default, env="MOONZERO_NAME")

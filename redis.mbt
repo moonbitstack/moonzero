@@ -69,7 +69,7 @@ pub async fn RedisClient::set_ex(
   self : RedisClient,
   key : Bytes,
   value : Bytes,
-  ttl_secs : Int,
+  ttl_secs : Int32,
 ) -> Unit raise RedisError {
   let reply = self.command([
     b"SET",
@@ -103,7 +103,7 @@ pub async fn RedisClient::get(
 pub async fn RedisClient::expire(
   self : RedisClient,
   key : Bytes,
-  ttl_secs : Int,
+  ttl_secs : Int32,
 ) -> Bool raise RedisError {
   match self.command([b"EXPIRE", key, @utf8.encode(ttl_secs.to_string())]) {
     Integer(n) => n == 1
@@ -137,7 +137,7 @@ pub async fn RedisClient::del(
 pub async fn RedisClient::scan_match(
   self : RedisClient,
   pattern : Bytes,
-  count : Int,
+  count : Int32,
 ) -> Array[Bytes] raise RedisError {
   let out : Array[Bytes] = []
   let mut cursor = b"0"

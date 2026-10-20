@@ -21,7 +21,7 @@ async fn consul_put_healthy(
   service : String,
   id : String,
   host : String,
-  port : Int,
+  port : Int32,
 ) -> Unit {
   let ok = sock.request(
     "PUT",

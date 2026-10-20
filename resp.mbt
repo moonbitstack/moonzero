@@ -98,7 +98,7 @@ pub fn RespValue::decode(data : Bytes) -> RespValue raise RespError {
 /// pipelined replies decode in sequence.
 pub struct RespReader {
   data : Bytes
-  mut pos : Int
+  mut pos : Int32
 }
 
 ///|
@@ -236,7 +236,7 @@ fn RespReader::read_verbatim(self : RespReader) -> RespValue raise RespError {
 ///|
 /// An aggregate's element count (the line after its marker), as a signed `Int` so the
 /// caller can tell a RESP2 null array (`-1`) from an empty one (`0`).
-fn RespReader::read_count(self : RespReader) -> Int raise RespError {
+fn RespReader::read_count(self : RespReader) -> Int32 raise RespError {
   self.read_line_int().to_int()
 }
 
@@ -244,7 +244,7 @@ fn RespReader::read_count(self : RespReader) -> Int raise RespError {
 /// Read exactly `count` values (a negative count reads none), for an array/set/push.
 fn RespReader::read_elems(
   self : RespReader,
-  count : Int,
+  count : Int32,
 ) -> Array[RespValue] raise RespError {
   let out : Array[RespValue] = []
   if count <= 0 {
@@ -276,7 +276,7 @@ fn RespReader::read_map(
 
 ///|
 /// Take exactly `n` bytes, advancing the cursor; an error if fewer remain.
-fn RespReader::take(self : RespReader, n : Int) -> Bytes raise RespError {
+fn RespReader::take(self : RespReader, n : Int32) -> Bytes raise RespError {
   if self.pos + n > self.data.length() {
     raise RespError("RESP bulk length exceeds available bytes")
   }

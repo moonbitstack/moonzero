@@ -307,7 +307,7 @@ pub fn Conf::string(
   default? : String,
   options? : Array[String],
   env? : String,
-  also? : Array[String] = [],
+  also~ : Array[String] = [],
 ) -> String raise ConfigError {
   let value = match self.raw(path, also, env) {
     Some(String(s)) => s
@@ -328,11 +328,11 @@ pub fn Conf::string(
 pub fn Conf::int(
   self : Conf,
   path : String,
-  default? : Int,
+  default? : Int32,
   range? : String,
   env? : String,
-  also? : Array[String] = [],
-) -> Int raise ConfigError {
+  also~ : Array[String] = [],
+) -> Int32 raise ConfigError {
   let value = match self.raw(path, also, env) {
     Some(v) => as_number(v, path)
     None =>
@@ -353,7 +353,7 @@ pub fn Conf::int64(
   default? : Int64,
   range? : String,
   env? : String,
-  also? : Array[String] = [],
+  also~ : Array[String] = [],
 ) -> Int64 raise ConfigError {
   let value = match self.raw(path, also, env) {
     Some(v) => as_number(v, path)
@@ -375,7 +375,7 @@ pub fn Conf::bool(
   path : String,
   default? : Bool,
   env? : String,
-  also? : Array[String] = [],
+  also~ : Array[String] = [],
 ) -> Bool raise ConfigError {
   match self.raw(path, also, env) {
     Some(True) => true
@@ -399,7 +399,7 @@ pub fn Conf::strings(
   path : String,
   default? : Array[String],
   env? : String,
-  also? : Array[String] = [],
+  also~ : Array[String] = [],
 ) -> Array[String] raise ConfigError {
   match self.raw(path, also, env) {
     Some(Array(items)) => {
@@ -477,7 +477,7 @@ pub fn Conf::list(self : Conf, path : String) -> Array[Conf] raise ConfigError {
 fn trim(s : String) -> String {
   let mut start = 0
   let mut end = s.length()
-  fn blank(c : Int) -> Bool {
+  fn blank(c : Int32) -> Bool {
     c == ' '.to_int() || c == '	'.to_int()
   }
 

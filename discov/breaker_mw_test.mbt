@@ -1,6 +1,6 @@
 ///|
 /// An app that answers with `status` and an empty body.
-fn responder(status : Int) -> @moonasgi.AsgiApp {
+fn responder(status : Int32) -> @moonasgi.AsgiApp {
   (_s, _r, snd) => {
     snd(@moonasgi.Event::HttpResponseStart(status~, headers=[], trailers=false))
     snd(@moonasgi.Event::HttpResponseBody(body=b"", more_body=false))
@@ -17,7 +17,7 @@ async fn drive(app : @moonasgi.AsgiApp) -> Array[@moonasgi.Event] {
 }
 
 ///|
-fn status_of(events : Array[@moonasgi.Event]) -> Int {
+fn status_of(events : Array[@moonasgi.Event]) -> Int32 {
   for e in events {
     match e {
       HttpResponseStart(status~, ..) => return status
@@ -69,7 +69,7 @@ async test "breaker middleware answers 503 without running the app once shedding
   let clock = @moonzero.Clock::new(() => 0L)
   // 0.0 wins every draw, so the throttle sheds the moment the ratio leaves zero
   let b = @moonzero.Breaker::new(clock, rand=() => 0.0)
-  let ran : Ref[Int] = { val: 0, }
+  let ran : Ref[Int32] = { val: 0, }
   let app = @moonzero.breaker(b)((_s, _r, snd) => {
     ran.val = ran.val + 1
     snd(

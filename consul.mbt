@@ -15,19 +15,19 @@ pub suberror ConsulError {
 ///|
 /// A consul agent's HTTP response: the status code and the raw body bytes.
 pub struct ConsulResponse {
-  status : Int
+  status : Int32
   body : Bytes
 }
 
 ///|
 /// A consul response.
-pub fn ConsulResponse::new(status : Int, body : Bytes) -> ConsulResponse {
+pub fn ConsulResponse::new(status : Int32, body : Bytes) -> ConsulResponse {
   { status, body, }
 }
 
 ///|
 /// The HTTP status code.
-pub fn ConsulResponse::status(self : ConsulResponse) -> Int {
+pub fn ConsulResponse::status(self : ConsulResponse) -> Int32 {
   self.status
 }
 
@@ -99,8 +99,8 @@ pub fn ConsulClient::register_service(
   id : String,
   name : String,
   address : String,
-  port : Int,
-  ttl_secs : Int,
+  port : Int32,
+  ttl_secs : Int32,
 ) -> Unit raise ConsulError {
   let _ = self.call(
     "PUT",
@@ -117,24 +117,21 @@ pub fn consul_register_body(
   id : String,
   name : String,
   address : String,
-  port : Int,
-  ttl_secs : Int,
+  port : Int32,
+  ttl_secs : Int32,
 ) -> Bytes {
   let check : Map[String, Json] = Map([
-    ("TTL", (ttl_secs.to_string() + "s").to_json()),
-    (
-      "DeregisterCriticalServiceAfter",
-      ((ttl_secs * 3).to_string() + "s").to_json(),
-    ),
+    ("TTL", Json(ttl_secs.to_string() + "s")),
+    ("DeregisterCriticalServiceAfter", Json((ttl_secs * 3).to_string() + "s")),
   ])
   let body : Map[String, Json] = Map([
-    ("ID", id.to_json()),
-    ("Name", name.to_json()),
-    ("Address", address.to_json()),
-    ("Port", port.to_json()),
-    ("Check", check.to_json()),
+    ("ID", Json(id)),
+    ("Name", Json(name)),
+    ("Address", Json(address)),
+    ("Port", Json(port)),
+    ("Check", Json(check)),
   ])
-  @utf8.encode(body.to_json().stringify())
+  @utf8.encode(Json(body).stringify())
 }
 
 ///|
@@ -263,7 +260,7 @@ fn consul_str_field(obj : Json, key : String) -> String {
 
 ///|
 /// The integer value of a JSON number `key`, truncated toward zero, or `0`.
-fn consul_int_field(obj : Json, key : String) -> Int {
+fn consul_int_field(obj : Json, key : String) -> Int32 {
   match json_field(obj, key) {
     Some(Number(n, ..)) => n.to_int()
     _ => 0

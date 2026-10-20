@@ -11,12 +11,12 @@
 /// agent's short JSON round trips.
 pub struct ConsulSocket {
   host : String
-  port : Int
+  port : Int32
 }
 
 ///|
 /// A transport to the consul agent at `host:port` (default port 8500).
-pub fn ConsulSocket::new(host : String, port? : Int = 8500) -> ConsulSocket {
+pub fn ConsulSocket::new(host : String, port~ : Int32 = 8500) -> ConsulSocket {
   { host, port, }
 }
 
@@ -61,7 +61,7 @@ pub async fn ConsulSocket::request(
 ///
 /// A length longer than what arrived keeps what arrived rather than failing: the
 /// agent closed the connection, so there is no more coming.
-fn content(raw : Bytes, used : Int, body : @http1.Body) -> Bytes raise {
+fn content(raw : Bytes, used : Int32, body : @http1.Body) -> Bytes raise {
   match body {
     Sized(n) =>
       if used + n <= raw.length() {

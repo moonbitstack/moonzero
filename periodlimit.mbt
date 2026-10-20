@@ -20,13 +20,13 @@ pub(all) enum PeriodResult {
 /// single process, and for the fallback a caller wants when redis is unreachable.
 pub struct PeriodLimit {
   period_ms : Int64
-  quota : Int
-  windows : Map[String, (Int64, Int)]
+  quota : Int32
+  windows : Map[String, (Int64, Int32)]
 }
 
 ///|
 /// A limiter admitting `quota` requests per `period_secs` seconds, per key.
-pub fn PeriodLimit::new(period_secs~ : Int, quota~ : Int) -> PeriodLimit {
+pub fn PeriodLimit::new(period_secs~ : Int32, quota~ : Int32) -> PeriodLimit {
   { period_ms: period_secs.to_int64() * 1000L, quota, windows: Map([]), }
 }
 
@@ -65,8 +65,8 @@ pub fn PeriodLimit::take(
 pub fn period_limit(
   limiter : PeriodLimit,
   clock : Clock,
-  key? : String = "global",
-  refusal? : Refusal = too_many,
+  key~ : String = "global",
+  refusal~ : Refusal = too_many,
 ) -> Middleware {
   inner => {
     (scope, receive, send) => {
@@ -114,8 +114,8 @@ pub let period_script : String =
 pub struct RedisPeriodLimit {
   client : RedisClient
   script : RedisScript
-  period_secs : Int
-  quota : Int
+  period_secs : Int32
+  quota : Int32
   prefix : String
 }
 
@@ -124,9 +124,9 @@ pub struct RedisPeriodLimit {
 /// `client`'s redis under `prefix`-prefixed keys.
 pub fn RedisPeriodLimit::new(
   client : RedisClient,
-  period_secs~ : Int,
-  quota~ : Int,
-  prefix? : String = "",
+  period_secs~ : Int32,
+  quota~ : Int32,
+  prefix~ : String = "",
 ) -> RedisPeriodLimit {
   {
     client,
@@ -170,8 +170,8 @@ pub async fn RedisPeriodLimit::take(
 /// service, not a dependency that should be able to close it.
 pub fn redis_period_limit(
   limiter : RedisPeriodLimit,
-  key? : String = "global",
-  refusal? : Refusal = too_many,
+  key~ : String = "global",
+  refusal~ : Refusal = too_many,
 ) -> Middleware {
   inner => {
     (scope, receive, send) => {

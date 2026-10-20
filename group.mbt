@@ -45,7 +45,7 @@ pub fn Group::route(
   verb : @moonapi.Method,
   path : String,
   handler : @moonapi.ApiHandler,
-  summary? : String = "",
+  summary~ : String = "",
 ) -> Unit {
   self.app.route(verb, join_path(self.prefix, path), handler, summary~)
 }
@@ -56,7 +56,7 @@ pub fn Group::get(
   self : Group,
   path : String,
   handler : @moonapi.ApiHandler,
-  summary? : String = "",
+  summary~ : String = "",
 ) -> Unit {
   self.route(Get, path, handler, summary~)
 }
@@ -67,7 +67,7 @@ pub fn Group::post(
   self : Group,
   path : String,
   handler : @moonapi.ApiHandler,
-  summary? : String = "",
+  summary~ : String = "",
 ) -> Unit {
   self.route(Post, path, handler, summary~)
 }
@@ -78,7 +78,7 @@ pub fn Group::put(
   self : Group,
   path : String,
   handler : @moonapi.ApiHandler,
-  summary? : String = "",
+  summary~ : String = "",
 ) -> Unit {
   self.route(Put, path, handler, summary~)
 }
@@ -89,7 +89,7 @@ pub fn Group::patch(
   self : Group,
   path : String,
   handler : @moonapi.ApiHandler,
-  summary? : String = "",
+  summary~ : String = "",
 ) -> Unit {
   self.route(Patch, path, handler, summary~)
 }
@@ -100,7 +100,7 @@ pub fn Group::delete(
   self : Group,
   path : String,
   handler : @moonapi.ApiHandler,
-  summary? : String = "",
+  summary~ : String = "",
 ) -> Unit {
   self.route(Delete, path, handler, summary~)
 }

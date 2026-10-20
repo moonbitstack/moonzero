@@ -17,7 +17,7 @@ pub struct EtcdDiscovery {
 /// `"moonzero/"`, mirroring go-zero's configurable discovery key root).
 pub fn EtcdDiscovery::new(
   client : EtcdClient,
-  prefix? : String = "moonzero/",
+  prefix~ : String = "moonzero/",
 ) -> EtcdDiscovery {
   { client, prefix, }
 }
@@ -73,7 +73,7 @@ pub fn EtcdDiscovery::register(
   self : EtcdDiscovery,
   service : String,
   endpoint : Endpoint,
-  ttl? : Int64 = 10,
+  ttl~ : Int64 = 10,
 ) -> Int64 raise {
   let lease = self.client.lease_grant({ ttl, id: 0, })
   let key = self.service_prefix(service) + lease.id.to_string()

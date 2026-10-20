@@ -19,7 +19,7 @@ pub struct EtcdSocket {
 
 ///|
 /// Open a gRPC connection to the etcd at `host:port` (etcd serves client gRPC on 2379).
-pub async fn EtcdSocket::connect(host : String, port : Int) -> EtcdSocket {
+pub async fn EtcdSocket::connect(host : String, port : Int32) -> EtcdSocket {
   { channel: @net.Channel::connect(host, port), }
 }
 
@@ -93,7 +93,7 @@ pub async fn EtcdSocket::delete_range(
 pub async fn EtcdSocket::watch(
   self : EtcdSocket,
   req : @moonzero.EtcdWatchCreateRequest,
-  count : Int,
+  count : Int32,
 ) -> Array[@moonzero.EtcdWatchResponse] {
   let request = @moonzero.EtcdWatchRequest::Create(req).encode()
   let raw = self.channel.stream_take(

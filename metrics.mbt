@@ -76,7 +76,7 @@ pub let default_latency_buckets : Array[Double] = [
 /// bounds are taken as given; supply them in ascending order, as Prometheus
 /// requires.
 pub fn Histogram::new(
-  bounds? : Array[Double] = default_latency_buckets,
+  bounds~ : Array[Double] = default_latency_buckets,
 ) -> Histogram {
   { bounds, bucket: Array::make(bounds.length(), 0L), sum: 0.0, count: 0, }
 }
@@ -109,7 +109,7 @@ pub fn Histogram::sum_value(self : Histogram) -> Double {
 ///|
 /// The cumulative count in the bucket bounded by `bounds[i]` — how many
 /// observations were `<=` that bound.
-pub fn Histogram::bucket_count(self : Histogram, i : Int) -> Int64 {
+pub fn Histogram::bucket_count(self : Histogram, i : Int32) -> Int64 {
   self.bucket[i]
 }
 
@@ -212,7 +212,7 @@ pub fn CounterVec::to_exposition(
   self : CounterVec,
   name~ : String,
   help~ : String,
-  label? : String = "label",
+  label~ : String = "label",
 ) -> String {
   let sb = StringBuilder()
   sb.write_string("# HELP " + name + " " + help + "\n")

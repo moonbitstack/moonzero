@@ -6,18 +6,18 @@
 pub(all) struct RpcServerConf {
   name : String
   host : String
-  port : Int
-  timeout_ms : Int
+  port : Int32
+  timeout_ms : Int32
 } derive(FromJson, Eq, Debug)
 
 ///|
 /// Build an RPC server config with go-zero-style defaults (`0.0.0.0:8080`, 2s
 /// timeout).
 pub fn RpcServerConf::new(
-  name? : String = "rpc",
-  host? : String = "0.0.0.0",
-  port? : Int = rpc_port,
-  timeout_ms? : Int = 2000,
+  name~ : String = "rpc",
+  host~ : String = "0.0.0.0",
+  port~ : Int32 = rpc_port,
+  timeout_ms~ : Int32 = 2000,
 ) -> RpcServerConf {
   { name, host, port, timeout_ms, }
 }

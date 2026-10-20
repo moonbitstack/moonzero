@@ -2,7 +2,7 @@
 /// A logger writing into `lines` instead of stdout.
 fn collecting(
   lines : Array[String],
-  level? : LogLevel = Info,
+  level~ : LogLevel = Info,
   clock? : Clock,
 ) -> Logger {
   Logger::new(

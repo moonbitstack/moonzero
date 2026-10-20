@@ -9,7 +9,7 @@
 struct ConsulInstance {
   name : String
   address : String
-  port : Int
+  port : Int32
   mut healthy : Bool
 }
 
@@ -64,28 +64,28 @@ impl ConsulHttp for FakeConsul with fn request(self, verb, path, body) {
     for _id, inst in self.services {
       if inst.name == name && inst.healthy {
         let svc : Map[String, Json] = Map([
-          ("Address", inst.address.to_json()),
-          ("Port", inst.port.to_json()),
+          ("Address", Json(inst.address)),
+          ("Port", Json(inst.port)),
         ])
-        let node : Map[String, Json] = Map([("Address", inst.address.to_json())])
-        arr.push(
-          Map([("Service", svc.to_json()), ("Node", node.to_json())]).to_json(),
-        )
+        let node : Map[String, Json] = Map([("Address", Json(inst.address))])
+        arr.push(Json(Map([("Service", Json(svc)), ("Node", Json(node))])))
       }
     }
-    return ConsulResponse::new(200, @utf8.encode(arr.to_json().stringify()))
+    return ConsulResponse::new(200, @utf8.encode(Json(arr).stringify()))
   }
   if verb == "GET" && path == "/v1/agent/services" {
     let obj : Map[String, Json] = Map([])
     for id, inst in self.services {
-      obj[id] = Map([
-        ("ID", id.to_json()),
-        ("Service", inst.name.to_json()),
-        ("Address", inst.address.to_json()),
-        ("Port", inst.port.to_json()),
-      ]).to_json()
+      obj[id] = Json(
+        Map([
+          ("ID", Json(id)),
+          ("Service", Json(inst.name)),
+          ("Address", Json(inst.address)),
+          ("Port", Json(inst.port)),
+        ]),
+      )
     }
-    return ConsulResponse::new(200, @utf8.encode(obj.to_json().stringify()))
+    return ConsulResponse::new(200, @utf8.encode(Json(obj).stringify()))
   }
   ConsulResponse::new(404, b"not found")
 }

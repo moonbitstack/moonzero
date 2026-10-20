@@ -32,7 +32,7 @@ pub fn ConsulDiscovery::register(
   self : ConsulDiscovery,
   service : String,
   endpoint : Endpoint,
-  ttl? : Int = 10,
+  ttl~ : Int32 = 10,
 ) -> String raise {
   let id = consul_instance_id(service, endpoint)
   self.client.register_service(id, service, endpoint.host, endpoint.port, ttl)

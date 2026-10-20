@@ -88,8 +88,8 @@ pub fn level_name(level : @moonlog.Level) -> String {
 /// sink=@moonlog.Discard::{  })` is how a test silences one.
 pub fn Logger::new(
   clock : Clock,
-  level? : LogLevel = Info,
-  sink? : &@moonlog.Sink = @moonlog.Lines::new(
+  level~ : LogLevel = Info,
+  sink~ : &@moonlog.Sink = @moonlog.Lines::new(
     line => println(line),
     format=entry,
   ),
@@ -143,7 +143,7 @@ pub fn Logger::log(
   self : Logger,
   level : LogLevel,
   content : String,
-  fields? : Array[(String, Json)] = [],
+  fields~ : Array[(String, Json)] = [],
 ) -> Unit {
   if !self.enabled(level) {
     return
@@ -170,7 +170,7 @@ pub fn Logger::log(
 pub fn Logger::debug(
   self : Logger,
   content : String,
-  fields? : Array[(String, Json)] = [],
+  fields~ : Array[(String, Json)] = [],
 ) -> Unit {
   self.log(Debug, content, fields~)
 }
@@ -180,7 +180,7 @@ pub fn Logger::debug(
 pub fn Logger::info(
   self : Logger,
   content : String,
-  fields? : Array[(String, Json)] = [],
+  fields~ : Array[(String, Json)] = [],
 ) -> Unit {
   self.log(Info, content, fields~)
 }
@@ -190,7 +190,7 @@ pub fn Logger::info(
 pub fn Logger::error(
   self : Logger,
   content : String,
-  fields? : Array[(String, Json)] = [],
+  fields~ : Array[(String, Json)] = [],
 ) -> Unit {
   self.log(Error, content, fields~)
 }
@@ -200,7 +200,7 @@ pub fn Logger::error(
 pub fn Logger::severe(
   self : Logger,
   content : String,
-  fields? : Array[(String, Json)] = [],
+  fields~ : Array[(String, Json)] = [],
 ) -> Unit {
   self.log(Severe, content, fields~)
 }

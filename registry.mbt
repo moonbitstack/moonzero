@@ -5,13 +5,17 @@
 /// shares traffic by; round-robin and pick-first ignore it.
 pub(all) struct Endpoint {
   host : String
-  port : Int
-  weight : Int
+  port : Int32
+  weight : Int32
 } derive(Eq, Debug)
 
 ///|
 /// Build an endpoint; `weight` defaults to `1`, matching an unweighted instance.
-pub fn Endpoint::new(host : String, port : Int, weight? : Int = 1) -> Endpoint {
+pub fn Endpoint::new(
+  host : String,
+  port : Int32,
+  weight~ : Int32 = 1,
+) -> Endpoint {
   { host, port, weight, }
 }
 
@@ -29,7 +33,7 @@ pub fn Endpoint::address(self : Endpoint) -> String {
 /// the etcd key an instance would lease.
 pub struct InMemoryRegistry {
   instances : Map[String, Map[String, Endpoint]]
-  mut seq : Int
+  mut seq : Int32
   mut revision : Int64
 }
 
@@ -126,7 +130,7 @@ pub fn resolve_one(
 /// endpoint set: successive `pick`s cycle through the instances, spreading load
 /// evenly. Holds only a cursor, so it is cheap to keep per client.
 pub struct RoundRobin {
-  mut cursor : Int
+  mut cursor : Int32
 }
 
 ///|
@@ -164,7 +168,7 @@ pub fn RoundRobin::pick(
 /// an address are treated as one. An instance whose weight is zero or negative is
 /// never picked; a set where every weight is non-positive yields `None`.
 pub struct WeightedRoundRobin {
-  scores : Map[String, Int]
+  scores : Map[String, Int32]
 }
 
 ///|

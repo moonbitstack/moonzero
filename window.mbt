@@ -50,10 +50,10 @@ fn Bucket::reset(self : Bucket) -> Unit {
 /// them without clearing, so a window nobody writes to still ages out, and two
 /// reads at the same `now` agree.
 pub struct Window {
-  size : Int
+  size : Int32
   bucket_ms : Int64
   buckets : Array[Bucket]
-  mut offset : Int
+  mut offset : Int32
   mut bucket_start : Int64
 }
 
@@ -63,9 +63,9 @@ pub struct Window {
 /// size or duration below one is raised to one, the way the other cores here
 /// clamp their bounds rather than rejecting them.
 pub fn Window::new(
-  size? : Int = 40,
-  bucket_ms? : Int64 = 250L,
-  now? : Int64 = 0L,
+  size~ : Int32 = 40,
+  bucket_ms~ : Int64 = 250L,
+  now~ : Int64 = 0L,
 ) -> Window {
   let size = if size < 1 { 1 } else { size }
   let bucket_ms = if bucket_ms < 1L { 1L } else { bucket_ms }
@@ -87,7 +87,7 @@ pub fn Window::new(
 /// How many buckets have elapsed since the head bucket opened, capped at `size`
 /// because beyond that the whole window is stale. A clock that moves backwards
 /// counts as no elapsed time.
-fn Window::span(self : Window, now : Int64) -> Int {
+fn Window::span(self : Window, now : Int64) -> Int32 {
   let n = (now - self.bucket_start) / self.bucket_ms
   if n <= 0L {
     0

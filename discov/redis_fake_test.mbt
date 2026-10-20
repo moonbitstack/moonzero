@@ -20,8 +20,8 @@ struct FakeRedis {
   scripts : Map[String, String]
   mut now : Int64
   mut fails : Bool
-  mut evals : Int
-  mut evalshas : Int
+  mut evals : Int32
+  mut evalshas : Int32
 }
 
 ///|

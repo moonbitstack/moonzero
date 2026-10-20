@@ -8,13 +8,13 @@
 ///|
 /// A permit pool of `max` concurrent slots (← go-zero's `syncx.Limit`).
 pub struct MaxConns {
-  max : Int
-  mut in_flight : Int
+  max : Int32
+  mut in_flight : Int32
 }
 
 ///|
 /// A pool admitting at most `max` requests at once.
-pub fn MaxConns::new(max : Int) -> MaxConns {
+pub fn MaxConns::new(max : Int32) -> MaxConns {
   { max, in_flight: 0, }
 }
 
@@ -39,7 +39,7 @@ pub fn MaxConns::release(self : MaxConns) -> Unit {
 
 ///|
 /// The number of requests currently holding a permit.
-pub fn MaxConns::in_flight(self : MaxConns) -> Int {
+pub fn MaxConns::in_flight(self : MaxConns) -> Int32 {
   self.in_flight
 }
 
@@ -49,7 +49,7 @@ pub fn MaxConns::in_flight(self : MaxConns) -> Int {
 /// (lifespan, websocket) pass through untouched.
 pub fn max_conns(
   limit : MaxConns,
-  refusal? : Refusal = unavailable,
+  refusal~ : Refusal = unavailable,
 ) -> Middleware {
   inner => {
     (scope, receive, send) => {

@@ -6,7 +6,7 @@
 pub(all) struct RequestLog {
   http_method : String
   path : String
-  status : Int
+  status : Int32
   duration_ms : Int64
   request_id : String
   client_ip : String

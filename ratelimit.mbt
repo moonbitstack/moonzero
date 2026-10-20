@@ -24,8 +24,8 @@ pub struct TokenBucket {
 /// `burst` used to give.
 pub fn TokenBucket::new(
   rate : Double,
-  burst? : Double = -1.0,
-  now? : Int64 = 0,
+  burst~ : Double = -1.0,
+  now~ : Int64 = 0,
 ) -> TokenBucket {
   {
     bucket: @moonpool.Bucket::new(
@@ -78,7 +78,7 @@ fn nanos(ms : Int64) -> Int64 {
 pub fn rate_limit(
   bucket : TokenBucket,
   clock : Clock,
-  refusal? : Refusal = too_many,
+  refusal~ : Refusal = too_many,
 ) -> Middleware {
   inner => {
     (scope, receive, send) => {
@@ -146,8 +146,8 @@ pub let token_script : String =
 pub struct RedisTokenLimit {
   client : RedisClient
   script : RedisScript
-  rate : Int
-  burst : Int
+  rate : Int32
+  burst : Int32
   token_key : Bytes
   ts_key : Bytes
   rescue : TokenBucket
@@ -158,8 +158,8 @@ pub struct RedisTokenLimit {
 /// back-to-back, over the bucket `key` names in `client`'s redis.
 pub fn RedisTokenLimit::new(
   client : RedisClient,
-  rate~ : Int,
-  burst~ : Int,
+  rate~ : Int32,
+  burst~ : Int32,
   key~ : String,
 ) -> RedisTokenLimit {
   {
@@ -196,7 +196,7 @@ pub async fn RedisTokenLimit::allow(
 /// the local bucket instead.
 pub async fn RedisTokenLimit::allow_n(
   self : RedisTokenLimit,
-  n : Int,
+  n : Int32,
   now_ms : Int64,
 ) -> Bool {
   let reply = self.script.run(self.client, [self.token_key, self.ts_key], [
@@ -222,7 +222,7 @@ pub async fn RedisTokenLimit::allow_n(
 pub fn redis_rate_limit(
   limiter : RedisTokenLimit,
   clock : Clock,
-  refusal? : Refusal = too_many,
+  refusal~ : Refusal = too_many,
 ) -> Middleware {
   inner => {
     (scope, receive, send) => {

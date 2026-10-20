@@ -10,7 +10,7 @@
 /// The response a refused request receives: a status, a body, and the headers
 /// sent with it.
 pub(all) struct Refusal {
-  status : Int
+  status : Int32
   body : Bytes
   headers : Array[(String, String)]
 }
@@ -25,9 +25,9 @@ pub let plain_text : Array[(String, String)] = [
 /// Build a refusal. Left alone it is the `503 Service Unavailable` the breaker,
 /// the shedder and the connection limiter all answer with.
 pub fn Refusal::new(
-  status? : Int = 503,
-  body? : Bytes = b"503 Service Unavailable",
-  headers? : Array[(String, String)] = plain_text,
+  status~ : Int32 = 503,
+  body~ : Bytes = b"503 Service Unavailable",
+  headers~ : Array[(String, String)] = plain_text,
 ) -> Refusal {
   { status, body, headers, }
 }

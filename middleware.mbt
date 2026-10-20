@@ -42,18 +42,18 @@ pub(all) struct CorsConf {
   allow_methods : String
   allow_headers : String
   allow_credentials : Bool
-  max_age : Int
+  max_age : Int32
 }
 
 ///|
 /// Build a permissive CORS config: any origin, the full method set, and a one-day
 /// preflight cache. Credentials are off by default, matching go-zero.
 pub fn CorsConf::new(
-  allow_origin? : String = "*",
-  allow_methods? : String = "GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS",
-  allow_headers? : String = "Content-Type, Authorization",
-  allow_credentials? : Bool = false,
-  max_age? : Int = 86400,
+  allow_origin~ : String = "*",
+  allow_methods~ : String = "GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS",
+  allow_headers~ : String = "Content-Type, Authorization",
+  allow_credentials~ : Bool = false,
+  max_age~ : Int32 = 86400,
 ) -> CorsConf {
   { allow_origin, allow_methods, allow_headers, allow_credentials, max_age, }
 }
@@ -119,7 +119,7 @@ fn scope_header(scope : @moonasgi.Scope, name : String) -> String? {
 ///|
 /// Resolve the id for a request: reuse an inbound one verbatim, otherwise mint the
 /// next monotonic `req-N` from the shared counter.
-fn resolve_request_id(inbound : String?, counter : Ref[Int]) -> String {
+fn resolve_request_id(inbound : String?, counter : Ref[Int32]) -> String {
   match inbound {
     Some(existing) => existing
     None => {
@@ -135,8 +135,8 @@ fn resolve_request_id(inbound : String?, counter : Ref[Int]) -> String {
 /// monotonic id, and stamp it onto every response's `HttpResponseStart`. The
 /// counter is captured once per assembly, so ids stay unique across the requests
 /// this layer serves.
-pub fn request_id(header? : String = "x-request-id") -> Middleware {
-  let counter : Ref[Int] = { val: 0, }
+pub fn request_id(header~ : String = "x-request-id") -> Middleware {
+  let counter : Ref[Int32] = { val: 0, }
   inner => {
     (scope, receive, send) => {
       let id = resolve_request_id(scope_header(scope, header), counter)

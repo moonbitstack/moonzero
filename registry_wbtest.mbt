@@ -76,7 +76,7 @@ test "round-robin and pick_first on an empty set return None" {
 fn weighted_run(
   lb : WeightedRoundRobin,
   eps : Array[Endpoint],
-  n : Int,
+  n : Int32,
 ) -> Array[String] {
   let out : Array[String] = []
   for _ in 0..<n {

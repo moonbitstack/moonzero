@@ -19,17 +19,17 @@ pub(all) struct MiddlewaresConf {
 ///|
 /// The full chain, which is what go-zero defaults to.
 pub fn MiddlewaresConf::new(
-  trace? : Bool = true,
-  log? : Bool = true,
-  prometheus? : Bool = true,
-  max_conns? : Bool = true,
-  breaker? : Bool = true,
-  shedding? : Bool = true,
-  timeout? : Bool = true,
-  recover? : Bool = true,
-  metrics? : Bool = true,
-  max_bytes? : Bool = true,
-  gunzip? : Bool = true,
+  trace~ : Bool = true,
+  log~ : Bool = true,
+  prometheus~ : Bool = true,
+  max_conns~ : Bool = true,
+  breaker~ : Bool = true,
+  shedding~ : Bool = true,
+  timeout~ : Bool = true,
+  recover~ : Bool = true,
+  metrics~ : Bool = true,
+  max_bytes~ : Bool = true,
+  gunzip~ : Bool = true,
 ) -> MiddlewaresConf {
   {
     trace,
@@ -72,9 +72,9 @@ pub(all) struct SignatureConf {
 /// Signature settings that verify nothing: not strict, go-zero's one-hour
 /// expiry, no keys.
 pub fn SignatureConf::new(
-  strict? : Bool = false,
-  expiry_ms? : Int64 = 3600000L,
-  private_keys? : Array[PrivateKeyConf] = [],
+  strict~ : Bool = false,
+  expiry_ms~ : Int64 = 3600000L,
+  private_keys~ : Array[PrivateKeyConf] = [],
 ) -> SignatureConf {
   { strict, expiry_ms, private_keys, }
 }
@@ -92,8 +92,8 @@ pub(all) struct RestConf {
   cert_file : String
   key_file : String
   verbose : Bool
-  max_conns : Int
-  max_bytes : Int
+  max_conns : Int32
+  max_bytes : Int32
   cpu_threshold : Int64
   signature : SignatureConf
   middlewares : MiddlewaresConf
@@ -104,16 +104,16 @@ pub(all) struct RestConf {
 /// A REST config with go-zero's defaults: no TLS, not verbose, 10000 connections,
 /// a 1 MiB body cap, a 90% CPU shed threshold, and the full middleware chain.
 pub fn RestConf::new(
-  service? : ServiceConf = ServiceConf::new(),
-  cert_file? : String = "",
-  key_file? : String = "",
-  verbose? : Bool = false,
-  max_conns? : Int = 10000,
-  max_bytes? : Int = 1048576,
-  cpu_threshold? : Int64 = 900L,
-  signature? : SignatureConf = SignatureConf::new(),
-  middlewares? : MiddlewaresConf = MiddlewaresConf::new(),
-  trace_ignore_paths? : Array[String] = [],
+  service~ : ServiceConf = ServiceConf::new(),
+  cert_file~ : String = "",
+  key_file~ : String = "",
+  verbose~ : Bool = false,
+  max_conns~ : Int32 = 10000,
+  max_bytes~ : Int32 = 1048576,
+  cpu_threshold~ : Int64 = 900L,
+  signature~ : SignatureConf = SignatureConf::new(),
+  middlewares~ : MiddlewaresConf = MiddlewaresConf::new(),
+  trace_ignore_paths~ : Array[String] = [],
 ) -> RestConf {
   {
     service,
@@ -137,13 +137,13 @@ pub fn RestConf::host(self : RestConf) -> String {
 
 ///|
 /// The port the service binds.
-pub fn RestConf::port(self : RestConf) -> Int {
+pub fn RestConf::port(self : RestConf) -> Int32 {
   self.service.port
 }
 
 ///|
 /// The per-request timeout budget in milliseconds; `0` disables it.
-pub fn RestConf::timeout_ms(self : RestConf) -> Int {
+pub fn RestConf::timeout_ms(self : RestConf) -> Int32 {
   self.service.timeout_ms
 }
 
@@ -264,9 +264,9 @@ pub struct RestEngine {
 /// `ErrSignatureConfig`.
 pub fn RestEngine::new(
   conf : RestConf,
-  clock? : Clock = Clock::system(),
+  clock~ : Clock = Clock::system(),
   logger? : Logger,
-  metrics? : ServerMetrics = ServerMetrics::new(),
+  metrics~ : ServerMetrics = ServerMetrics::new(),
   usage? : () -> Int64,
 ) -> RestEngine raise ConfigError {
   if conf.signature.strict && conf.signature.private_keys.length() == 0 {

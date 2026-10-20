@@ -27,7 +27,7 @@ fn hs256(secret : String) -> @jwt.Keyed {
 pub fn jwt_sign(
   claims : Map[String, Json],
   secret : String,
-  typ? : String? = Some("JWT"),
+  typ~ : String? = Some("JWT"),
   extra? : Map[String, Json],
   wins? : @jwt.Wins,
   clash? : @jwt.OnClash[Map[String, Json]],
@@ -50,7 +50,7 @@ pub fn jwt_verify(
   token : String,
   secret : String,
   now_secs : Int64,
-  policy? : @jwt.Policy = @jwt.policy,
+  policy~ : @jwt.Policy = @jwt.policy,
 ) -> Map[String, Json] raise @jwt.Rejected {
   @jwt.verify(token, HS256, hs256(secret), now=At(now_secs), policy~)
 }

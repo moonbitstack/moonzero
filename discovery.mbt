@@ -49,7 +49,7 @@ pub fn RegistryEvent::revision(self : RegistryEvent) -> Int64 {
 pub struct PersistentRegistry {
   instances : Map[String, Map[String, Endpoint]]
   key_rev : Map[String, Int64]
-  mut seq : Int
+  mut seq : Int32
   mut revision : Int64
   events : Array[RegistryEvent]
   watchers : Array[(RegistryEvent) -> Unit]
@@ -215,25 +215,25 @@ pub fn PersistentRegistry::snapshot(self : PersistentRegistry) -> String {
         None => 0L
       }
       let entry : Map[String, Json] = Map([
-        ("key", key.to_json()),
-        ("service", service.to_json()),
-        ("host", ep.host.to_json()),
-        ("port", ep.port.to_json()),
-        ("weight", ep.weight.to_json()),
-        ("mod_revision", rev.to_string().to_json()),
+        ("key", Json(key)),
+        ("service", Json(service)),
+        ("host", Json(ep.host)),
+        ("port", Json(ep.port)),
+        ("weight", Json(ep.weight)),
+        ("mod_revision", Json(rev.to_string())),
       ])
-      kvs.push(entry.to_json())
+      kvs.push(Json(entry))
     }
   }
   let header : Map[String, Json] = Map([
-    ("revision", self.revision.to_string().to_json()),
-    ("seq", self.seq.to_json()),
+    ("revision", Json(self.revision.to_string())),
+    ("seq", Json(self.seq)),
   ])
   let root : Map[String, Json] = Map([
-    ("header", header.to_json()),
-    ("kvs", kvs.to_json()),
+    ("header", Json(header)),
+    ("kvs", Json(kvs)),
   ])
-  root.to_json().stringify(indent=2)
+  Json(root).stringify(indent=2)
 }
 
 ///|
@@ -303,7 +303,7 @@ fn string_field_json(obj : Map[String, Json], field : String) -> String {
 
 ///|
 /// The integer value of a JSON `Number` `field`, truncated toward zero, or `0`.
-fn int_field_json(obj : Map[String, Json], field : String) -> Int {
+fn int_field_json(obj : Map[String, Json], field : String) -> Int32 {
   match obj.get(field) {
     Some(Number(n, ..)) => n.to_int()
     _ => 0
@@ -429,7 +429,7 @@ pub fn LoadBalancedChannel::new(
   resolve : Resolve,
   cluster : RpcCluster,
   service : String,
-  balancer? : Balancer = Balancer::round_robin(),
+  balancer~ : Balancer = Balancer::round_robin(),
 ) -> LoadBalancedChannel {
   { resolve, cluster, balancer, service, }
 }

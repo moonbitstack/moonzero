@@ -31,7 +31,7 @@ priv struct Health {
 ///|
 /// The unscaled shed fraction. Non-positive means the window is healthy enough
 /// to admit everything.
-fn Health::ratio(self : Health, buckets : Int) -> Double {
+fn Health::ratio(self : Health, buckets : Int32) -> Double {
   let w = k - (k - min_k) * self.failing.to_double() / buckets.to_double()
   let weighted = (if w > min_k { w } else { min_k }) * self.accepts.to_double()
   (self.total.to_double() - protection - weighted) /
@@ -41,7 +41,7 @@ fn Health::ratio(self : Health, buckets : Int) -> Double {
 ///|
 /// The factor that eases the throttle off as clean buckets pile up: `1.0` with
 /// nothing working, `0.0` once every bucket in the window is clean.
-fn Health::recovery(self : Health, buckets : Int) -> Double {
+fn Health::recovery(self : Health, buckets : Int32) -> Double {
   (buckets.to_double() - self.working.to_double()) / buckets.to_double()
 }
 
@@ -85,13 +85,13 @@ pub struct Breaker {
 pub fn Breaker::new(
   clock : Clock,
   rand? : () -> Double,
-  buckets? : Int = 40,
-  bucket_ms? : Int64 = 250L,
+  buckets~ : Int32 = 40,
+  bucket_ms~ : Int64 = 250L,
 ) -> Breaker {
   let roll = match rand {
     Some(f) => f
     None => {
-      let src = @random.Rand::new()
+      let src = @random.Rand()
       () => src.double()
     }
   }
@@ -228,14 +228,14 @@ pub fn[T] Breaker::run(self : Breaker, req : () -> T raise) -> T raise {
 /// success, on a `defer` — the same shape go-zero's `doReq` uses, so a handler
 /// that raises or is cancelled before answering counts against the window
 /// instead of quietly not counting at all.
-pub fn breaker(b : Breaker, refusal? : Refusal = unavailable) -> Middleware {
+pub fn breaker(b : Breaker, refusal~ : Refusal = unavailable) -> Middleware {
   inner => {
     (scope, receive, send) => {
       match scope {
         Http(_) =>
           match b.allow() {
             Some(p) => {
-              let status : Ref[Int] = { val: 500, }
+              let status : Ref[Int32] = { val: 500, }
               let observed : @moonasgi.Send = event => {
                 match event {
                   HttpResponseStart(status=s, headers~, trailers~) => {

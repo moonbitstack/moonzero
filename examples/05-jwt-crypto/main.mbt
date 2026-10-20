@@ -108,7 +108,7 @@ fn sub_of(claims : Map[String, Json]) -> String {
 }
 
 ///|
-fn count_dots(s : String) -> Int {
+fn count_dots(s : String) -> Int32 {
   let mut n = 1
   for i = 0; i < s.length(); i = i + 1 {
     if s[i] == '.' {

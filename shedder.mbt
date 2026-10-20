@@ -35,7 +35,7 @@ pub fn Shedder::usage(self : Shedder) -> Int64 {
 /// Shedding middleware (← go-zero's `SheddingHandler`): answer `503 Service
 /// Unavailable` without running the app while the shedder is refusing, and pass
 /// everything else through. Non-HTTP scopes are never shed.
-pub fn shedding(s : Shedder, refusal? : Refusal = unavailable) -> Middleware {
+pub fn shedding(s : Shedder, refusal~ : Refusal = unavailable) -> Middleware {
   inner => {
     (scope, receive, send) => {
       match scope {

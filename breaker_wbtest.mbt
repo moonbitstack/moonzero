@@ -9,7 +9,7 @@ priv struct Dice {
 priv suberror Boom
 
 ///|
-fn bust() -> Int raise {
+fn bust() -> Int32 raise {
   raise Boom
 }
 

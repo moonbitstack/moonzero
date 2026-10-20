@@ -40,7 +40,7 @@ pub fn generate_span_id(seed : Int64) -> String {
 pub(all) struct TraceContext {
   trace_id : String
   span_id : String
-  flags : Int
+  flags : Int32
 }
 
 ///|
@@ -64,7 +64,7 @@ pub fn TraceContext::span_id(self : TraceContext) -> String {
 
 ///|
 /// One octet in lowercase base16 (the `traceparent` version and flags fields).
-fn two_hex(n : Int) -> String {
+fn two_hex(n : Int32) -> String {
   let buf = Buffer()
   @fixed.write_u8(buf, n)
   @base16.encode(buf.to_bytes()[:])
@@ -72,7 +72,7 @@ fn two_hex(n : Int) -> String {
 
 ///|
 /// Whether `s` is exactly `n` lowercase- or uppercase-hex digits.
-fn is_hex(s : String, n : Int) -> Bool {
+fn is_hex(s : String, n : Int32) -> Bool {
   if s.length() != n {
     return false
   }
@@ -136,8 +136,8 @@ pub fn next_trace_context(inbound : String?, seed : Int64) -> TraceContext {
 /// blacklist that keeps health checks out of the trace store), as are non-HTTP
 /// scopes.
 pub fn tracing(
-  header? : String = "x-trace-id",
-  ignore_paths? : Array[String] = [],
+  header~ : String = "x-trace-id",
+  ignore_paths~ : Array[String] = [],
 ) -> Middleware {
   let counter : Ref[Int64] = { val: 0L, }
   inner => {

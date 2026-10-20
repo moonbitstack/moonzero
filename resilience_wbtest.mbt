@@ -26,7 +26,7 @@ fn json_num(j : Json, key : String) -> Double {
 
 ///|
 /// The status carried by an event array's `HttpResponseStart`, or `0`.
-fn start_status(events : Array[@moonasgi.Event]) -> Int {
+fn start_status(events : Array[@moonasgi.Event]) -> Int32 {
   for e in events {
     match e {
       HttpResponseStart(status~, ..) => return status

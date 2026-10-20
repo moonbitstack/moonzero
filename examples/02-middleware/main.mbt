@@ -80,7 +80,7 @@ async fn drive(
   verb : String,
   path : String,
   headers : Array[(String, String)],
-) -> (Int, Array[(String, String)], Bytes) {
+) -> (Int32, Array[(String, String)], Bytes) {
   let scope = @moonasgi.Scope::Http(
     @moonasgi.HttpScope::new(http_method=verb, path~, headers~),
   )
@@ -93,7 +93,7 @@ async fn drive(
       @moonasgi.Event::HttpRequest(body=b"", more_body=false)
     }
   }
-  let status : Ref[Int] = { val: 0, }
+  let status : Ref[Int32] = { val: 0, }
   let out : Ref[Array[(String, String)]] = { val: [], }
   let body = Buffer()
   let sink : @moonasgi.Send = event => {

@@ -175,7 +175,7 @@ async test "the prometheus layer records into the engine's own metric set" {
 async test "shedding refuses without running the app" {
   let usage : Ref[Int64] = { val: 0L, }
   let s = @moonzero.Shedder::new(900L, usage=() => usage.val)
-  let ran : Ref[Int] = { val: 0, }
+  let ran : Ref[Int32] = { val: 0, }
   let app = @moonzero.shedding(s)((_s, _r, snd) => {
     ran.val = ran.val + 1
     snd(

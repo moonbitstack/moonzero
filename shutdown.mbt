@@ -13,7 +13,7 @@
 /// the count is only observed at await points between them.
 pub struct ShutdownCoordinator {
   mut shutting_down : Bool
-  mut in_flight : Int
+  mut in_flight : Int32
 }
 
 ///|
@@ -63,7 +63,7 @@ pub fn ShutdownCoordinator::is_shutting_down(
 
 ///|
 /// The number of calls currently in flight.
-pub fn ShutdownCoordinator::in_flight(self : ShutdownCoordinator) -> Int {
+pub fn ShutdownCoordinator::in_flight(self : ShutdownCoordinator) -> Int32 {
   self.in_flight
 }
 

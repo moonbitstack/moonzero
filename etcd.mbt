@@ -391,7 +391,7 @@ pub(all) enum EtcdEventType {
 
 ///|
 /// The protobuf enum number of an event type (`PUT` = 0, `DELETE` = 1).
-pub fn EtcdEventType::to_int(self : EtcdEventType) -> Int {
+pub fn EtcdEventType::to_int(self : EtcdEventType) -> Int32 {
   match self {
     Put => 0
     Delete => 1
@@ -400,7 +400,7 @@ pub fn EtcdEventType::to_int(self : EtcdEventType) -> Int {
 
 ///|
 /// The event type for a protobuf enum number; unknown numbers read as `Put`.
-pub fn EtcdEventType::from_int(n : Int) -> EtcdEventType {
+pub fn EtcdEventType::from_int(n : Int32) -> EtcdEventType {
   if n == 1 {
     Delete
   } else {

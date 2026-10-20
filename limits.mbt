@@ -55,7 +55,7 @@ pub fn Deadline::remaining(self : Deadline, now : Int64) -> Int64 {
 pub fn timeout(
   budget_ms : Int64,
   clock : Clock,
-  refusal? : Refusal = timed_out,
+  refusal~ : Refusal = timed_out,
 ) -> Middleware {
   inner => {
     (scope, receive, send) => {
@@ -88,7 +88,7 @@ pub fn timeout(
 /// Parse a non-negative decimal string to `Int`, returning `None` for an empty
 /// string or any non-digit character. Used to read `Content-Length`; core has no
 /// portable integer parser, so it is hand-written.
-fn parse_uint(s : String) -> Int? {
+fn parse_uint(s : String) -> Int32? {
   if s.length() == 0 {
     return None
   }
@@ -108,7 +108,7 @@ fn parse_uint(s : String) -> Int? {
 /// missing or unparseable length is treated as *not* exceeding (go-zero's
 /// `MaxBytesHandler` likewise enforces on the declared/streamed size). The header
 /// name is matched case-insensitively.
-fn content_length_exceeds(scope : @moonasgi.Scope, limit : Int) -> Bool {
+fn content_length_exceeds(scope : @moonasgi.Scope, limit : Int32) -> Bool {
   match scope {
     Http(hs) => {
       for pair in hs.headers {
@@ -130,7 +130,7 @@ fn content_length_exceeds(scope : @moonasgi.Scope, limit : Int) -> Bool {
 /// whose declared `Content-Length` exceeds `limit` bytes with `413 Payload Too
 /// Large`, before the wrapped app runs. A `limit <= 0` disables the check. Non-
 /// HTTP scopes pass through untouched.
-pub fn maxbytes(limit : Int, refusal? : Refusal = too_large) -> Middleware {
+pub fn maxbytes(limit : Int32, refusal~ : Refusal = too_large) -> Middleware {
   inner => {
     (scope, receive, send) => {
       if limit > 0 && content_length_exceeds(scope, limit) {

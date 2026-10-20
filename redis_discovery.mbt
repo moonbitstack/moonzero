@@ -19,7 +19,7 @@ pub struct RedisDiscovery {
 /// A redis discovery over `client`; keys live under `prefix` (default `"moonzero/"`).
 pub fn RedisDiscovery::new(
   client : RedisClient,
-  prefix? : String = "moonzero/",
+  prefix~ : String = "moonzero/",
 ) -> RedisDiscovery {
   { client, prefix, seen: Map([]), }
 }
@@ -65,7 +65,7 @@ pub async fn RedisDiscovery::register(
   self : RedisDiscovery,
   service : String,
   endpoint : Endpoint,
-  ttl? : Int = 10,
+  ttl~ : Int32 = 10,
 ) -> String {
   let key = self.instance_key(service, endpoint)
   self.client.set_ex(@utf8.encode(key), @utf8.encode(endpoint.address()), ttl)
@@ -79,7 +79,7 @@ pub async fn RedisDiscovery::keepalive(
   self : RedisDiscovery,
   service : String,
   endpoint : Endpoint,
-  ttl? : Int = 10,
+  ttl~ : Int32 = 10,
 ) -> Bool {
   self.client.expire(@utf8.encode(self.instance_key(service, endpoint)), ttl)
 }

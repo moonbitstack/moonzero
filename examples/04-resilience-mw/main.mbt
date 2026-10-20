@@ -107,7 +107,7 @@ async fn drive(
       @moonasgi.Event::HttpRequest(body=b"", more_body=false)
     }
   }
-  let status : Ref[Int] = { val: 0, }
+  let status : Ref[Int32] = { val: 0, }
   let sink : @moonasgi.Send = event => {
     match event {
       HttpResponseStart(status=s, ..) => status.val = s

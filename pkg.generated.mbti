@@ -27,7 +27,7 @@ pub fn consul_check_id(String) -> String
 
 pub fn consul_parse_health(Bytes) -> Array[Endpoint] raise ConsulError
 
-pub fn consul_register_body(String, String, String, Int, Int) -> Bytes
+pub fn consul_register_body(String, String, String, Int32, Int32) -> Bytes
 
 pub fn cors(CorsConf) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
@@ -63,7 +63,7 @@ pub let logx : Logger
 
 pub fn max_conns(MaxConns, refusal? : Refusal) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
-pub fn maxbytes(Int, refusal? : Refusal) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+pub fn maxbytes(Int32, refusal? : Refusal) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
 pub let message_key : String
 
@@ -85,7 +85,7 @@ pub fn pick_first(Array[Endpoint]) -> Endpoint?
 
 pub let plain_text : Array[(String, String)]
 
-pub let port : Int
+pub let port : Int32
 
 pub fn rate_limit(TokenBucket, Clock, refusal? : Refusal) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
@@ -113,7 +113,7 @@ pub fn resp_encode_command(Array[Bytes]) -> Bytes
 
 pub fn resp_kind(RespValue) -> String
 
-pub let rpc_port : Int
+pub let rpc_port : Int32
 
 pub fn set_log_level(LogLevel) -> Unit
 
@@ -127,7 +127,7 @@ pub fn shedding(Shedder, refusal? : Refusal) -> (async (@spec.Scope, async () ->
 
 pub let stamp_key : String
 
-pub fn status_of_code(Int) -> @moonrpc.Status
+pub fn status_of_code(Int32) -> @moonrpc.Status
 
 pub fn structured_logging(Clock, logger? : Logger) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
@@ -180,9 +180,9 @@ pub fn Balancer::weighted() -> Self
 
 pub struct BidiCall {
   channel : RpcChannel
-  sid : Int
+  sid : Int32
   mut pending : Bytes
-  mut status_code : Int
+  mut status_code : Int32
   mut ended : Bool
 }
 pub fn BidiCall::close_send(Self) -> Result[Array[Bytes], @moonrpc.Status] raise
@@ -201,7 +201,7 @@ pub struct Breaker {
 }
 pub fn Breaker::allow(Self) -> Promise?
 pub fn Breaker::drop_ratio(Self) -> Double
-pub fn Breaker::new(Clock, rand? : () -> Double, buckets? : Int, bucket_ms? : Int64) -> Self
+pub fn Breaker::new(Clock, rand? : () -> Double, buckets? : Int32, bucket_ms? : Int64) -> Self
 pub fn[T] Breaker::run(Self, () -> T raise) -> T raise
 
 pub struct Bucket {
@@ -223,7 +223,7 @@ pub struct Conf {
 }
 pub fn Conf::at(Self, String) -> Json?
 pub fn Conf::bool(Self, String, default? : Bool, env? : String, also? : Array[String]) -> Bool raise ConfigError
-pub fn Conf::int(Self, String, default? : Int, range? : String, env? : String, also? : Array[String]) -> Int raise ConfigError
+pub fn Conf::int(Self, String, default? : Int32, range? : String, env? : String, also? : Array[String]) -> Int32 raise ConfigError
 pub fn Conf::int64(Self, String, default? : Int64, range? : String, env? : String, also? : Array[String]) -> Int64 raise ConfigError
 pub fn Conf::list(Self, String) -> Array[Self] raise ConfigError
 pub fn Conf::of_json(String) -> Self raise ConfigError
@@ -239,7 +239,7 @@ pub fn ConsulClient::check_pass(Self, String) -> Unit raise ConsulError
 pub fn ConsulClient::deregister_service(Self, String) -> Unit raise ConsulError
 pub fn ConsulClient::health_service(Self, String) -> Array[Endpoint] raise ConsulError
 pub fn ConsulClient::new(&ConsulHttp) -> Self
-pub fn ConsulClient::register_service(Self, String, String, String, Int, Int) -> Unit raise ConsulError
+pub fn ConsulClient::register_service(Self, String, String, String, Int32, Int32) -> Unit raise ConsulError
 
 pub struct ConsulDiscovery {
   client : ConsulClient
@@ -248,26 +248,26 @@ pub fn ConsulDiscovery::deregister(Self, String) -> Unit raise
 pub fn ConsulDiscovery::deregister_instance(Self, String, Endpoint) -> Unit raise
 pub fn ConsulDiscovery::keepalive(Self, String, Endpoint) -> Unit raise
 pub fn ConsulDiscovery::new(ConsulClient) -> Self
-pub fn ConsulDiscovery::register(Self, String, Endpoint, ttl? : Int) -> String raise
+pub fn ConsulDiscovery::register(Self, String, Endpoint, ttl? : Int32) -> String raise
 pub fn ConsulDiscovery::resolve(Self, String) -> Array[Endpoint] raise
 pub fn ConsulDiscovery::resolver(Self) -> (String) -> Array[Endpoint]
 
 pub struct ConsulResponse {
-  status : Int
+  status : Int32
   body : Bytes
 }
 pub fn ConsulResponse::body(Self) -> Bytes
-pub fn ConsulResponse::new(Int, Bytes) -> Self
-pub fn ConsulResponse::status(Self) -> Int
+pub fn ConsulResponse::new(Int32, Bytes) -> Self
+pub fn ConsulResponse::status(Self) -> Int32
 
 pub(all) struct CorsConf {
   allow_origin : String
   allow_methods : String
   allow_headers : String
   allow_credentials : Bool
-  max_age : Int
+  max_age : Int32
 }
-pub fn CorsConf::new(allow_origin? : String, allow_methods? : String, allow_headers? : String, allow_credentials? : Bool, max_age? : Int) -> Self
+pub fn CorsConf::new(allow_origin? : String, allow_methods? : String, allow_headers? : String, allow_credentials? : Bool, max_age? : Int32) -> Self
 
 pub struct CounterVec {
   counts : Map[String, Int64]
@@ -290,12 +290,12 @@ pub fn Deadline::start(Int64, Int64) -> Self
 
 pub(all) struct Endpoint {
   host : String
-  port : Int
-  weight : Int
+  port : Int32
+  weight : Int32
 } derive(Eq, @debug.Debug)
 pub fn Endpoint::address(Self) -> String
 pub fn Endpoint::equal(Self, Self) -> Bool
-pub fn Endpoint::new(String, Int, weight? : Int) -> Self
+pub fn Endpoint::new(String, Int32, weight? : Int32) -> Self
 pub fn Endpoint::not_equal(Self, Self) -> Bool
 pub fn Endpoint::to_repr(Self) -> @debug.Repr
 
@@ -352,9 +352,9 @@ pub(all) enum EtcdEventType {
   Delete
 } derive(Eq)
 pub fn EtcdEventType::equal(Self, Self) -> Bool
-pub fn EtcdEventType::from_int(Int) -> Self
+pub fn EtcdEventType::from_int(Int32) -> Self
 pub fn EtcdEventType::not_equal(Self, Self) -> Bool
-pub fn EtcdEventType::to_int(Self) -> Int
+pub fn EtcdEventType::to_int(Self) -> Int32
 
 pub(all) struct EtcdKeyValue {
   key : Bytes
@@ -501,7 +501,7 @@ pub struct Histogram {
   mut count : Int64
 }
 pub fn Histogram::bounds(Self) -> Array[Double]
-pub fn Histogram::bucket_count(Self, Int) -> Int64
+pub fn Histogram::bucket_count(Self, Int32) -> Int64
 pub fn Histogram::mean(Self) -> Double
 pub fn Histogram::new(bounds? : Array[Double]) -> Self
 pub fn Histogram::observe(Self, Double) -> Unit
@@ -511,7 +511,7 @@ pub fn Histogram::total(Self) -> Int64
 
 pub struct InMemoryRegistry {
   instances : Map[String, Map[String, Endpoint]]
-  mut seq : Int
+  mut seq : Int32
   mut revision : Int64
 }
 pub fn InMemoryRegistry::deregister(Self, String, String) -> Bool
@@ -545,7 +545,7 @@ pub(all) enum LogLevel {
   Severe
 } derive(Compare, Eq, @debug.Debug)
 pub fn LogLevel::as_level(Self) -> @moonlog.Level
-pub fn LogLevel::compare(Self, Self) -> Int
+pub fn LogLevel::compare(Self, Self) -> Int32
 pub fn LogLevel::equal(Self, Self) -> Bool
 pub fn LogLevel::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn LogLevel::not_equal(Self, Self) -> Bool
@@ -586,11 +586,11 @@ pub fn ManualClock::as_clock(Self) -> Clock
 pub fn ManualClock::new(start? : Int64) -> Self
 
 pub struct MaxConns {
-  max : Int
-  mut in_flight : Int
+  max : Int32
+  mut in_flight : Int32
 }
-pub fn MaxConns::in_flight(Self) -> Int
-pub fn MaxConns::new(Int) -> Self
+pub fn MaxConns::in_flight(Self) -> Int32
+pub fn MaxConns::new(Int32) -> Self
 pub fn MaxConns::release(Self) -> Unit
 pub fn MaxConns::try_acquire(Self) -> Bool
 
@@ -623,10 +623,10 @@ pub fn Outcome::to_repr(Self) -> @debug.Repr
 
 pub struct PeriodLimit {
   period_ms : Int64
-  quota : Int
-  windows : Map[String, (Int64, Int)]
+  quota : Int32
+  windows : Map[String, (Int64, Int32)]
 }
-pub fn PeriodLimit::new(period_secs~ : Int, quota~ : Int) -> Self
+pub fn PeriodLimit::new(period_secs~ : Int32, quota~ : Int32) -> Self
 pub fn PeriodLimit::take(Self, String, Int64) -> PeriodResult
 
 pub(all) enum PeriodResult {
@@ -641,7 +641,7 @@ pub fn PeriodResult::to_repr(Self) -> @debug.Repr
 pub struct PersistentRegistry {
   instances : Map[String, Map[String, Endpoint]]
   key_rev : Map[String, Int64]
-  mut seq : Int
+  mut seq : Int32
   mut revision : Int64
   events : Array[RegistryEvent]
   watchers : Array[(RegistryEvent) -> Unit]
@@ -680,13 +680,13 @@ pub async fn RedisClient::command(Self, Array[Bytes]) -> RespValue raise RedisEr
 pub async fn RedisClient::del(Self, Array[Bytes]) -> Int64 raise RedisError
 pub async fn RedisClient::eval(Self, String, Array[Bytes], Array[Bytes]) -> RespValue raise RedisError
 pub async fn RedisClient::evalsha(Self, String, Array[Bytes], Array[Bytes]) -> RespValue raise RedisError
-pub async fn RedisClient::expire(Self, Bytes, Int) -> Bool raise RedisError
+pub async fn RedisClient::expire(Self, Bytes, Int32) -> Bool raise RedisError
 pub async fn RedisClient::get(Self, Bytes) -> Bytes? raise RedisError
 pub fn RedisClient::new(&RedisConn) -> Self
 pub async fn RedisClient::ping(Self) -> String raise RedisError
-pub async fn RedisClient::scan_match(Self, Bytes, Int) -> Array[Bytes] raise RedisError
+pub async fn RedisClient::scan_match(Self, Bytes, Int32) -> Array[Bytes] raise RedisError
 pub async fn RedisClient::script_load(Self, String) -> String raise RedisError
-pub async fn RedisClient::set_ex(Self, Bytes, Bytes, Int) -> Unit raise RedisError
+pub async fn RedisClient::set_ex(Self, Bytes, Bytes, Int32) -> Unit raise RedisError
 
 pub struct RedisDiscovery {
   client : RedisClient
@@ -695,21 +695,21 @@ pub struct RedisDiscovery {
 }
 pub async fn RedisDiscovery::deregister(Self, String) -> Unit
 pub async fn RedisDiscovery::deregister_instance(Self, String, Endpoint) -> Unit
-pub async fn RedisDiscovery::keepalive(Self, String, Endpoint, ttl? : Int) -> Bool
+pub async fn RedisDiscovery::keepalive(Self, String, Endpoint, ttl? : Int32) -> Bool
 pub fn RedisDiscovery::last(Self, String) -> Array[Endpoint]
 pub fn RedisDiscovery::new(RedisClient, prefix? : String) -> Self
-pub async fn RedisDiscovery::register(Self, String, Endpoint, ttl? : Int) -> String
+pub async fn RedisDiscovery::register(Self, String, Endpoint, ttl? : Int32) -> String
 pub async fn RedisDiscovery::resolve(Self, String) -> Array[Endpoint]
 pub fn RedisDiscovery::resolver(Self) -> (String) -> Array[Endpoint]
 
 pub struct RedisPeriodLimit {
   client : RedisClient
   script : RedisScript
-  period_secs : Int
-  quota : Int
+  period_secs : Int32
+  quota : Int32
   prefix : String
 }
-pub fn RedisPeriodLimit::new(RedisClient, period_secs~ : Int, quota~ : Int, prefix? : String) -> Self
+pub fn RedisPeriodLimit::new(RedisClient, period_secs~ : Int32, quota~ : Int32, prefix? : String) -> Self
 pub async fn RedisPeriodLimit::take(Self, String) -> PeriodResult raise RedisError
 
 pub struct RedisScript {
@@ -723,24 +723,24 @@ pub fn RedisScript::source(Self) -> String
 pub struct RedisTokenLimit {
   client : RedisClient
   script : RedisScript
-  rate : Int
-  burst : Int
+  rate : Int32
+  burst : Int32
   token_key : Bytes
   ts_key : Bytes
   rescue : TokenBucket
 }
 pub async fn RedisTokenLimit::allow(Self, Int64) -> Bool
-pub async fn RedisTokenLimit::allow_n(Self, Int, Int64) -> Bool
-pub fn RedisTokenLimit::new(RedisClient, rate~ : Int, burst~ : Int, key~ : String) -> Self
+pub async fn RedisTokenLimit::allow_n(Self, Int32, Int64) -> Bool
+pub fn RedisTokenLimit::new(RedisClient, rate~ : Int32, burst~ : Int32, key~ : String) -> Self
 pub fn RedisTokenLimit::rescue(Self) -> TokenBucket
 
 pub(all) struct Refusal {
-  status : Int
+  status : Int32
   body : Bytes
   headers : Array[(String, String)]
 }
 pub fn Refusal::events(Self) -> Array[@spec.Event]
-pub fn Refusal::new(status? : Int, body? : Bytes, headers? : Array[(String, String)]) -> Self
+pub fn Refusal::new(status? : Int32, body? : Bytes, headers? : Array[(String, String)]) -> Self
 
 pub(all) enum RegistryEvent {
   Put(key~ : String, endpoint~ : Endpoint, revision~ : Int64)
@@ -754,7 +754,7 @@ pub fn RegistryEvent::to_repr(Self) -> @debug.Repr
 pub(all) struct RequestLog {
   http_method : String
   path : String
-  status : Int
+  status : Int32
   duration_ms : Int64
   request_id : String
   client_ip : String
@@ -766,7 +766,7 @@ pub fn RequestLog::to_json(Self) -> Json
 
 pub struct RespReader {
   data : Bytes
-  mut pos : Int
+  mut pos : Int32
 }
 pub fn RespReader::at_end(Self) -> Bool
 pub fn RespReader::new(Bytes) -> Self
@@ -798,8 +798,8 @@ pub(all) struct RestConf {
   cert_file : String
   key_file : String
   verbose : Bool
-  max_conns : Int
-  max_bytes : Int
+  max_conns : Int32
+  max_bytes : Int32
   cpu_threshold : Int64
   signature : SignatureConf
   middlewares : MiddlewaresConf
@@ -808,9 +808,9 @@ pub(all) struct RestConf {
 pub fn RestConf::from_json(String) -> Self raise ConfigError
 pub fn RestConf::from_yaml(String) -> Self raise ConfigError
 pub fn RestConf::host(Self) -> String
-pub fn RestConf::new(service? : ServiceConf, cert_file? : String, key_file? : String, verbose? : Bool, max_conns? : Int, max_bytes? : Int, cpu_threshold? : Int64, signature? : SignatureConf, middlewares? : MiddlewaresConf, trace_ignore_paths? : Array[String]) -> Self
-pub fn RestConf::port(Self) -> Int
-pub fn RestConf::timeout_ms(Self) -> Int
+pub fn RestConf::new(service? : ServiceConf, cert_file? : String, key_file? : String, verbose? : Bool, max_conns? : Int32, max_bytes? : Int32, cpu_threshold? : Int64, signature? : SignatureConf, middlewares? : MiddlewaresConf, trace_ignore_paths? : Array[String]) -> Self
+pub fn RestConf::port(Self) -> Int32
+pub fn RestConf::timeout_ms(Self) -> Int32
 pub fn RestConf::tls(Self) -> Bool
 
 pub struct RestEngine {
@@ -830,7 +830,7 @@ pub fn RestEngine::names(Self) -> Array[String]
 pub fn RestEngine::new(RestConf, clock? : Clock, logger? : Logger, metrics? : ServerMetrics, usage? : () -> Int64) -> Self raise ConfigError
 
 pub struct RoundRobin {
-  mut cursor : Int
+  mut cursor : Int32
 }
 pub fn RoundRobin::new() -> Self
 pub fn RoundRobin::pick(Self, Array[Endpoint]) -> Endpoint?
@@ -840,7 +840,7 @@ pub struct RpcChannel {
   encoder : @hpack.Encoder
   decoder : @hpack.Decoder
   authority : String
-  mut next_stream_id : Int
+  mut next_stream_id : Int32
 }
 pub fn RpcChannel::call(Self, String, Bytes) -> Result[Bytes, @moonrpc.Status] raise
 pub fn RpcChannel::call_bidi_streaming(Self, String, Array[Bytes]) -> Result[Array[Bytes], @moonrpc.Status] raise
@@ -890,13 +890,13 @@ pub fn RpcServer::to_h2(Self) -> @moonrpc.H2Server
 pub(all) struct RpcServerConf {
   name : String
   host : String
-  port : Int
-  timeout_ms : Int
+  port : Int32
+  timeout_ms : Int32
 } derive(Eq, @debug.Debug, @json.FromJson)
 pub fn RpcServerConf::equal(Self, Self) -> Bool
 pub fn RpcServerConf::from_json(String) -> Self raise ConfigError
 pub fn RpcServerConf::from_yaml(String) -> Self raise ConfigError
-pub fn RpcServerConf::new(name? : String, host? : String, port? : Int, timeout_ms? : Int) -> Self
+pub fn RpcServerConf::new(name? : String, host? : String, port? : Int32, timeout_ms? : Int32) -> Self
 pub fn RpcServerConf::not_equal(Self, Self) -> Bool
 pub fn RpcServerConf::to_repr(Self) -> @debug.Repr
 
@@ -921,14 +921,14 @@ pub fn ServerMetrics::to_exposition(Self) -> String
 pub(all) struct ServiceConf {
   name : String
   host : String
-  port : Int
-  timeout_ms : Int
+  port : Int32
+  timeout_ms : Int32
   log_level : LogLevel
 } derive(Eq, @json.FromJson)
 pub fn ServiceConf::equal(Self, Self) -> Bool
 pub fn ServiceConf::from_json(String) -> Self raise ConfigError
 pub fn ServiceConf::from_yaml(String) -> Self raise ConfigError
-pub fn ServiceConf::new(name? : String, host? : String, port? : Int, timeout_ms? : Int, log_level? : LogLevel) -> Self
+pub fn ServiceConf::new(name? : String, host? : String, port? : Int32, timeout_ms? : Int32, log_level? : LogLevel) -> Self
 pub fn ServiceConf::not_equal(Self, Self) -> Bool
 
 pub struct Shedder {
@@ -941,11 +941,11 @@ pub fn Shedder::usage(Self) -> Int64
 
 pub struct ShutdownCoordinator {
   mut shutting_down : Bool
-  mut in_flight : Int
+  mut in_flight : Int32
 }
 pub fn ShutdownCoordinator::begin_call(Self) -> Bool
 pub fn ShutdownCoordinator::end_call(Self) -> Unit
-pub fn ShutdownCoordinator::in_flight(Self) -> Int
+pub fn ShutdownCoordinator::in_flight(Self) -> Int32
 pub fn ShutdownCoordinator::initiate_shutdown(Self) -> Unit
 pub fn ShutdownCoordinator::is_drained(Self) -> Bool
 pub fn ShutdownCoordinator::is_shutting_down(Self) -> Bool
@@ -972,28 +972,28 @@ pub fn TokenBucket::new(Double, burst? : Double, now? : Int64) -> Self
 pub(all) struct TraceContext {
   trace_id : String
   span_id : String
-  flags : Int
+  flags : Int32
 }
 pub fn TraceContext::span_id(Self) -> String
 pub fn TraceContext::to_traceparent(Self) -> String
 pub fn TraceContext::trace_id(Self) -> String
 
 pub struct WeightedRoundRobin {
-  scores : Map[String, Int]
+  scores : Map[String, Int32]
 }
 pub fn WeightedRoundRobin::new() -> Self
 pub fn WeightedRoundRobin::pick(Self, Array[Endpoint]) -> Endpoint?
 
 pub struct Window {
-  size : Int
+  size : Int32
   bucket_ms : Int64
   buckets : Array[Bucket]
-  mut offset : Int
+  mut offset : Int32
   mut bucket_start : Int64
 }
 pub fn Window::add(Self, Outcome, Int64) -> Unit
 pub fn Window::each(Self, Int64, (Bucket) -> Unit) -> Unit
-pub fn Window::new(size? : Int, bucket_ms? : Int64, now? : Int64) -> Self
+pub fn Window::new(size? : Int32, bucket_ms? : Int64, now? : Int64) -> Self
 
 // Type aliases
 pub type BidiStreamFactory = () -> BidiStreamHandler
