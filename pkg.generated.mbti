@@ -5,13 +5,17 @@ import {
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
   "moonbitstack/moonapi",
+  "moonbitstack/moonapi/ctx",
+  "moonbitstack/moonapi/route",
   "moonbitstack/moonasgi/http",
   "moonbitstack/moonasgi/spec",
   "moonbitstack/mooncred/jwt",
   "moonbitstack/moonhttp/hpack",
   "moonbitstack/moonlog",
   "moonbitstack/moonpool",
-  "moonbitstack/moonrpc",
+  "moonbitstack/moonrpc/proto",
+  "moonbitstack/moonrpc/server",
+  "moonbitstack/moonrpc/wire",
 }
 
 // Values
@@ -69,7 +73,7 @@ pub let message_key : String
 
 pub fn metrics(ServerMetrics, Clock) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
-pub fn metrics_handler(ServerMetrics) -> (@moonapi.Context) -> @http.Response raise
+pub fn metrics_handler(ServerMetrics) -> (@ctx.Context) -> @http.Response raise
 
 pub fn mount_metrics(@moonapi.App, ServerMetrics) -> Unit
 
@@ -127,7 +131,7 @@ pub fn shedding(Shedder, refusal? : Refusal) -> (async (@spec.Scope, async () ->
 
 pub let stamp_key : String
 
-pub fn status_of_code(Int32) -> @moonrpc.Status
+pub fn status_of_code(Int32) -> @wire.Status
 
 pub fn structured_logging(Clock, logger? : Logger) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
@@ -185,7 +189,7 @@ pub struct BidiCall {
   mut status_code : Int32
   mut ended : Bool
 }
-pub fn BidiCall::close_send(Self) -> Result[Array[Bytes], @moonrpc.Status] raise
+pub fn BidiCall::close_send(Self) -> Result[Array[Bytes], @wire.Status] raise
 pub fn BidiCall::send(Self, Bytes) -> Array[Bytes] raise
 
 pub(all) struct BidiStreamHandler {
@@ -314,7 +318,7 @@ pub(all) struct EtcdDeleteRangeRequest {
   range_end : Bytes
   prev_kv : Bool
 } derive(Eq)
-pub fn EtcdDeleteRangeRequest::decode(Bytes) -> Self raise @moonrpc.PbError
+pub fn EtcdDeleteRangeRequest::decode(Bytes) -> Self raise @proto.PbError
 pub fn EtcdDeleteRangeRequest::encode(Self) -> Bytes
 pub fn EtcdDeleteRangeRequest::equal(Self, Self) -> Bool
 pub fn EtcdDeleteRangeRequest::not_equal(Self, Self) -> Bool
@@ -323,7 +327,7 @@ pub(all) struct EtcdDeleteRangeResponse {
   deleted : Int64
   prev_kvs : Array[EtcdKeyValue]
 } derive(Eq)
-pub fn EtcdDeleteRangeResponse::decode(Bytes) -> Self raise @moonrpc.PbError
+pub fn EtcdDeleteRangeResponse::decode(Bytes) -> Self raise @proto.PbError
 pub fn EtcdDeleteRangeResponse::encode(Self) -> Bytes
 pub fn EtcdDeleteRangeResponse::equal(Self, Self) -> Bool
 pub fn EtcdDeleteRangeResponse::not_equal(Self, Self) -> Bool
@@ -342,7 +346,7 @@ pub(all) struct EtcdEvent {
   event_type : EtcdEventType
   kv : EtcdKeyValue
 } derive(Eq)
-pub fn EtcdEvent::decode(Bytes) -> Self raise @moonrpc.PbError
+pub fn EtcdEvent::decode(Bytes) -> Self raise @proto.PbError
 pub fn EtcdEvent::encode(Self) -> Bytes
 pub fn EtcdEvent::equal(Self, Self) -> Bool
 pub fn EtcdEvent::not_equal(Self, Self) -> Bool
@@ -364,7 +368,7 @@ pub(all) struct EtcdKeyValue {
   value : Bytes
   lease : Int64
 } derive(Eq)
-pub fn EtcdKeyValue::decode(Bytes) -> Self raise @moonrpc.PbError
+pub fn EtcdKeyValue::decode(Bytes) -> Self raise @proto.PbError
 pub fn EtcdKeyValue::empty() -> Self
 pub fn EtcdKeyValue::encode(Self) -> Bytes
 pub fn EtcdKeyValue::equal(Self, Self) -> Bool
@@ -374,7 +378,7 @@ pub(all) struct EtcdLeaseGrantRequest {
   ttl : Int64
   id : Int64
 } derive(Eq)
-pub fn EtcdLeaseGrantRequest::decode(Bytes) -> Self raise @moonrpc.PbError
+pub fn EtcdLeaseGrantRequest::decode(Bytes) -> Self raise @proto.PbError
 pub fn EtcdLeaseGrantRequest::encode(Self) -> Bytes
 pub fn EtcdLeaseGrantRequest::equal(Self, Self) -> Bool
 pub fn EtcdLeaseGrantRequest::not_equal(Self, Self) -> Bool
@@ -384,7 +388,7 @@ pub(all) struct EtcdLeaseGrantResponse {
   ttl : Int64
   error : String
 } derive(Eq)
-pub fn EtcdLeaseGrantResponse::decode(Bytes) -> Self raise @moonrpc.PbError
+pub fn EtcdLeaseGrantResponse::decode(Bytes) -> Self raise @proto.PbError
 pub fn EtcdLeaseGrantResponse::encode(Self) -> Bytes
 pub fn EtcdLeaseGrantResponse::equal(Self, Self) -> Bool
 pub fn EtcdLeaseGrantResponse::not_equal(Self, Self) -> Bool
@@ -392,7 +396,7 @@ pub fn EtcdLeaseGrantResponse::not_equal(Self, Self) -> Bool
 pub(all) struct EtcdLeaseKeepAliveRequest {
   id : Int64
 } derive(Eq)
-pub fn EtcdLeaseKeepAliveRequest::decode(Bytes) -> Self raise @moonrpc.PbError
+pub fn EtcdLeaseKeepAliveRequest::decode(Bytes) -> Self raise @proto.PbError
 pub fn EtcdLeaseKeepAliveRequest::encode(Self) -> Bytes
 pub fn EtcdLeaseKeepAliveRequest::equal(Self, Self) -> Bool
 pub fn EtcdLeaseKeepAliveRequest::not_equal(Self, Self) -> Bool
@@ -401,7 +405,7 @@ pub(all) struct EtcdLeaseKeepAliveResponse {
   id : Int64
   ttl : Int64
 } derive(Eq)
-pub fn EtcdLeaseKeepAliveResponse::decode(Bytes) -> Self raise @moonrpc.PbError
+pub fn EtcdLeaseKeepAliveResponse::decode(Bytes) -> Self raise @proto.PbError
 pub fn EtcdLeaseKeepAliveResponse::encode(Self) -> Bytes
 pub fn EtcdLeaseKeepAliveResponse::equal(Self, Self) -> Bool
 pub fn EtcdLeaseKeepAliveResponse::not_equal(Self, Self) -> Bool
@@ -411,7 +415,7 @@ pub(all) struct EtcdPutRequest {
   value : Bytes
   lease : Int64
 } derive(Eq)
-pub fn EtcdPutRequest::decode(Bytes) -> Self raise @moonrpc.PbError
+pub fn EtcdPutRequest::decode(Bytes) -> Self raise @proto.PbError
 pub fn EtcdPutRequest::encode(Self) -> Bytes
 pub fn EtcdPutRequest::equal(Self, Self) -> Bool
 pub fn EtcdPutRequest::not_equal(Self, Self) -> Bool
@@ -419,7 +423,7 @@ pub fn EtcdPutRequest::not_equal(Self, Self) -> Bool
 pub(all) struct EtcdPutResponse {
   prev_kv : EtcdKeyValue
 } derive(Eq)
-pub fn EtcdPutResponse::decode(Bytes) -> Self raise @moonrpc.PbError
+pub fn EtcdPutResponse::decode(Bytes) -> Self raise @proto.PbError
 pub fn EtcdPutResponse::encode(Self) -> Bytes
 pub fn EtcdPutResponse::equal(Self, Self) -> Bool
 pub fn EtcdPutResponse::not_equal(Self, Self) -> Bool
@@ -429,7 +433,7 @@ pub(all) struct EtcdRangeRequest {
   range_end : Bytes
   limit : Int64
 } derive(Eq)
-pub fn EtcdRangeRequest::decode(Bytes) -> Self raise @moonrpc.PbError
+pub fn EtcdRangeRequest::decode(Bytes) -> Self raise @proto.PbError
 pub fn EtcdRangeRequest::encode(Self) -> Bytes
 pub fn EtcdRangeRequest::equal(Self, Self) -> Bool
 pub fn EtcdRangeRequest::not_equal(Self, Self) -> Bool
@@ -438,7 +442,7 @@ pub(all) struct EtcdRangeResponse {
   kvs : Array[EtcdKeyValue]
   count : Int64
 } derive(Eq)
-pub fn EtcdRangeResponse::decode(Bytes) -> Self raise @moonrpc.PbError
+pub fn EtcdRangeResponse::decode(Bytes) -> Self raise @proto.PbError
 pub fn EtcdRangeResponse::encode(Self) -> Bytes
 pub fn EtcdRangeResponse::equal(Self, Self) -> Bool
 pub fn EtcdRangeResponse::not_equal(Self, Self) -> Bool
@@ -446,7 +450,7 @@ pub fn EtcdRangeResponse::not_equal(Self, Self) -> Bool
 pub(all) struct EtcdWatchCancelRequest {
   watch_id : Int64
 } derive(Eq)
-pub fn EtcdWatchCancelRequest::decode(Bytes) -> Self raise @moonrpc.PbError
+pub fn EtcdWatchCancelRequest::decode(Bytes) -> Self raise @proto.PbError
 pub fn EtcdWatchCancelRequest::encode(Self) -> Bytes
 pub fn EtcdWatchCancelRequest::equal(Self, Self) -> Bool
 pub fn EtcdWatchCancelRequest::not_equal(Self, Self) -> Bool
@@ -456,7 +460,7 @@ pub(all) struct EtcdWatchCreateRequest {
   range_end : Bytes
   start_revision : Int64
 } derive(Eq)
-pub fn EtcdWatchCreateRequest::decode(Bytes) -> Self raise @moonrpc.PbError
+pub fn EtcdWatchCreateRequest::decode(Bytes) -> Self raise @proto.PbError
 pub fn EtcdWatchCreateRequest::encode(Self) -> Bytes
 pub fn EtcdWatchCreateRequest::equal(Self, Self) -> Bool
 pub fn EtcdWatchCreateRequest::not_equal(Self, Self) -> Bool
@@ -465,7 +469,7 @@ pub(all) enum EtcdWatchRequest {
   Create(EtcdWatchCreateRequest)
   Cancel(EtcdWatchCancelRequest)
 } derive(Eq)
-pub fn EtcdWatchRequest::decode(Bytes) -> Self raise @moonrpc.PbError
+pub fn EtcdWatchRequest::decode(Bytes) -> Self raise @proto.PbError
 pub fn EtcdWatchRequest::encode(Self) -> Bytes
 pub fn EtcdWatchRequest::equal(Self, Self) -> Bool
 pub fn EtcdWatchRequest::not_equal(Self, Self) -> Bool
@@ -476,7 +480,7 @@ pub(all) struct EtcdWatchResponse {
   canceled : Bool
   events : Array[EtcdEvent]
 } derive(Eq)
-pub fn EtcdWatchResponse::decode(Bytes) -> Self raise @moonrpc.PbError
+pub fn EtcdWatchResponse::decode(Bytes) -> Self raise @proto.PbError
 pub fn EtcdWatchResponse::encode(Self) -> Bytes
 pub fn EtcdWatchResponse::equal(Self, Self) -> Bool
 pub fn EtcdWatchResponse::not_equal(Self, Self) -> Bool
@@ -485,14 +489,14 @@ pub struct Group {
   app : @moonapi.App
   prefix : String
 }
-pub fn Group::delete(Self, String, (@moonapi.Context) -> @http.Response raise, summary? : String) -> Unit
-pub fn Group::get(Self, String, (@moonapi.Context) -> @http.Response raise, summary? : String) -> Unit
+pub fn Group::delete(Self, String, (@ctx.Context) -> @http.Response raise, summary? : String) -> Unit
+pub fn Group::get(Self, String, (@ctx.Context) -> @http.Response raise, summary? : String) -> Unit
 pub fn Group::new(@moonapi.App, String) -> Self
-pub fn Group::patch(Self, String, (@moonapi.Context) -> @http.Response raise, summary? : String) -> Unit
-pub fn Group::post(Self, String, (@moonapi.Context) -> @http.Response raise, summary? : String) -> Unit
+pub fn Group::patch(Self, String, (@ctx.Context) -> @http.Response raise, summary? : String) -> Unit
+pub fn Group::post(Self, String, (@ctx.Context) -> @http.Response raise, summary? : String) -> Unit
 pub fn Group::prefix(Self) -> String
-pub fn Group::put(Self, String, (@moonapi.Context) -> @http.Response raise, summary? : String) -> Unit
-pub fn Group::route(Self, @moonapi.Method, String, (@moonapi.Context) -> @http.Response raise, summary? : String) -> Unit
+pub fn Group::put(Self, String, (@ctx.Context) -> @http.Response raise, summary? : String) -> Unit
+pub fn Group::route(Self, @route.Method, String, (@ctx.Context) -> @http.Response raise, summary? : String) -> Unit
 
 pub struct Histogram {
   bounds : Array[Double]
@@ -533,9 +537,9 @@ pub struct LoadBalancedChannel {
   balancer : Balancer
   service : String
 }
-pub fn LoadBalancedChannel::call(Self, String, Bytes) -> Result[Bytes, @moonrpc.Status] raise
-pub fn LoadBalancedChannel::call_bidi_streaming(Self, String, Array[Bytes]) -> Result[Array[Bytes], @moonrpc.Status] raise
-pub fn LoadBalancedChannel::call_server_streaming(Self, String, Bytes) -> Result[Array[Bytes], @moonrpc.Status] raise
+pub fn LoadBalancedChannel::call(Self, String, Bytes) -> Result[Bytes, @wire.Status] raise
+pub fn LoadBalancedChannel::call_bidi_streaming(Self, String, Array[Bytes]) -> Result[Array[Bytes], @wire.Status] raise
+pub fn LoadBalancedChannel::call_server_streaming(Self, String, Bytes) -> Result[Array[Bytes], @wire.Status] raise
 pub fn LoadBalancedChannel::new((String) -> Array[Endpoint], RpcCluster, String, balancer? : Balancer) -> Self
 
 pub(all) enum LogLevel {
@@ -836,16 +840,16 @@ pub fn RoundRobin::new() -> Self
 pub fn RoundRobin::pick(Self, Array[Endpoint]) -> Endpoint?
 
 pub struct RpcChannel {
-  engine : @moonrpc.H2Server
+  engine : @server.H2Server
   encoder : @hpack.Encoder
   decoder : @hpack.Decoder
   authority : String
   mut next_stream_id : Int32
 }
-pub fn RpcChannel::call(Self, String, Bytes) -> Result[Bytes, @moonrpc.Status] raise
-pub fn RpcChannel::call_bidi_streaming(Self, String, Array[Bytes]) -> Result[Array[Bytes], @moonrpc.Status] raise
-pub fn RpcChannel::call_client_streaming(Self, String, Array[Bytes]) -> Result[Bytes, @moonrpc.Status] raise
-pub fn RpcChannel::call_server_streaming(Self, String, Bytes) -> Result[Array[Bytes], @moonrpc.Status] raise
+pub fn RpcChannel::call(Self, String, Bytes) -> Result[Bytes, @wire.Status] raise
+pub fn RpcChannel::call_bidi_streaming(Self, String, Array[Bytes]) -> Result[Array[Bytes], @wire.Status] raise
+pub fn RpcChannel::call_client_streaming(Self, String, Array[Bytes]) -> Result[Bytes, @wire.Status] raise
+pub fn RpcChannel::call_server_streaming(Self, String, Bytes) -> Result[Array[Bytes], @wire.Status] raise
 pub fn RpcChannel::connect(RpcServer, authority? : String) -> Self
 pub fn RpcChannel::open_bidi(Self, String) -> BidiCall raise
 
@@ -874,18 +878,18 @@ pub struct RpcServer {
   bidi_streaming : Map[String, () -> BidiStreamHandler]
 }
 pub fn RpcServer::conf(Self) -> RpcServerConf
-pub fn RpcServer::dispatch(Self, String, Bytes) -> Result[Bytes, @moonrpc.Status]
-pub fn RpcServer::dispatch_graceful(Self, ShutdownCoordinator, String, Bytes) -> Result[Bytes, @moonrpc.Status]
+pub fn RpcServer::dispatch(Self, String, Bytes) -> Result[Bytes, @wire.Status]
+pub fn RpcServer::dispatch_graceful(Self, ShutdownCoordinator, String, Bytes) -> Result[Bytes, @wire.Status]
 pub fn RpcServer::group(Self, String) -> RpcGroup
 pub fn RpcServer::has_method(Self, String) -> Bool
 pub fn RpcServer::lookup(Self, String) -> ((Bytes) -> Bytes)?
 pub fn RpcServer::methods(Self) -> Array[String]
 pub fn RpcServer::new(RpcServerConf) -> Self
-pub fn RpcServer::register(Self, @moonrpc.Method, (Bytes) -> Bytes) -> Unit
-pub fn RpcServer::register_bidi_streaming(Self, @moonrpc.Method, () -> BidiStreamHandler) -> Unit
-pub fn RpcServer::register_client_streaming(Self, @moonrpc.Method, (Array[Bytes]) -> Bytes) -> Unit
-pub fn RpcServer::register_server_streaming(Self, @moonrpc.Method, (Bytes) -> Array[Bytes]) -> Unit
-pub fn RpcServer::to_h2(Self) -> @moonrpc.H2Server
+pub fn RpcServer::register(Self, @wire.Method, (Bytes) -> Bytes) -> Unit
+pub fn RpcServer::register_bidi_streaming(Self, @wire.Method, () -> BidiStreamHandler) -> Unit
+pub fn RpcServer::register_client_streaming(Self, @wire.Method, (Array[Bytes]) -> Bytes) -> Unit
+pub fn RpcServer::register_server_streaming(Self, @wire.Method, (Bytes) -> Array[Bytes]) -> Unit
+pub fn RpcServer::to_h2(Self) -> @server.H2Server
 
 pub(all) struct RpcServerConf {
   name : String
