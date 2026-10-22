@@ -1,6 +1,6 @@
 name = "moonbitstack/moonzero"
 
-version = "0.14.0"
+version = "0.14.1"
 
 readme = "README.md"
 
@@ -20,12 +20,12 @@ keywords = [
 description = "A service framework for MoonBit after go-zero: config-driven REST engine and middleware over moonapi, zRPC over moonrpc, discovery on etcd, consul and redis, and go-zero's breaker, shedder and limiters over moonward."
 
 import {
-  "moonbitstack/moonapi@0.15.0",
+  "moonbitstack/moonapi@0.16.0",
   "moonbitstack/moonasgi@0.10.0",
-  "moonbitstack/moonrpc@0.20.1",
+  "moonbitstack/moonrpc@0.20.2",
   "moonbitstack/mooncrypt@0.3.1",
   "moonbitstack/mooncred@0.6.1",
-  "moonbitstack/moonhttp@0.12.1",
+  "moonbitstack/moonhttp@0.15.0",
   "moonbitstack/moonjson@0.4.0",
   "moonbitstack/moonyaml@0.1.1",
   "moonbitstack/moonlog@0.1.0",
