@@ -174,7 +174,8 @@ async test "the prometheus layer records into the engine's own metric set" {
 ///|
 async test "shedding refuses without running the app" {
   let usage : Ref[Int64] = { val: 0L, }
-  let s = @moonzero.Shedder::new(900L, usage=() => usage.val)
+  let mc = @moonzero.ManualClock::new()
+  let s = @moonzero.Shedder::new(mc.as_clock(), usage=() => usage.val)
   let ran : Ref[Int32] = { val: 0, }
   let app = @moonzero.shedding(s)((_s, _r, snd) => {
     ran.val = ran.val + 1
@@ -182,11 +183,47 @@ async test "shedding refuses without running the app" {
       @moonasgi.Event::HttpResponseStart(status=200, headers=[], trailers=false),
     )
   })
-  assert_eq(status_of(run(app, scope_at("/ping", []))), 200)
-  assert_eq(ran.val, 1)
-  usage.val = 950L
+  // Ten requests held in flight elsewhere and forty instant ones over 400ms: the
+  // server has shown it finishes calls at once, so ten stuck in flight is too many.
+  let held = Array::makei(10, _ => s.allow().unwrap())
+  for _ in 0..<40 {
+    assert_eq(status_of(run(app, scope_at("/ping", []))), 200)
+    mc.advance(10)
+  }
+  assert_eq(ran.val, 40)
+  usage.val = 900L
   assert_eq(status_of(run(app, scope_at("/ping", []))), 503)
-  assert_eq(ran.val, 1)
+  assert_eq(ran.val, 40)
+  for t in held {
+    t.fail()
+  }
+}
+
+///|
+async test "shedding does not count an app's 503 as throughput" {
+  let usage : Ref[Int64] = { val: 0L, }
+  let mc = @moonzero.ManualClock::new()
+  let s = @moonzero.Shedder::new(mc.as_clock(), usage=() => usage.val)
+  let ran : Ref[Int32] = { val: 0, }
+  let app = @moonzero.shedding(s)((_s, _r, snd) => {
+    ran.val = ran.val + 1
+    snd(
+      @moonasgi.Event::HttpResponseStart(status=503, headers=[], trailers=false),
+    )
+  })
+  // The same load as above, but every answer was a 503, so the shedder has no
+  // throughput to go by and assumes a second a call: ten in flight is not too many.
+  let held = Array::makei(10, _ => s.allow().unwrap())
+  for _ in 0..<40 {
+    let _ = run(app, scope_at("/ping", []))
+    mc.advance(10)
+  }
+  usage.val = 900L
+  let _ = run(app, scope_at("/ping", []))
+  assert_eq(ran.val, 41)
+  for t in held {
+    t.fail()
+  }
 }
 
 ///|

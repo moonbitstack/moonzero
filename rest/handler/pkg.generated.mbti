@@ -84,14 +84,6 @@ pub(all) struct CorsConf {
 }
 pub fn CorsConf::new(allow_origin? : String, allow_methods? : String, allow_headers? : String, allow_credentials? : Bool, max_age? : Int32) -> Self
 
-pub struct Deadline {
-  budget_ms : Int64
-  started_ms : Int64
-}
-pub fn Deadline::expired(Self, Int64) -> Bool
-pub fn Deadline::remaining(Self, Int64) -> Int64
-pub fn Deadline::start(Int64, Int64) -> Self
-
 pub(all) struct Refusal {
   status : Int32
   body : Bytes

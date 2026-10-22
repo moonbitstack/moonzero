@@ -1,7 +1,8 @@
 // go-zero's adaptive circuit breaker (core/breaker): Google SRE's client-side
-// throttling over a rolling window.
+// throttling, moonward's core bound to a clock and a source of draws.
 import {
-  "moonbitstack/moonzero/clock",
-  "moonbitstack/moonzero/window",
   "moonbitlang/core/random",
+  "moonbitstack/moondate",
+  "moonbitstack/moonward",
+  "moonbitstack/moonzero/clock",
 }

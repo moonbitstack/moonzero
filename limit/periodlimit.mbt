@@ -10,48 +10,60 @@ pub(all) enum PeriodResult {
 
 ///|
 /// A fixed-window rate limiter kept in this process: each key may make up to `quota`
-/// requests per `period`; a key's window opens on its first request and resets once
-/// `period` has elapsed. It is the counting complement of the continuous
-/// `TokenBucket`, and because every decision is a function of `(state, now)` it is
-/// exactly testable without a real clock.
+/// requests per `period`, counted by one moonward `Period` per key. A key's window
+/// opens on its first request, or with `align` on a multiple of the period
+/// (← go-zero's `Align()`), and starts again once the period has passed.
 ///
 /// The window is local, so N replicas admit N quotas. `RedisPeriodLimit` is the same
 /// limiter with its window in redis and is what a fleet should run; this one is for a
 /// single process, and for the fallback a caller wants when redis is unreachable.
 pub struct PeriodLimit {
-  period_ms : Int64
+  period : @moondate.Span
   quota : Int32
-  windows : Map[String, (Int64, Int32)]
+  align : Bool
+  windows : Map[String, @moonward.Period]
 }
 
 ///|
 /// A limiter admitting `quota` requests per `period_secs` seconds, per key.
-pub fn PeriodLimit::new(period_secs~ : Int32, quota~ : Int32) -> PeriodLimit {
-  { period_ms: period_secs.to_int64() * 1000L, quota, windows: Map([]), }
+pub fn PeriodLimit::new(
+  period_secs~ : Int32,
+  quota~ : Int32,
+  align~ : Bool = false,
+) -> PeriodLimit {
+  {
+    period: @moondate.Span::new(seconds=period_secs.to_int64()),
+    quota,
+    align,
+    windows: {},
+  }
 }
 
 ///|
-/// Account for one request under `key` at `now` and report its outcome. Opens a
-/// fresh window if the key's current one has elapsed; `PeriodAllowed` below quota,
-/// `PeriodHitQuota` at exactly the quota (the last admitted request), and
-/// `PeriodOverQuota` beyond it.
+/// Account for one request under `key` at `now`, in milliseconds, and report its
+/// outcome: `PeriodAllowed` below quota, `PeriodHitQuota` at exactly the quota (the
+/// last admitted request), and `PeriodOverQuota` beyond it.
 pub fn PeriodLimit::take(
   self : PeriodLimit,
   key : String,
   now : Int64,
 ) -> PeriodResult {
-  let (start, count) = match self.windows.get(key) {
-    Some((s, c)) => if now - s >= self.period_ms { (now, 0) } else { (s, c) }
-    None => (now, 0)
+  let window = match self.windows.get(key) {
+    Some(window) => window
+    None => {
+      let fresh = @moonward.Period::new(
+        self.quota,
+        self.period,
+        align=self.align,
+      )
+      self.windows[key] = fresh
+      fresh
+    }
   }
-  let count = count + 1
-  self.windows[key] = (start, count)
-  if count < self.quota {
-    PeriodAllowed
-  } else if count == self.quota {
-    PeriodHitQuota
-  } else {
-    PeriodOverQuota
+  match window.take(now * 1_000_000L) {
+    Under => PeriodAllowed
+    Hit => PeriodHitQuota
+    Over => PeriodOverQuota
   }
 }
 

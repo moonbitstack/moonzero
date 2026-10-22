@@ -5,9 +5,6 @@
 pub using @clock {type Clock, type ManualClock}
 
 ///|
-pub using @window {type Bucket, type Outcome, type Window}
-
-///|
 pub using @proc {type ShutdownCoordinator}
 
 ///|
@@ -47,7 +44,7 @@ pub using @metric {
 pub using @breaker {type Breaker, type Promise, type Unavailable}
 
 ///|
-pub using @shedder {type Shedder}
+pub using @shedder {type Shedder, type Ticket}
 
 ///|
 pub using @conf {
@@ -165,7 +162,6 @@ pub using @limit {
 ///|
 pub using @handler {
   type CorsConf,
-  type Deadline,
   type Middleware,
   type Refusal,
   type RequestLog,

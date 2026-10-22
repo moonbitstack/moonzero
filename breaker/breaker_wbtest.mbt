@@ -15,13 +15,13 @@ fn bust() -> Int32 raise {
 
 ///|
 /// Take one call through the breaker and settle it as `o`.
-fn settle(b : Breaker, o : @window.Outcome) -> Unit raise {
+fn settle(b : Breaker, o : @moonward.Outcome) -> Unit raise {
   guard b.allow() is Some(p) else {
     fail("the breaker shed a call it should admit")
   }
   match o {
-    Succ => p.accept()
-    Fail => p.reject()
+    Success => p.accept()
+    Failure => p.reject()
     Drop => fail("a settled call is not a drop")
   }
 }
@@ -33,16 +33,16 @@ test "the drop ratio follows the SRE formula as failures pile up" {
   // sees is the formula alone, with the draw taken out of it
   let b = Breaker::new(mc.as_clock(), rand=() => 1.0)
   for _ in 0..<5 {
-    settle(b, Fail)
+    settle(b, Failure)
   }
   // five failures are exactly the protection floor, so nothing sheds yet
   assert_eq(b.drop_ratio(), 0.0)
-  settle(b, Fail)
+  settle(b, Failure)
   assert_eq(b.drop_ratio(), 1.0 / 7.0)
-  settle(b, Fail)
+  settle(b, Failure)
   assert_eq(b.drop_ratio(), 2.0 / 8.0)
   // one success is worth k = 1.5 against the seven failures
-  settle(b, Succ)
+  settle(b, Success)
   assert_eq(b.drop_ratio(), (8.0 - 5.0 - 1.5) / 9.0)
 }
 
@@ -51,18 +51,18 @@ test "a run of all-failure buckets decays the weight on past successes" {
   let mc = @clock.ManualClock::new()
   let b = Breaker::new(mc.as_clock(), rand=() => 1.0)
   for _ in 0..<4 {
-    settle(b, Succ)
+    settle(b, Success)
   }
   mc.advance(250)
   for _ in 0..<20 {
-    settle(b, Fail)
+    settle(b, Failure)
   }
   // one failing bucket out of forty: w = 1.5 - 0.4/40 = 1.49, so the four
   // successes are worth 5.96 against 24 calls
   assert_eq(b.drop_ratio(), 0.5216)
   mc.advance(250)
   for _ in 0..<20 {
-    settle(b, Fail)
+    settle(b, Failure)
   }
   // a second failing bucket pulls w to 1.48 and the ratio up with it
   assert_eq(b.drop_ratio(), 0.735111111111111)
@@ -75,7 +75,7 @@ test "a healthy stream is never shed, however the roll lands" {
   // formula's doing and not the dice's
   let b = Breaker::new(mc.as_clock(), rand=() => 0.0)
   for _ in 0..<200 {
-    settle(b, Succ)
+    settle(b, Success)
     mc.advance(50)
   }
   assert_eq(b.drop_ratio(), 0.0)
@@ -87,7 +87,7 @@ test "a shed call counts as traffic, and a silent second forces one probe" {
   let dice = Dice::{ face: 1.0, }
   let b = Breaker::new(mc.as_clock(), rand=() => dice.face)
   for _ in 0..<7 {
-    settle(b, Fail)
+    settle(b, Failure)
   }
   assert_eq(b.drop_ratio(), 0.25)
   // from here every draw loses, so the 0.25 throttle sheds

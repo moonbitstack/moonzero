@@ -6,13 +6,13 @@
 
 [![Check and Test](https://github.com/moonbitstack/moonzero/actions/workflows/ci.yml/badge.svg)](https://github.com/moonbitstack/moonzero/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](./LICENSE)
-[![mooncakes](https://img.shields.io/badge/mooncakes-Lfan--ke%2Fmoonzero-brightgreen)](https://mooncakes.io/docs/moonbitstack/moonzero)
+[![mooncakes](https://img.shields.io/badge/mooncakes-moonbitstack%2Fmoonzero-brightgreen)](https://mooncakes.io/docs/moonbitstack/moonzero)
 
 </div>
 
 > Moved on mooncakes from `Lfan-ke/moonzero` to `moonbitstack/moonzero`.
 
-`moonzero` is the integration layer of the **moon\*** suite — the role `go-zero` plays for Go. It assembles a [`moonapi`](https://github.com/moonbitstack/moonapi) application from config, wraps it in middleware, and produces a runnable [`moonasgi`](https://github.com/moonbitstack/moonasgi) `AsgiApp` that a server (`mooncat`) runs. It depends only on `moonapi` + `moonasgi`, so it stays backend-agnostic.
+`moonzero` is the integration layer of the **moon\*** suite — the role `go-zero` plays for Go. It assembles a [`moonapi`](https://github.com/moonbitstack/moonapi) application from config, wraps it in middleware, and produces a runnable [`moonasgi`](https://github.com/moonbitstack/moonasgi) `AsgiApp` that a server (`mooncat`) runs. It never names a server, so any ASGI host runs it.
 
 ```mermaid
 flowchart LR
@@ -52,10 +52,9 @@ The layout follows go-zero's own: algorithms in packages of their own, every HTT
 | Package | What | go-zero |
 |:--:|:--|:--|
 | `clock` | the millisecond clock every timing decision is a function of | `core/timex` |
-| `window` | the rolling window outcomes are counted in | `core/collection` |
-| `breaker` | the adaptive circuit breaker | `core/breaker` |
-| `shedder` | the adaptive load shedder | `core/load` |
-| `limit` | token bucket, period limit and connection limit, in memory or on Redis | `core/limit`, `core/syncx` |
+| `breaker` | the adaptive circuit breaker, over moonward's | `core/breaker` |
+| `shedder` | the adaptive load shedder, over moonward's | `core/load` |
+| `limit` | token bucket, period limit and connection limit, in memory over moonward's or on Redis | `core/limit`, `core/syncx` |
 | `logx` | levelled, structured logging | `core/logx` |
 | `metric` | counters and histograms in the Prometheus format | `core/metric` |
 | `trace` | W3C trace context | `core/trace` |
@@ -93,8 +92,9 @@ let server = @moonzero.Server::new(conf, app)
 ```
 
 - **`rate_limit`** / **`period_limit`** — a [`TokenBucket`](./limit/ratelimit.mbt) that admits a burst and refills continuously, and a [`PeriodLimit`](./limit/periodlimit.mbt) that counts a fixed window per key; both answer `429` once they run out. Both are process-local, so N replicas admit N quotas — for a fleet use **`redis_rate_limit`** / **`redis_period_limit`** over `RedisTokenLimit` / `RedisPeriodLimit`, which run go-zero's `tokenscript.lua` and `periodscript.lua` in redis so every replica draws on one bucket or one window. An unreachable redis leaves the token limiter running on its local bucket (go-zero's `rescueLimiter`) rather than opening the gate.
-- **`breaker`** — a [`Breaker`](./breaker/breaker.mbt): go-zero's `googleBreaker`, Google SRE's client-side throttle. It keeps a [`Window`](./window/window.mbt) of the last 10s in 40 buckets and sheds a *fraction* of calls, `(total - 5 - max(w, 1.1) * accepts) / (total + 1)` scaled by the run of clean buckets, answering `503` for the ones it sheds — a struggling backend keeps whatever load it can still serve instead of being cut off wholesale. The clock and the shed roll are both injected, so the decisions are exactly reproducible.
-- **`timeout`** — a [`Deadline`](./rest/handler/limits.mbt) enforced on the response path. Preemptively aborting a hung handler needs racing it against a timer (`@async.any`) under the native runtime; that race is wired at the async server edge, the deadline core is portable and tested.
+- **`breaker`** — a [`Breaker`](./breaker/breaker.mbt): go-zero's `googleBreaker`, Google SRE's client-side throttle. It counts the last 10s in 40 buckets and sheds a *fraction* of calls, `(total - 5 - max(w, 1.1) * accepts) / (total + 1)` scaled by the run of clean buckets, answering `503` for the ones it sheds — a struggling backend keeps whatever load it can still serve instead of being cut off wholesale. The clock and the shed roll are both injected, so the decisions are exactly reproducible.
+- **`shedding`** — a [`Shedder`](./shedder/shedder.mbt): go-zero's `AdaptiveShedder`. While the CPU is at or above `CpuThreshold`, or was within the last second, it sheds once more requests are in flight than the best throughput and latency of the last five seconds can carry, answering `503`; an app's own `503` is not counted as throughput.
+- **`timeout`** — a [moonward `Deadline`](./rest/handler/limits.mbt) per request, enforced on the response path. Preemptively aborting a hung handler needs racing it against a timer (`@async.any`) under the native runtime; that race is wired at the async server edge.
 - **`maxbytes`** — rejects a request whose declared `Content-Length` exceeds the limit with `413`.
 - **`structured_logging`** — a [`RequestLog`](./rest/handler/logging.mbt) rendered as one JSON line per request (method, path, status, duration, request-id, client-ip, user-agent).
 
@@ -183,6 +183,6 @@ m.latency().mean()                             // mean request latency, ms
 
 A `conf.Load`-shaped loader (canonical keys, env overrides, `default=`/`options=`/`range=`) + `RestConf` and the engine that builds a chain from its `Middlewares` flags + leveled structured logging + service assembly + the base middleware onion (logging, recovery, CORS, request-id) + the resilience set (timeout, rate-limit, breaker, maxbytes, structured logging) + route groups + JWT auth + zRPC groups with real unary, server/client-streaming, and bidirectional h2c round-trips + graceful shutdown draining in-flight calls + a persisted, watchable registry with round-robin/weighted/pick-first balancers and a load-balanced client + real file-backed registry I/O with a live filesystem watcher + request metrics + trace-id propagation are here. Next: an etcd/consul network client behind the same `Resolve` interface, and `moonctl`-driven scaffolding of a full `moonzero` service from a spec.
 
-## License
+## Licence
 
-Apache-2.0.
+Apache-2.0. See [LICENSE](LICENSE).

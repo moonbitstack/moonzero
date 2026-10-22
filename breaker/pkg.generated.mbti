@@ -2,8 +2,8 @@
 package "moonbitstack/moonzero/breaker"
 
 import {
+  "moonbitstack/moonward",
   "moonbitstack/moonzero/clock",
-  "moonbitstack/moonzero/window",
 }
 
 // Values
@@ -13,10 +13,9 @@ pub suberror Unavailable
 
 // Types and methods
 pub struct Breaker {
-  win : @window.Window
+  core : @moonward.Breaker
   clock : @clock.Clock
   roll : () -> Double
-  mut last_pass : Int64?
 }
 pub fn Breaker::allow(Self) -> Promise?
 pub fn Breaker::drop_ratio(Self) -> Double
@@ -24,7 +23,8 @@ pub fn Breaker::new(@clock.Clock, rand? : () -> Double, buckets? : Int32, bucket
 pub fn[T] Breaker::run(Self, () -> T raise) -> T raise
 
 pub struct Promise {
-  b : Breaker
+  inner : @moonward.Promise
+  clock : @clock.Clock
 }
 pub fn Promise::accept(Self) -> Unit
 pub fn Promise::reject(Self) -> Unit

@@ -1,18 +1,31 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "moonbitstack/moonzero/shedder"
 
+import {
+  "moonbitstack/moonward",
+  "moonbitstack/moonzero/clock",
+}
+
 // Values
 
 // Errors
 
 // Types and methods
 pub struct Shedder {
-  threshold : Int64
+  core : @moonward.Shedder
+  clock : @clock.Clock
   usage : () -> Int64
 }
-pub fn Shedder::allow(Self) -> Bool
-pub fn Shedder::new(Int64, usage? : () -> Int64) -> Self
+pub fn Shedder::allow(Self) -> Ticket?
+pub fn Shedder::new(@clock.Clock, threshold? : Int64, usage? : () -> Int64) -> Self
 pub fn Shedder::usage(Self) -> Int64
+
+pub struct Ticket {
+  inner : @moonward.Ticket
+  clock : @clock.Clock
+}
+pub fn Ticket::fail(Self) -> Unit
+pub fn Ticket::pass(Self) -> Unit
 
 // Type aliases
 

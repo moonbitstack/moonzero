@@ -1,7 +1,7 @@
 ///|
 /// Drive each resilience decision core over an explicit clock, so its whole state
 /// machine is visible without a running server: the token bucket, the circuit
-/// breaker, the request deadline, the max-conns permit pool, and the fixed-window
+/// breaker, the adaptive shedder, the max-conns permit pool, and the fixed-window
 /// period limiter.
 ///
 ///     moon run examples/03-resilience-core
@@ -43,19 +43,32 @@ fn main {
     shedding.drop_ratio().to_string(),
   )
 
-  // Deadline: a budget measured from a start instant; a non-positive budget never
-  // expires (go-zero's disabled-timeout convention).
-  let deadline = @moonzero.Deadline::start(500L, 0L)
+  // Shedder: go-zero's adaptive load shedding. A hot CPU alone sheds nothing;
+  // ten calls stuck in flight, on a server that has shown it finishes calls at
+  // once, does.
+  let cpu : Ref[Int64] = { val: 900L, }
+  let watch = @moonzero.ManualClock::new()
+  let shedder = @moonzero.Shedder::new(watch.as_clock(), usage=() => cpu.val)
+  let first = shedder.allow()
+  println("shedder, hot and idle, admits: " + (first is Some(_)).to_string())
+  if first is Some(t) {
+    t.pass()
+  }
+  cpu.val = 0L
+  let stuck = Array::makei(10, _ => shedder.allow().unwrap())
+  for _ in 0..<40 {
+    if shedder.allow() is Some(t) {
+      t.pass()
+    }
+    watch.advance(10)
+  }
+  cpu.val = 900L
   println(
-    "deadline remaining at t=100: " +
-    deadline.remaining(100L).to_string() +
-    "ms, expired at t=600: " +
-    deadline.expired(600L).to_string(),
+    "  hot with ten stuck, sheds: " + (shedder.allow() is None).to_string(),
   )
-  println(
-    "  disabled deadline expires: " +
-    @moonzero.Deadline::start(0L, 0L).expired(999999L).to_string(),
-  )
+  for t in stuck {
+    t.fail()
+  }
 
   // MaxConns: a permit pool that admits up to `max` in flight at once.
   let conns = @moonzero.MaxConns::new(2)

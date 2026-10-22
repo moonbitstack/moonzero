@@ -1,87 +1,23 @@
-///|
-/// Google SRE's client-side throttling constants, the values go-zero ships.
-/// `k = 1.5` leaves a backend alone until more than a third of its traffic is
-/// failing; `min_k` is the floor `k` decays to under a sustained failure run;
-/// `protection` is the traffic every service gets for free, which keeps a quiet
-/// service from throttling itself over two bad calls; and after `force_pass_ms`
-/// with nothing at all getting through, one call goes past the roll regardless
-/// so a recovered backend is noticed.
-let k : Double = 1.5
+// Copyright 2026 Leo Cheng
+// SPDX-License-Identifier: Apache-2.0
 
 ///|
-let min_k : Double = 1.1
-
-///|
-let protection : Double = 5.0
-
-///|
-let force_pass_ms : Int64 = 1000L
-
-///|
-/// The window folded the way go-zero's `history` folds it. `failing` and
-/// `working` are *trailing runs*, not totals: a bucket that saw both a success
-/// and a failure ends both runs, and an idle bucket ends neither.
-priv struct Health {
-  mut accepts : Int64
-  mut total : Int64
-  mut failing : Int64
-  mut working : Int64
-}
-
-///|
-/// The unscaled shed fraction. Non-positive means the window is healthy enough
-/// to admit everything.
-fn Health::ratio(self : Health, buckets : Int32) -> Double {
-  let w = k - (k - min_k) * self.failing.to_double() / buckets.to_double()
-  let weighted = (if w > min_k { w } else { min_k }) * self.accepts.to_double()
-  (self.total.to_double() - protection - weighted) /
-  (self.total + 1L).to_double()
-}
-
-///|
-/// The factor that eases the throttle off as clean buckets pile up: `1.0` with
-/// nothing working, `0.0` once every bucket in the window is clean.
-fn Health::recovery(self : Health, buckets : Int32) -> Double {
-  (buckets.to_double() - self.working.to_double()) / buckets.to_double()
-}
-
-///|
-/// Google SRE's client-side throttling breaker (← go-zero's `googleBreaker`,
-/// the algorithm behind every breaker it hands out). There is no open/closed
-/// state machine and no failure streak: the breaker keeps a rolling `Window` of
-/// call outcomes and sheds a *fraction* of new calls, so a struggling backend
-/// keeps receiving as much load as it can still serve rather than being cut off
-/// wholesale and then flooded again on recovery.
+/// Google SRE's client-side throttling breaker (← go-zero's `googleBreaker`).
 ///
-/// With `accepts` successes out of `total` calls in the window, `failing` the
-/// run of all-failure buckets at the head of the window and `working` the run of
-/// all-success ones:
-///
-/// ```text
-/// w     = k - (k - min_k) * failing / buckets
-/// drop  = (total - protection - max(w, min_k) * accepts) / (total + 1)
-/// drop *= (buckets - working) / buckets
-/// ```
-///
-/// A non-positive `drop` admits everything, which is the whole healthy case. A
-/// sustained failure run decays `w` towards `min_k`, so past successes count for
-/// less and the throttle bites harder; a run of clean buckets scales `drop` back
-/// down as the backend recovers.
-///
-/// Both sources of nondeterminism are injected — `clock` for time, `rand` for
-/// the shed roll — so every decision is reproducible in a test.
+/// The algorithm is moonward's `Breaker`; this binds it to a `Clock` and a
+/// source of draws, the shape go-zero's breaker has, so a call site asks with
+/// no arguments. go-zero's constants are moonward's preset `sre`.
 pub struct Breaker {
-  win : @window.Window
+  core : @moonward.Breaker
   clock : @clock.Clock
   roll : () -> Double
-  mut last_pass : Int64?
 }
 
 ///|
 /// A breaker over a `buckets` × `bucket_ms` window (go-zero's ten seconds in
 /// forty slices by default) reading time from `clock`. `rand` supplies the shed
-/// roll as a draw from `[0, 1)`; omit it and the breaker draws from a
-/// system-seeded generator, pass one to fix the decisions.
+/// roll as a draw from `[0, 1)`; without it the breaker draws from a
+/// system-seeded generator.
 pub fn Breaker::new(
   clock : @clock.Clock,
   rand? : () -> Double,
@@ -95,107 +31,49 @@ pub fn Breaker::new(
       () => src.double()
     }
   }
-  {
-    win: @window.Window::new(size=buckets, bucket_ms~, now=clock.now()),
-    clock,
-    roll,
-    last_pass: None,
+  let sre = {
+    ..@moonward.sre,
+    size: buckets,
+    window: @moondate.Span::new(millis=bucket_ms * buckets.to_int64()),
   }
+  { core: @moonward.Breaker::new(sre~, now=nanos(clock)), clock, roll, }
 }
 
 ///|
-fn Breaker::health(self : Breaker, now : Int64) -> Health {
-  let h = Health::{ accepts: 0L, total: 0L, failing: 0L, working: 0L, }
-  self.win.each(now, b => {
-    h.accepts = h.accepts + b.succ
-    h.total = h.total + b.sum
-    if b.fail > 0L {
-      h.working = 0L
-    } else if b.succ > 0L {
-      h.working = h.working + 1L
-    }
-    if b.succ > 0L {
-      h.failing = 0L
-    } else if b.fail > 0L {
-      h.failing = h.failing + 1L
-    }
-  })
-  h
+fn nanos(clock : @clock.Clock) -> Int64 {
+  clock.now() * 1_000_000L
 }
 
 ///|
-/// The fraction of new calls the breaker is currently shedding — `0.0` while the
-/// window is healthy. The force-pass probe is deliberately not folded in: this
-/// is the standing throttle, which is what a dashboard or an alert wants.
+/// The fraction of new calls the breaker is shedding now, zero while healthy.
 pub fn Breaker::drop_ratio(self : Breaker) -> Double {
-  let h = self.health(self.clock.now())
-  let r = h.ratio(self.win.size)
-  if r <= 0.0 {
-    0.0
-  } else {
-    r * h.recovery(self.win.size)
-  }
-}
-
-///|
-/// The shed decision for one call (← go-zero's `accept`), and the only place the
-/// roll is drawn.
-fn Breaker::accept(self : Breaker) -> Bool {
-  let now = self.clock.now()
-  let h = self.health(now)
-  let r = h.ratio(self.win.size)
-  if r <= 0.0 {
-    return true
-  }
-  if self.last_pass is Some(t) && now - t > force_pass_ms {
-    self.last_pass = Some(now)
-    return true
-  }
-  if (self.roll)() < r * h.recovery(self.win.size) {
-    false
-  } else {
-    self.last_pass = Some(now)
-    true
-  }
-}
-
-///|
-fn Breaker::mark(self : Breaker, o : @window.Outcome) -> Unit {
-  self.win.add(o, self.clock.now())
+  self.core.ratio(nanos(self.clock))
 }
 
 ///|
 /// Ask to make one call. `Some` promise means it may proceed and the caller
-/// settles that promise once the call finishes; `None` means the throttle shed
-/// it. A shed is recorded too, so a breaker that is dropping never reads back as
-/// idle and throttle itself off.
+/// settles the promise when it finishes; `None` means the throttle shed it.
 pub fn Breaker::allow(self : Breaker) -> Promise? {
-  if self.accept() {
-    Some({ b: self, })
-  } else {
-    self.mark(Drop)
-    None
-  }
+  self.core
+  .allow(nanos(self.clock), (self.roll)())
+  .map(inner => { inner, clock: self.clock, })
 }
 
 ///|
-/// The receipt for an admitted call (← go-zero's `breaker.Promise`). Exactly one
-/// of `accept` / `reject` settles it; until then the window holds no record of
-/// how the call went.
+/// The receipt for an admitted call (← go-zero's `breaker.Promise`).
 pub struct Promise {
-  b : Breaker
+  inner : @moonward.Promise
+  clock : @clock.Clock
 }
 
 ///|
-/// Settle the call as a success.
 pub fn Promise::accept(self : Promise) -> Unit {
-  self.b.mark(Succ)
+  self.inner.pass(nanos(self.clock))
 }
 
 ///|
-/// Settle the call as a failure.
 pub fn Promise::reject(self : Promise) -> Unit {
-  self.b.mark(Fail)
+  self.inner.fail(nanos(self.clock))
 }
 
 ///|
@@ -204,10 +82,8 @@ pub fn Promise::reject(self : Promise) -> Unit {
 pub suberror Unavailable
 
 ///|
-/// Run `req` under the breaker (← go-zero's `Breaker.Do`). A shed call raises
-/// `Unavailable` and `req` never runs; otherwise `req` returning settles the
-/// promise as a success, and `req` raising settles it as a failure and
-/// propagates.
+/// Run `req` under the breaker (← go-zero's `Breaker.Do`): a shed call raises
+/// `Unavailable` and `req` never runs; a raise from `req` counts as a failure.
 pub fn[T] Breaker::run(self : Breaker, req : () -> T raise) -> T raise {
   guard self.allow() is Some(p) else { raise Unavailable }
   errdefer p.reject()

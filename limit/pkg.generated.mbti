@@ -3,7 +3,8 @@ package "moonbitstack/moonzero/limit"
 
 import {
   "moonbitlang/core/debug",
-  "moonbitstack/moonpool",
+  "moonbitstack/moondate",
+  "moonbitstack/moonward",
   "moonbitstack/moonzero/redis",
 }
 
@@ -16,8 +17,7 @@ pub let token_script : String
 
 // Types and methods
 pub struct MaxConns {
-  max : Int32
-  mut in_flight : Int32
+  gate : @moonward.Gate
 }
 pub fn MaxConns::in_flight(Self) -> Int32
 pub fn MaxConns::new(Int32) -> Self
@@ -25,11 +25,12 @@ pub fn MaxConns::release(Self) -> Unit
 pub fn MaxConns::try_acquire(Self) -> Bool
 
 pub struct PeriodLimit {
-  period_ms : Int64
+  period : @moondate.Span
   quota : Int32
-  windows : Map[String, (Int64, Int32)]
+  align : Bool
+  windows : Map[String, @moonward.Period]
 }
-pub fn PeriodLimit::new(period_secs~ : Int32, quota~ : Int32) -> Self
+pub fn PeriodLimit::new(period_secs~ : Int32, quota~ : Int32, align? : Bool) -> Self
 pub fn PeriodLimit::take(Self, String, Int64) -> PeriodResult
 
 pub(all) enum PeriodResult {
@@ -66,7 +67,7 @@ pub fn RedisTokenLimit::new(@redis.RedisClient, rate~ : Int32, burst~ : Int32, k
 pub fn RedisTokenLimit::rescue(Self) -> TokenBucket
 
 pub struct TokenBucket {
-  bucket : @moonpool.Bucket
+  bucket : @moonward.Bucket
 }
 pub fn TokenBucket::allow(Self, Int64) -> Bool
 pub fn TokenBucket::allow_n(Self, Double, Int64) -> Bool

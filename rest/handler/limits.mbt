@@ -1,45 +1,6 @@
 ///|
-/// A request deadline (← go-zero's `timeout` middleware's `context.WithTimeout`):
-/// a budget in milliseconds measured from a start instant on the shared clock.
-/// A `budget_ms <= 0` means "no deadline" and never expires — go-zero's
-/// convention for a disabled timeout.
-pub struct Deadline {
-  budget_ms : Int64
-  started_ms : Int64
-}
-
-///|
-/// Start a deadline of `budget_ms` milliseconds at time `now`.
-pub fn Deadline::start(budget_ms : Int64, now : Int64) -> Deadline {
-  { budget_ms, started_ms: now, }
-}
-
-///|
-/// Whether the deadline has passed at time `now`. A non-positive budget never
-/// expires.
-pub fn Deadline::expired(self : Deadline, now : Int64) -> Bool {
-  self.budget_ms > 0L && now - self.started_ms >= self.budget_ms
-}
-
-///|
-/// Milliseconds left before the deadline at time `now` (never negative); `-1`
-/// for a disabled (non-positive-budget) deadline, which has no finite remaining.
-pub fn Deadline::remaining(self : Deadline, now : Int64) -> Int64 {
-  if self.budget_ms <= 0L {
-    -1L
-  } else {
-    let left = self.budget_ms - (now - self.started_ms)
-    if left < 0L {
-      0L
-    } else {
-      left
-    }
-  }
-}
-
-///|
-/// Timeout middleware (← go-zero's `TimeoutHandler`): establish a per-request
-/// `Deadline` of `budget_ms` at `clock.now()` for the wrapped app.
+/// Timeout middleware (← go-zero's `TimeoutHandler`): start a moonward `Deadline`
+/// of `budget_ms` at `clock.now()` for each request to the wrapped app.
 ///
 /// **Async boundary (faithful model).** *Preemptively* aborting an in-flight
 /// handler the instant its deadline fires requires racing the handler against a
@@ -61,13 +22,16 @@ pub fn timeout(
     (scope, receive, send) => {
       match scope {
         Http(_) => {
-          let deadline = Deadline::start(budget_ms, clock.now())
+          let deadline = @moonward.Deadline::start(
+            @moondate.Span::new(millis=budget_ms),
+            clock.now() * 1_000_000L,
+          )
           let done : Ref[Bool] = { val: false, }
           let guarded : @moonasgi.Send = event => {
             if done.val {
               // deadline already answered — drop the handler's late output
               ()
-            } else if deadline.expired(clock.now()) {
+            } else if deadline.expired(clock.now() * 1_000_000L) {
               done.val = true
               for e in refusal.events() {
                 send(e)

@@ -2,7 +2,6 @@
 // The work is done in the subpackages; the root re-exports their surface.
 import {
   "moonbitstack/moonzero/clock",
-  "moonbitstack/moonzero/window",
   "moonbitstack/moonzero/proc",
   "moonbitstack/moonzero/logx",
   "moonbitstack/moonzero/trace",

@@ -1,18 +1,4 @@
 ///|
-test "deadline expiry and remaining budget" {
-  let d = Deadline::start(1000L, 0L)
-  assert_eq(d.expired(500L), false)
-  assert_eq(d.remaining(500L), 500L)
-  assert_eq(d.expired(1000L), true)
-  assert_eq(d.remaining(1000L), 0L)
-  assert_eq(d.remaining(5000L), 0L) // never negative
-  // a non-positive budget is a disabled deadline
-  let off = Deadline::start(0L, 0L)
-  assert_eq(off.expired(999_999L), false)
-  assert_eq(off.remaining(10L), -1L)
-}
-
-///|
 test "maxbytes: content-length parsing and threshold, case-insensitive" {
   assert_eq(parse_uint("2048"), Some(2048))
   assert_eq(parse_uint(""), None)

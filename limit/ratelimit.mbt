@@ -1,16 +1,15 @@
 ///|
 /// A token-bucket rate limiter kept in this process: the bucket holds up to
-/// `capacity` tokens and refills continuously at `refill_per_ms` tokens per
-/// millisecond, and each admitted request spends one. Because every decision is a
-/// function of `(state, now)`, the limiter is exactly testable without a real
-/// clock.
+/// `burst` tokens and refills continuously at `rate` a second, and each admitted
+/// request spends one. Every decision is a function of the state and `now`, so the
+/// limiter is testable without a real clock.
 ///
 /// The bucket is local, so N replicas admit N times the rate. `RedisTokenLimit` is
 /// the same limiter with its bucket in redis and is what a fleet should run; this
 /// one serves a single process, and is what `RedisTokenLimit` itself falls back to
 /// when redis is unreachable (← go-zero's `rescueLimiter`).
 pub struct TokenBucket {
-  bucket : @moonpool.Bucket
+  bucket : @moonward.Bucket
 }
 
 ///|
@@ -18,7 +17,7 @@ pub struct TokenBucket {
 /// `burst` of that many back-to-back (default `burst = rate`). It starts full at
 /// time `now`, in milliseconds.
 ///
-/// The bucket is moonpool's; this keeps go-zero's shape and its millisecond clock.
+/// The bucket is moonward's; this keeps go-zero's shape and its millisecond clock.
 /// A capacity below one token is raised to one, because a bucket that can never hold
 /// a whole token admits nothing at all — which is what a fractional `rate` with no
 /// `burst` used to give.
@@ -28,10 +27,10 @@ pub fn TokenBucket::new(
   now~ : Int64 = 0,
 ) -> TokenBucket {
   {
-    bucket: @moonpool.Bucket::new(
+    bucket: @moonward.Bucket::new(
       rate,
       burst=if burst <= 0.0 { 0.0 } else { burst },
-      at=nanos(now),
+      now=nanos(now),
     ),
   }
 }
@@ -62,7 +61,7 @@ pub fn TokenBucket::available(self : TokenBucket, now : Int64) -> Double {
 }
 
 ///|
-/// A millisecond reading as the nanoseconds moonpool's clock is read in.
+/// A millisecond reading as the nanoseconds moonward's clock is read in.
 fn nanos(ms : Int64) -> Int64 {
   ms * 1_000_000L
 }

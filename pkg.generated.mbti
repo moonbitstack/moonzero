@@ -24,7 +24,6 @@ import {
   "moonbitstack/moonzero/rest/handler",
   "moonbitstack/moonzero/shedder",
   "moonbitstack/moonzero/trace",
-  "moonbitstack/moonzero/window",
   "moonbitstack/moonzero/zrpc",
 }
 
@@ -168,8 +167,6 @@ pub using @zrpc {type BidiStreamHandler}
 
 pub using @breaker {type Breaker}
 
-pub using @window {type Bucket}
-
 pub type ClientStreamHandler = (Array[Bytes]) -> Bytes
 
 pub using @clock {type Clock}
@@ -189,8 +186,6 @@ pub using @consul {type ConsulResponse}
 pub using @handler {type CorsConf}
 
 pub using @metric {type CounterVec}
-
-pub using @handler {type Deadline}
 
 pub using @registry {type Endpoint}
 
@@ -255,8 +250,6 @@ pub using @limit {type MaxConns}
 pub type Middleware = (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
 pub using @conf {type MiddlewaresConf}
-
-pub using @window {type Outcome}
 
 pub using @limit {type PeriodLimit}
 
@@ -326,6 +319,8 @@ pub using @proc {type ShutdownCoordinator}
 
 pub using @conf {type SignatureConf}
 
+pub using @shedder {type Ticket}
+
 pub using @limit {type TokenBucket}
 
 pub using @trace {type TraceContext}
@@ -333,8 +328,6 @@ pub using @trace {type TraceContext}
 pub using @breaker {type Unavailable}
 
 pub using @registry {type WeightedRoundRobin}
-
-pub using @window {type Window}
 
 pub using @consul {trait ConsulHttp}
 

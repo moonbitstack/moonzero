@@ -1,4 +1,6 @@
-// go-zero's adaptive load shedder (core/load): refuse work when in-flight
-// requests outrun what the recent latency says the service can finish.
+// go-zero's adaptive load shedder (core/load): moonward's core bound to a clock
+// and a CPU meter.
 import {
+  "moonbitstack/moonward",
+  "moonbitstack/moonzero/clock",
 }

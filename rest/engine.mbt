@@ -49,7 +49,7 @@ pub fn RestEngine::new(
     metrics,
     conns: @limit.MaxConns::new(conf.max_conns),
     circuit: @breaker.Breaker::new(clock),
-    shedder: @shedder.Shedder::new(conf.cpu_threshold, usage?),
+    shedder: @shedder.Shedder::new(clock, threshold=conf.cpu_threshold, usage?),
   }
 }
 

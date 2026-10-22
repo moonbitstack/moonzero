@@ -1,13 +1,30 @@
 ///|
-test "the shedder admits at the threshold and sheds above it" {
+test "a CPU spike with nothing queued sheds nothing" {
+  let usage : Ref[Int64] = { val: 1000L, }
+  let mc = @clock.ManualClock::new()
+  let s = Shedder::new(mc.as_clock(), usage=() => usage.val)
+  for _ in 0..<50 {
+    guard s.allow() is Some(t) else { fail("shed with nothing in flight") }
+    mc.advance(1)
+    t.pass()
+  }
+  assert_eq(Shedder::new(mc.as_clock()).usage(), 0L)
+}
+
+///|
+test "a hot server with requests piling up sheds the next one" {
   let usage : Ref[Int64] = { val: 0L, }
-  let s = Shedder::new(900L, usage=() => usage.val)
-  assert_eq(s.allow(), true)
-  usage.val = 900L
-  assert_eq(s.allow(), true)
-  usage.val = 901L
-  assert_eq(s.allow(), false)
-  // with no meter wired there is nothing to shed on
-  assert_eq(Shedder::new(900L).usage(), 0L)
-  assert_eq(Shedder::new(900L).allow(), true)
+  let mc = @clock.ManualClock::new()
+  let s = Shedder::new(mc.as_clock(), usage=() => usage.val)
+  let held = Array::makei(5, _ => s.allow().unwrap())
+  for _ in 0..<40 {
+    guard s.allow() is Some(t) else { fail("shed while cool") }
+    mc.advance(1)
+    t.pass()
+  }
+  usage.val = 1000L
+  assert_eq(s.allow() is None, true)
+  for t in held {
+    t.fail()
+  }
 }

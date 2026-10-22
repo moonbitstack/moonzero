@@ -73,20 +73,16 @@ SECTIONS = [
      "their timing is a pure function of an explicit clock; ManualClock drives "
      "them deterministically in tests."),
     ("ratelimit", "limit/ratelimit.mbt", "Rate limiting",
-     "A token-bucket limiter (pure counter over the clock) and the rate_limit "
-     "middleware, which answers 429 Too Many Requests when the bucket is empty."),
-    ("window", "window/window.mbt", "Rolling window",
-     "A window of call outcomes in time buckets (40 x 250ms, go-zero's ten "
-     "seconds), which ages out on its own and is what the breaker reads a "
-     "backend's recent health from."),
+     "go-zero's token-bucket limiter over moonward's bucket, on the millisecond "
+     "clock, and the rate_limit middleware, which answers 429 when it is empty."),
     ("breaker", "breaker/breaker.mbt", "Circuit breaker",
-     "go-zero's googleBreaker: Google SRE client-side throttling over the "
-     "rolling window, which sheds a computed fraction of calls rather than "
-     "opening, and the breaker middleware that answers 503 for a shed request."),
+     "go-zero's googleBreaker over moonward's: Google SRE client-side throttling "
+     "on the last ten seconds of outcomes, which sheds a computed fraction of calls "
+     "rather than opening, and the breaker middleware that answers 503 for a shed one."),
     ("limits", "rest/handler/limits.mbt", "Timeout & max-bytes",
-     "A request Deadline plus the timeout middleware (deadline-enforced on the "
-     "response path; preemptive cancel is the async boundary) and maxbytes, "
-     "which rejects over-limit Content-Length with 413."),
+     "The timeout middleware, which starts a moonward Deadline per request and "
+     "enforces it on the response path (preemptive cancel is the async boundary), "
+     "and maxbytes, which rejects an over-limit Content-Length with 413."),
     ("logging", "rest/handler/logging.mbt", "Structured logging",
      "RequestLog captures typed access-log fields (method, path, status, "
      "duration, request-id, client-ip, user-agent) and renders one JSON line "
@@ -128,9 +124,9 @@ SECTIONS = [
      "connection budget or a passed deadline, 429 for a rate limit, 413 for a body too "
      "large. Each is a parameter."),
     ("shedder", "shedder/shedder.mbt", "Load shedding",
-     "Shedding under CPU pressure (<- load.AdaptiveShedder, wired from "
-     "RestConf.CpuThreshold): admit at or below the threshold, shed above it, both "
-     "numbers per-mille as go-zero writes them."),
+     "go-zero's load.AdaptiveShedder over moonward's, wired from RestConf.CpuThreshold: "
+     "while the CPU is above the threshold, or was within the last second, it sheds "
+     "once more requests are in flight than recent throughput and latency can carry."),
 ]
 KIND = {"struct": "struct", "enum": "enum", "fn": "fn", "type": "type", "let": "let"}
 

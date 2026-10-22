@@ -6,39 +6,33 @@
 // the arrival rate) and the breaker (which sheds on downstream failure).
 
 ///|
-/// A permit pool of `max` concurrent slots (← go-zero's `syncx.Limit`).
+/// A permit pool of `max` concurrent slots (← go-zero's `syncx.Limit`), moonward's
+/// `Gate` under go-zero's names. A `max` of zero or less admits everything, as
+/// go-zero's server does when `MaxConns` is unset.
 pub struct MaxConns {
-  max : Int32
-  mut in_flight : Int32
+  gate : @moonward.Gate
 }
 
 ///|
 /// A pool admitting at most `max` requests at once.
 pub fn MaxConns::new(max : Int32) -> MaxConns {
-  { max, in_flight: 0, }
+  { gate: @moonward.Gate::new(max), }
 }
 
 ///|
 /// Take a permit if one is free (`TryBorrow`), returning whether it was taken.
 pub fn MaxConns::try_acquire(self : MaxConns) -> Bool {
-  if self.in_flight < self.max {
-    self.in_flight = self.in_flight + 1
-    true
-  } else {
-    false
-  }
+  self.gate.enter()
 }
 
 ///|
 /// Return a permit taken by `try_acquire` (`Return`).
 pub fn MaxConns::release(self : MaxConns) -> Unit {
-  if self.in_flight > 0 {
-    self.in_flight = self.in_flight - 1
-  }
+  self.gate.leave()
 }
 
 ///|
 /// The number of requests currently holding a permit.
 pub fn MaxConns::in_flight(self : MaxConns) -> Int32 {
-  self.in_flight
+  self.gate.held()
 }
