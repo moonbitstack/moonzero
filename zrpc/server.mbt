@@ -1,0 +1,236 @@
+///|
+/// A unary RPC handler: it maps a request message's wire bytes to a response
+/// message's wire bytes (the `application/grpc+proto` payload, sans the
+/// length-prefix framing that `@moonrpc.encode_message` adds). Streaming
+/// handlers arrive with the h2 transport; this is the unary shape zRPC registers
+/// today.
+pub type RpcHandler = (Bytes) -> Bytes
+
+///|
+/// A server-streaming handler: one request message in, an ordered sequence of
+/// response messages out (each framed as its own length-prefixed gRPC message).
+/// Mirrors go-zero's `pb.XxxServer` server-streaming method, which writes to a
+/// `grpc.ServerStream` instead of returning one reply.
+pub type ServerStreamHandler = (Bytes) -> Array[Bytes]
+
+///|
+/// A client-streaming handler: every request message the client sends is
+/// collected, and after the client half-closes the handler returns one reply.
+pub type ClientStreamHandler = (Array[Bytes]) -> Bytes
+
+///|
+/// A live bidirectional call (← go-zero's `pb.XxxServer` bidi method, which reads
+/// from and writes to the same `grpc.ServerStream`): `on_message` fires once per
+/// request message and returns the replies to send right then, so responses
+/// interleave with requests; `on_end` runs after the client half-closes and
+/// returns the final replies before the `grpc-status` trailer. The moonzero-local
+/// mirror of `@moonrpc.BidiHandler`, so callers register bidi methods without
+/// naming the transport package.
+pub(all) struct BidiStreamHandler {
+  on_message : (Bytes) -> Array[Bytes]
+  on_end : () -> Array[Bytes]
+}
+
+///|
+/// A factory that mints one `BidiStreamHandler` per call, so each stream gets its
+/// own handler state (← the fresh `ServerStream` gRPC hands every bidi invocation).
+pub type BidiStreamFactory = () -> BidiStreamHandler
+
+///|
+/// A zRPC server (← go-zero's `zrpc.Server`): config plus a registry mapping
+/// each method's gRPC `:path` (`/package.Service/Method`) to its handler.
+/// Handlers are registered via `@moonrpc.Method` descriptors — directly or
+/// through a `RpcGroup` — and dispatched by path, mirroring how go-zero registers
+/// service implementations on the underlying gRPC server. Unary, server-streaming,
+/// and client-streaming methods live in separate registries so one path resolves
+/// to exactly one cardinality.
+pub struct RpcServer {
+  conf : @conf.RpcServerConf
+  handlers : Map[String, RpcHandler]
+  server_streaming : Map[String, ServerStreamHandler]
+  client_streaming : Map[String, ClientStreamHandler]
+  bidi_streaming : Map[String, BidiStreamFactory]
+}
+
+///|
+/// Build an empty RPC server from its config.
+pub fn RpcServer::new(conf : @conf.RpcServerConf) -> RpcServer {
+  {
+    conf,
+    handlers: Map([]),
+    server_streaming: Map([]),
+    client_streaming: Map([]),
+    bidi_streaming: Map([]),
+  }
+}
+
+///|
+/// The server's configuration.
+pub fn RpcServer::conf(self : RpcServer) -> @conf.RpcServerConf {
+  self.conf
+}
+
+///|
+/// Register `handler` for `method`, keyed by its gRPC path. A later
+/// registration for the same path replaces the earlier one.
+pub fn RpcServer::register(
+  self : RpcServer,
+  desc : @moonrpc.Method,
+  handler : RpcHandler,
+) -> Unit {
+  self.handlers[desc.path()] = handler
+}
+
+///|
+/// Register a server-streaming `handler` for `method`, keyed by its gRPC path.
+pub fn RpcServer::register_server_streaming(
+  self : RpcServer,
+  desc : @moonrpc.Method,
+  handler : ServerStreamHandler,
+) -> Unit {
+  self.server_streaming[desc.path()] = handler
+}
+
+///|
+/// Register a client-streaming `handler` for `method`, keyed by its gRPC path.
+pub fn RpcServer::register_client_streaming(
+  self : RpcServer,
+  desc : @moonrpc.Method,
+  handler : ClientStreamHandler,
+) -> Unit {
+  self.client_streaming[desc.path()] = handler
+}
+
+///|
+/// Register a bidirectional-streaming `handler` for `method`, keyed by its gRPC
+/// path. `factory` runs once per call so each stream gets fresh handler state.
+pub fn RpcServer::register_bidi_streaming(
+  self : RpcServer,
+  desc : @moonrpc.Method,
+  factory : BidiStreamFactory,
+) -> Unit {
+  self.bidi_streaming[desc.path()] = factory
+}
+
+///|
+/// Open a `RpcGroup` that registers methods under the fully-qualified
+/// `package.Service` name — go-zero's per-service registration, without
+/// repeating the service name on each method.
+pub fn RpcServer::group(self : RpcServer, service : String) -> RpcGroup {
+  { server: self, service, }
+}
+
+///|
+/// Look up the handler registered for a gRPC `:path`, or `None` if unregistered.
+pub fn RpcServer::lookup(self : RpcServer, path : String) -> RpcHandler? {
+  self.handlers.get(path)
+}
+
+///|
+/// The gRPC paths of every registered method.
+pub fn RpcServer::methods(self : RpcServer) -> Array[String] {
+  self.handlers.keys().collect()
+}
+
+///|
+/// Whether a handler is registered for `path`.
+pub fn RpcServer::has_method(self : RpcServer, path : String) -> Bool {
+  self.handlers.contains(path)
+}
+
+///|
+/// Dispatch a unary call to the handler registered for `path`, returning the
+/// response bytes. An unregistered path yields `Err(Unimplemented)` — exactly
+/// the `grpc-status` a real gRPC server returns for an unknown method — so a
+/// transport can translate the result straight onto the wire.
+pub fn RpcServer::dispatch(
+  self : RpcServer,
+  path : String,
+  request : Bytes,
+) -> Result[Bytes, @moonrpc.Status] {
+  match self.handlers.get(path) {
+    Some(handler) => Ok(handler(request))
+    None => Err(@moonrpc.Status::Unimplemented)
+  }
+}
+
+///|
+/// A per-service registration handle (← go-zero's service registrar closure):
+/// binds a set of methods to one `package.Service` on a shared `RpcServer`.
+pub struct RpcGroup {
+  server : RpcServer
+  service : String
+}
+
+///|
+/// The fully-qualified `package.Service` this group registers under.
+pub fn RpcGroup::service(self : RpcGroup) -> String {
+  self.service
+}
+
+///|
+/// Register a method `name` on this group's service, building the
+/// `@moonrpc.Method` descriptor and installing `handler` under its gRPC path.
+/// (`register`, not `method` — the latter is a reserved word.)
+pub fn RpcGroup::register(
+  self : RpcGroup,
+  name : String,
+  handler : RpcHandler,
+) -> Unit {
+  self.server.register({ service: self.service, name, }, handler)
+}
+
+///|
+/// Register a server-streaming method `name` on this group's service.
+pub fn RpcGroup::register_server_streaming(
+  self : RpcGroup,
+  name : String,
+  handler : ServerStreamHandler,
+) -> Unit {
+  self.server.register_server_streaming(
+    { service: self.service, name, },
+    handler,
+  )
+}
+
+///|
+/// Register a client-streaming method `name` on this group's service.
+pub fn RpcGroup::register_client_streaming(
+  self : RpcGroup,
+  name : String,
+  handler : ClientStreamHandler,
+) -> Unit {
+  self.server.register_client_streaming(
+    { service: self.service, name, },
+    handler,
+  )
+}
+
+///|
+/// Register a bidirectional-streaming method `name` on this group's service.
+pub fn RpcGroup::register_bidi_streaming(
+  self : RpcGroup,
+  name : String,
+  factory : BidiStreamFactory,
+) -> Unit {
+  self.server.register_bidi_streaming({ service: self.service, name, }, factory)
+}
+
+///|
+/// Dispatch a unary call through the shutdown gate: refuse with `Unavailable` when
+/// the server is shutting down, otherwise run the handler and count it as in-flight
+/// for the duration so a concurrent shutdown drains behind it. The gate wraps
+/// `RpcServer::dispatch`, so an unregistered path still yields `Unimplemented`.
+pub fn RpcServer::dispatch_graceful(
+  self : RpcServer,
+  coord : @proc.ShutdownCoordinator,
+  path : String,
+  request : Bytes,
+) -> Result[Bytes, @moonrpc.Status] {
+  if !coord.begin_call() {
+    return Err(@moonrpc.Status::Unavailable)
+  }
+  let result = self.dispatch(path, request)
+  coord.end_call()
+  result
+}

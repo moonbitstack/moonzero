@@ -2,6 +2,9 @@ import {
   "moonbitstack/moonzero",
   "moonbitstack/mooncred/jwt",
   "moonbitstack/moonbase/base16",
+  "moonbitstack/mooncrypt/hash/sha2",
+  "moonbitstack/mooncrypt/mac/hmac",
+  "moonbitstack/mooncrypt/spec",
 }
 
 pkgtype(kind: "executable")

@@ -1,0 +1,69 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/moonzero/rest"
+
+import {
+  "moonbitstack/moonapi",
+  "moonbitstack/moonapi/ctx",
+  "moonbitstack/moonapi/route",
+  "moonbitstack/moonasgi/http",
+  "moonbitstack/moonasgi/spec",
+  "moonbitstack/moonzero/breaker",
+  "moonbitstack/moonzero/clock",
+  "moonbitstack/moonzero/conf",
+  "moonbitstack/moonzero/limit",
+  "moonbitstack/moonzero/logx",
+  "moonbitstack/moonzero/metric",
+  "moonbitstack/moonzero/shedder",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub struct Group {
+  app : @moonapi.App
+  prefix : String
+}
+pub fn Group::delete(Self, String, (@ctx.Context) -> @http.Response raise, summary? : String) -> Unit
+pub fn Group::get(Self, String, (@ctx.Context) -> @http.Response raise, summary? : String) -> Unit
+pub fn Group::new(@moonapi.App, String) -> Self
+pub fn Group::patch(Self, String, (@ctx.Context) -> @http.Response raise, summary? : String) -> Unit
+pub fn Group::post(Self, String, (@ctx.Context) -> @http.Response raise, summary? : String) -> Unit
+pub fn Group::prefix(Self) -> String
+pub fn Group::put(Self, String, (@ctx.Context) -> @http.Response raise, summary? : String) -> Unit
+pub fn Group::route(Self, @route.Method, String, (@ctx.Context) -> @http.Response raise, summary? : String) -> Unit
+
+pub(all) struct Layer {
+  name : String
+  middleware : (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+}
+
+pub struct RestEngine {
+  conf : @conf.RestConf
+  clock : @clock.Clock
+  logger : @logx.Logger
+  metrics : @metric.ServerMetrics
+  conns : @limit.MaxConns
+  circuit : @breaker.Breaker
+  shedder : @shedder.Shedder
+}
+pub fn RestEngine::build(Self, @moonapi.App) -> Server
+pub fn RestEngine::conf(Self) -> @conf.RestConf
+pub fn RestEngine::layers(Self) -> Array[Layer]
+pub fn RestEngine::metrics(Self) -> @metric.ServerMetrics
+pub fn RestEngine::names(Self) -> Array[String]
+pub fn RestEngine::new(@conf.RestConf, clock? : @clock.Clock, logger? : @logx.Logger, metrics? : @metric.ServerMetrics, usage? : () -> Int64) -> Self raise @conf.ConfigError
+
+pub struct Server {
+  conf : @conf.ServiceConf
+  handler : async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+}
+pub fn Server::describe(Self) -> String
+pub fn Server::new(@conf.ServiceConf, @moonapi.App) -> Self
+pub fn Server::to_asgi(Self) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+pub fn Server::use_(Self, (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> Self
+
+// Type aliases
+
+// Traits

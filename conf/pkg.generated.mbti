@@ -1,0 +1,120 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/moonzero/conf"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "moonbitstack/moonzero/logx",
+}
+
+// Values
+pub fn canonical_key(String) -> String
+
+pub let port : Int32
+
+pub let rpc_port : Int32
+
+// Errors
+pub(all) suberror ConfigError {
+  ConfigError(String)
+}
+
+// Types and methods
+pub struct Conf {
+  root : Map[String, Json]
+}
+pub fn Conf::at(Self, String) -> Json?
+pub fn Conf::bool(Self, String, default? : Bool, env? : String, also? : Array[String]) -> Bool raise ConfigError
+pub fn Conf::int(Self, String, default? : Int32, range? : String, env? : String, also? : Array[String]) -> Int32 raise ConfigError
+pub fn Conf::int64(Self, String, default? : Int64, range? : String, env? : String, also? : Array[String]) -> Int64 raise ConfigError
+pub fn Conf::list(Self, String) -> Array[Self] raise ConfigError
+pub fn Conf::of_json(String) -> Self raise ConfigError
+pub fn Conf::of_yaml(String) -> Self raise ConfigError
+pub fn Conf::string(Self, String, default? : String, options? : Array[String], env? : String, also? : Array[String]) -> String raise ConfigError
+pub fn Conf::strings(Self, String, default? : Array[String], env? : String, also? : Array[String]) -> Array[String] raise ConfigError
+
+pub(all) struct MiddlewaresConf {
+  trace : Bool
+  log : Bool
+  prometheus : Bool
+  max_conns : Bool
+  breaker : Bool
+  shedding : Bool
+  timeout : Bool
+  recover : Bool
+  metrics : Bool
+  max_bytes : Bool
+  gunzip : Bool
+} derive(Eq, @debug.Debug)
+pub fn MiddlewaresConf::equal(Self, Self) -> Bool
+pub fn MiddlewaresConf::new(trace? : Bool, log? : Bool, prometheus? : Bool, max_conns? : Bool, breaker? : Bool, shedding? : Bool, timeout? : Bool, recover? : Bool, metrics? : Bool, max_bytes? : Bool, gunzip? : Bool) -> Self
+pub fn MiddlewaresConf::not_equal(Self, Self) -> Bool
+pub fn MiddlewaresConf::to_repr(Self) -> @debug.Repr
+
+pub(all) struct PrivateKeyConf {
+  fingerprint : String
+  key_file : String
+} derive(Eq, @debug.Debug)
+pub fn PrivateKeyConf::equal(Self, Self) -> Bool
+pub fn PrivateKeyConf::not_equal(Self, Self) -> Bool
+pub fn PrivateKeyConf::to_repr(Self) -> @debug.Repr
+
+pub(all) struct RestConf {
+  service : ServiceConf
+  cert_file : String
+  key_file : String
+  verbose : Bool
+  max_conns : Int32
+  max_bytes : Int32
+  cpu_threshold : Int64
+  signature : SignatureConf
+  middlewares : MiddlewaresConf
+  trace_ignore_paths : Array[String]
+}
+pub fn RestConf::from_json(String) -> Self raise ConfigError
+pub fn RestConf::from_yaml(String) -> Self raise ConfigError
+pub fn RestConf::host(Self) -> String
+pub fn RestConf::new(service? : ServiceConf, cert_file? : String, key_file? : String, verbose? : Bool, max_conns? : Int32, max_bytes? : Int32, cpu_threshold? : Int64, signature? : SignatureConf, middlewares? : MiddlewaresConf, trace_ignore_paths? : Array[String]) -> Self
+pub fn RestConf::port(Self) -> Int32
+pub fn RestConf::timeout_ms(Self) -> Int32
+pub fn RestConf::tls(Self) -> Bool
+
+pub(all) struct RpcServerConf {
+  name : String
+  host : String
+  port : Int32
+  timeout_ms : Int32
+} derive(Eq, @debug.Debug, @json.FromJson)
+pub fn RpcServerConf::equal(Self, Self) -> Bool
+pub fn RpcServerConf::from_json(String) -> Self raise ConfigError
+pub fn RpcServerConf::from_yaml(String) -> Self raise ConfigError
+pub fn RpcServerConf::new(name? : String, host? : String, port? : Int32, timeout_ms? : Int32) -> Self
+pub fn RpcServerConf::not_equal(Self, Self) -> Bool
+pub fn RpcServerConf::to_repr(Self) -> @debug.Repr
+
+pub(all) struct ServiceConf {
+  name : String
+  host : String
+  port : Int32
+  timeout_ms : Int32
+  log_level : @logx.LogLevel
+} derive(Eq, @json.FromJson)
+pub fn ServiceConf::equal(Self, Self) -> Bool
+pub fn ServiceConf::from_json(String) -> Self raise ConfigError
+pub fn ServiceConf::from_yaml(String) -> Self raise ConfigError
+pub fn ServiceConf::new(name? : String, host? : String, port? : Int32, timeout_ms? : Int32, log_level? : @logx.LogLevel) -> Self
+pub fn ServiceConf::not_equal(Self, Self) -> Bool
+
+pub(all) struct SignatureConf {
+  strict : Bool
+  expiry_ms : Int64
+  private_keys : Array[PrivateKeyConf]
+} derive(Eq, @debug.Debug)
+pub fn SignatureConf::equal(Self, Self) -> Bool
+pub fn SignatureConf::new(strict? : Bool, expiry_ms? : Int64, private_keys? : Array[PrivateKeyConf]) -> Self
+pub fn SignatureConf::not_equal(Self, Self) -> Bool
+pub fn SignatureConf::to_repr(Self) -> @debug.Repr
+
+// Type aliases
+
+// Traits

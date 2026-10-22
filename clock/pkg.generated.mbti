@@ -1,0 +1,25 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/moonzero/clock"
+
+// Values
+
+// Errors
+
+// Types and methods
+pub struct Clock {
+  now_ms : () -> Int64
+}
+pub fn Clock::new(() -> Int64) -> Self
+pub fn Clock::now(Self) -> Int64
+pub fn Clock::system() -> Self
+
+pub struct ManualClock {
+  mut ms : Int64
+}
+pub fn ManualClock::advance(Self, Int64) -> Unit
+pub fn ManualClock::as_clock(Self) -> Clock
+pub fn ManualClock::new(start? : Int64) -> Self
+
+// Type aliases
+
+// Traits

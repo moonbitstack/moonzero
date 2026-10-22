@@ -1,0 +1,87 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/moonzero/zrpc"
+
+import {
+  "moonbitstack/moonhttp/hpack",
+  "moonbitstack/moonrpc/server",
+  "moonbitstack/moonrpc/wire",
+  "moonbitstack/moonzero/conf",
+  "moonbitstack/moonzero/proc",
+}
+
+// Values
+pub fn status_of_code(Int32) -> @wire.Status
+
+// Errors
+
+// Types and methods
+pub struct BidiCall {
+  channel : RpcChannel
+  sid : Int32
+  mut pending : Bytes
+  mut status_code : Int32
+  mut ended : Bool
+}
+pub fn BidiCall::close_send(Self) -> Result[Array[Bytes], @wire.Status] raise
+pub fn BidiCall::send(Self, Bytes) -> Array[Bytes] raise
+
+pub(all) struct BidiStreamHandler {
+  on_message : (Bytes) -> Array[Bytes]
+  on_end : () -> Array[Bytes]
+}
+
+pub struct RpcChannel {
+  engine : @server.H2Server
+  encoder : @hpack.Encoder
+  decoder : @hpack.Decoder
+  authority : String
+  mut next_stream_id : Int32
+}
+pub fn RpcChannel::call(Self, String, Bytes) -> Result[Bytes, @wire.Status] raise
+pub fn RpcChannel::call_bidi_streaming(Self, String, Array[Bytes]) -> Result[Array[Bytes], @wire.Status] raise
+pub fn RpcChannel::call_client_streaming(Self, String, Array[Bytes]) -> Result[Bytes, @wire.Status] raise
+pub fn RpcChannel::call_server_streaming(Self, String, Bytes) -> Result[Array[Bytes], @wire.Status] raise
+pub fn RpcChannel::connect(RpcServer, authority? : String) -> Self
+pub fn RpcChannel::open_bidi(Self, String) -> BidiCall raise
+
+pub struct RpcGroup {
+  server : RpcServer
+  service : String
+}
+pub fn RpcGroup::register(Self, String, (Bytes) -> Bytes) -> Unit
+pub fn RpcGroup::register_bidi_streaming(Self, String, () -> BidiStreamHandler) -> Unit
+pub fn RpcGroup::register_client_streaming(Self, String, (Array[Bytes]) -> Bytes) -> Unit
+pub fn RpcGroup::register_server_streaming(Self, String, (Bytes) -> Array[Bytes]) -> Unit
+pub fn RpcGroup::service(Self) -> String
+
+pub struct RpcServer {
+  conf : @conf.RpcServerConf
+  handlers : Map[String, (Bytes) -> Bytes]
+  server_streaming : Map[String, (Bytes) -> Array[Bytes]]
+  client_streaming : Map[String, (Array[Bytes]) -> Bytes]
+  bidi_streaming : Map[String, () -> BidiStreamHandler]
+}
+pub fn RpcServer::conf(Self) -> @conf.RpcServerConf
+pub fn RpcServer::dispatch(Self, String, Bytes) -> Result[Bytes, @wire.Status]
+pub fn RpcServer::dispatch_graceful(Self, @proc.ShutdownCoordinator, String, Bytes) -> Result[Bytes, @wire.Status]
+pub fn RpcServer::group(Self, String) -> RpcGroup
+pub fn RpcServer::has_method(Self, String) -> Bool
+pub fn RpcServer::lookup(Self, String) -> ((Bytes) -> Bytes)?
+pub fn RpcServer::methods(Self) -> Array[String]
+pub fn RpcServer::new(@conf.RpcServerConf) -> Self
+pub fn RpcServer::register(Self, @wire.Method, (Bytes) -> Bytes) -> Unit
+pub fn RpcServer::register_bidi_streaming(Self, @wire.Method, () -> BidiStreamHandler) -> Unit
+pub fn RpcServer::register_client_streaming(Self, @wire.Method, (Array[Bytes]) -> Bytes) -> Unit
+pub fn RpcServer::register_server_streaming(Self, @wire.Method, (Bytes) -> Array[Bytes]) -> Unit
+pub fn RpcServer::to_h2(Self) -> @server.H2Server
+
+// Type aliases
+pub type BidiStreamFactory = () -> BidiStreamHandler
+
+pub type ClientStreamHandler = (Array[Bytes]) -> Bytes
+
+pub type RpcHandler = (Bytes) -> Bytes
+
+pub type ServerStreamHandler = (Bytes) -> Array[Bytes]
+
+// Traits

@@ -45,6 +45,29 @@ server.describe()        // "greet listening on 127.0.0.1:12000"
 
 Verified across all backends (`wasm`, `wasm-gc`, `js`, `native`) in CI, 0 warnings under `--deny-warn`.
 
+## Packages
+
+The layout follows go-zero's own: algorithms in packages of their own, every HTTP middleware in `rest/handler`, and the engine that assembles them in `rest`. The root re-exports the lot, so `@moonzero.Breaker` works as well as `@breaker.Breaker`.
+
+| Package | What | go-zero |
+|:--:|:--|:--|
+| `clock` | the millisecond clock every timing decision is a function of | `core/timex` |
+| `window` | the rolling window outcomes are counted in | `core/collection` |
+| `breaker` | the adaptive circuit breaker | `core/breaker` |
+| `shedder` | the adaptive load shedder | `core/load` |
+| `limit` | token bucket, period limit and connection limit, in memory or on Redis | `core/limit`, `core/syncx` |
+| `logx` | levelled, structured logging | `core/logx` |
+| `metric` | counters and histograms in the Prometheus format | `core/metric` |
+| `trace` | W3C trace context | `core/trace` |
+| `proc` | graceful shutdown | `core/proc` |
+| `conf` | configuration loading and the service, REST and RPC configuration | `core/conf` |
+| `registry` | endpoints, registries and balancers | `core/discov` |
+| `redis`, `etcd`, `consul` | the three stores' clients, and discovery on each | `core/stores/redis`, `core/discov` |
+| `zrpc` | the zRPC server and client on moonrpc | `zrpc` |
+| `rest/handler` | the middlewares | `rest/handler` |
+| `rest` | the engine, the server and route groups | `rest` |
+| `discov` | native file, socket and watch drivers for the registries | — |
+
 ## Ports
 
 The default listen port is **12000** for the REST engine and **12001** for the zRPC server — the family's numbers rather than go-zero's 8888 and 8080, so every example and every local run in this ecosystem points at the same place. gRPC shares a port with HTTP wherever one listener carries both; a moonzero process binds its REST and zRPC servers separately, and two listeners cannot hold one port, so the second takes the next number.
@@ -57,7 +80,7 @@ Every middleware that can turn a request away takes a `refusal` — the status, 
 
 ## Resilience middleware
 
-Beyond the base onion (logging, recovery, CORS, request-id), moonzero ships go-zero's resilience set, each modelled as a pure decision core over an injected [`Clock`](./clock.mbt) so its timing is exactly testable:
+Beyond the base onion (logging, recovery, CORS, request-id), moonzero ships go-zero's resilience set, each modelled as a pure decision core over an injected [`Clock`](./clock/clock.mbt) so its timing is exactly testable:
 
 ```moonbit
 let clock = @moonzero.Clock::new(() => now_ms())     // real time at the async edge
@@ -69,11 +92,11 @@ let server = @moonzero.Server::new(conf, app)
   .use_(@moonzero.structured_logging(clock))                          // one JSON line/req
 ```
 
-- **`rate_limit`** / **`period_limit`** — a [`TokenBucket`](./ratelimit.mbt) that admits a burst and refills continuously, and a [`PeriodLimit`](./periodlimit.mbt) that counts a fixed window per key; both answer `429` once they run out. Both are process-local, so N replicas admit N quotas — for a fleet use **`redis_rate_limit`** / **`redis_period_limit`** over `RedisTokenLimit` / `RedisPeriodLimit`, which run go-zero's `tokenscript.lua` and `periodscript.lua` in redis so every replica draws on one bucket or one window. An unreachable redis leaves the token limiter running on its local bucket (go-zero's `rescueLimiter`) rather than opening the gate.
-- **`breaker`** — a [`Breaker`](./breaker.mbt): go-zero's `googleBreaker`, Google SRE's client-side throttle. It keeps a [`Window`](./window.mbt) of the last 10s in 40 buckets and sheds a *fraction* of calls, `(total - 5 - max(w, 1.1) * accepts) / (total + 1)` scaled by the run of clean buckets, answering `503` for the ones it sheds — a struggling backend keeps whatever load it can still serve instead of being cut off wholesale. The clock and the shed roll are both injected, so the decisions are exactly reproducible.
-- **`timeout`** — a [`Deadline`](./limits.mbt) enforced on the response path. Preemptively aborting a hung handler needs racing it against a timer (`@async.any`) under the native runtime; that race is wired at the async server edge, the deadline core is portable and tested.
+- **`rate_limit`** / **`period_limit`** — a [`TokenBucket`](./limit/ratelimit.mbt) that admits a burst and refills continuously, and a [`PeriodLimit`](./limit/periodlimit.mbt) that counts a fixed window per key; both answer `429` once they run out. Both are process-local, so N replicas admit N quotas — for a fleet use **`redis_rate_limit`** / **`redis_period_limit`** over `RedisTokenLimit` / `RedisPeriodLimit`, which run go-zero's `tokenscript.lua` and `periodscript.lua` in redis so every replica draws on one bucket or one window. An unreachable redis leaves the token limiter running on its local bucket (go-zero's `rescueLimiter`) rather than opening the gate.
+- **`breaker`** — a [`Breaker`](./breaker/breaker.mbt): go-zero's `googleBreaker`, Google SRE's client-side throttle. It keeps a [`Window`](./window/window.mbt) of the last 10s in 40 buckets and sheds a *fraction* of calls, `(total - 5 - max(w, 1.1) * accepts) / (total + 1)` scaled by the run of clean buckets, answering `503` for the ones it sheds — a struggling backend keeps whatever load it can still serve instead of being cut off wholesale. The clock and the shed roll are both injected, so the decisions are exactly reproducible.
+- **`timeout`** — a [`Deadline`](./rest/handler/limits.mbt) enforced on the response path. Preemptively aborting a hung handler needs racing it against a timer (`@async.any`) under the native runtime; that race is wired at the async server edge, the deadline core is portable and tested.
 - **`maxbytes`** — rejects a request whose declared `Content-Length` exceeds the limit with `413`.
-- **`structured_logging`** — a [`RequestLog`](./logging.mbt) rendered as one JSON line per request (method, path, status, duration, request-id, client-ip, user-agent).
+- **`structured_logging`** — a [`RequestLog`](./rest/handler/logging.mbt) rendered as one JSON line per request (method, path, status, duration, request-id, client-ip, user-agent).
 
 ## Auth, YAML config, and zRPC over the h2c transport
 
@@ -112,15 +135,15 @@ call.close_send()     // -> Ok([on_end replies...]) | Err(status)
 ```
 
 - **`jwt_sign` / `jwt_verify`** — compact HS256 tokens through [`mooncred/jwt`](https://github.com/moonbitstack/mooncred) over [`mooncrypt`](https://github.com/moonbitstack/mooncrypt)'s SHA-256 and HMAC: signatures compared in constant time, `exp`/`nbf` enforced, the `alg:none` downgrade refused, and every check a field of the `policy` record. Interop-verified against the canonical jwt.io token.
-- **`auth`** — the [middleware](./auth.mbt) that requires `Authorization: Bearer <jwt>` and answers `401` for an absent, malformed, tampered, or expired token.
+- **`auth`** — the [middleware](./rest/handler/auth.mbt) that requires `Authorization: Bearer <jwt>` and answers `401` for an absent, malformed, tampered, or expired token.
 - **`ServiceConf::from_yaml`** — [`moonyaml`](https://github.com/moonbitstack/moonyaml) reads the `etc/*.yaml` into the same `Json` tree the JSON loader produces, so both formats agree field-for-field.
-- **`Conf`** — the [`conf.Load` port](./conf.mbt): keys match canonically (lowercase, `_` and `-` ignored), so a goctl-written `Name`/`MaxBytes`/`Log.Level` loads as readily as `name`/`max_bytes`/`log_level`; dotted paths reach nested blocks; `,env=` lets a variable override the file; and `default=` / `options=` / `range=[a:b)` behave as go-zero's tags do — a missing required field or a value outside its constraint is an error, never a quiet default.
-- **`RestConf` / `RestEngine`** — [config-driven assembly](./restconf.mbt) (← `rest.RestConf` and `newEngine`): host, port, TLS files, `MaxConns`, `MaxBytes`, `Timeout`, `CpuThreshold`, `Signature`, `TraceIgnorePaths` and the eleven `Middlewares` flags load from one `etc/*.yaml`, and the engine installs exactly the layers those flags ask for, in go-zero's order, over shared connection permits / breaker window / metric set. `Metrics` and `Gunzip` load but install nothing.
-- **`logx`** — go-zero's [leveled structured logger](./logx.mbt) over [`moonlog`](https://github.com/moonbitstack/moonlog)'s sink: entries below the configured level are dropped unrendered, everything else is one JSON object per line with `@timestamp`, `level`, `content`, an optional `WithDuration`, and typed fields. `RestEngine::new` points it at the config's `Log.Level`, which is what finally makes that setting mean something. Point it at another `moonlog` sink and every other library in the family writes to the same place.
-- **`RpcServer` / `RpcGroup`** — [config-driven zRPC groups](./rpc.mbt) that register [`moonrpc`](https://github.com/moonbitstack/moonrpc) `Method` handlers by gRPC path.
-- **`RpcChannel`** — a [client over the h2c transport](./zrpc.mbt): `to_h2` turns the registered handlers into a `moonrpc` `H2Server`, and the `call` family runs real exchanges through it — HPACK-coded HEADERS, length-prefixed DATA frames, and the `grpc-status` trailer read back off the reply. Unary (`call`), server-streaming (`call_server_streaming`, one request then every framed reply in order), client-streaming (`call_client_streaming`, each request as its own DATA frame then one reply after half-close), and bidirectional streaming all round-trip through the same engine. A call to an unregistered path comes back `UNIMPLEMENTED`, the trailers-only response a gRPC server sends for an unknown method.
+- **`Conf`** — the [`conf.Load` port](./conf/conf.mbt): keys match canonically (lowercase, `_` and `-` ignored), so a goctl-written `Name`/`MaxBytes`/`Log.Level` loads as readily as `name`/`max_bytes`/`log_level`; dotted paths reach nested blocks; `,env=` lets a variable override the file; and `default=` / `options=` / `range=[a:b)` behave as go-zero's tags do — a missing required field or a value outside its constraint is an error, never a quiet default.
+- **`RestConf` / `RestEngine`** — [config-driven assembly](./rest/engine.mbt) (← `rest.RestConf` and `newEngine`): host, port, TLS files, `MaxConns`, `MaxBytes`, `Timeout`, `CpuThreshold`, `Signature`, `TraceIgnorePaths` and the eleven `Middlewares` flags load from one `etc/*.yaml`, and the engine installs exactly the layers those flags ask for, in go-zero's order, over shared connection permits / breaker window / metric set. `Metrics` and `Gunzip` load but install nothing.
+- **`logx`** — go-zero's [leveled structured logger](./logx/logx.mbt) over [`moonlog`](https://github.com/moonbitstack/moonlog)'s sink: entries below the configured level are dropped unrendered, everything else is one JSON object per line with `@timestamp`, `level`, `content`, an optional `WithDuration`, and typed fields. `RestEngine::new` points it at the config's `Log.Level`, which is what finally makes that setting mean something. Point it at another `moonlog` sink and every other library in the family writes to the same place.
+- **`RpcServer` / `RpcGroup`** — [config-driven zRPC groups](./zrpc/server.mbt) that register [`moonrpc`](https://github.com/moonbitstack/moonrpc) `Method` handlers by gRPC path.
+- **`RpcChannel`** — a [client over the h2c transport](./zrpc/client.mbt): `to_h2` turns the registered handlers into a `moonrpc` `H2Server`, and the `call` family runs real exchanges through it — HPACK-coded HEADERS, length-prefixed DATA frames, and the `grpc-status` trailer read back off the reply. Unary (`call`), server-streaming (`call_server_streaming`, one request then every framed reply in order), client-streaming (`call_client_streaming`, each request as its own DATA frame then one reply after half-close), and bidirectional streaming all round-trip through the same engine. A call to an unregistered path comes back `UNIMPLEMENTED`, the trailers-only response a gRPC server sends for an unknown method.
 - **Bidi streaming** — `open_bidi` opens a stream that stays open both ways: each `BidiCall::send` writes one request message and returns the replies the server produced right then (an echo handler answers each message as it arrives), and `close_send` half-closes, runs the server's `on_end`, and reports the final `grpc-status`. `call_bidi_streaming` drives a whole exchange in one shot, returning the interleaved replies followed by the `on_end` messages. The channel's HPACK decoder is advanced across every reply block, so its dynamic table stays in lockstep with the engine's encoder for the life of the call.
-- **`ShutdownCoordinator`** — [graceful shutdown](./shutdown.mbt) for a serving zRPC server: `dispatch_graceful` counts each call as in-flight for its duration, `initiate_shutdown` makes new calls come back `Unavailable` (a stopped listener) while in-flight ones run to completion, and `is_drained` reports when the last one has finished so the process may exit.
+- **`ShutdownCoordinator`** — [graceful shutdown](./proc/shutdown.mbt) for a serving zRPC server: `dispatch_graceful` counts each call as in-flight for its duration, `initiate_shutdown` makes new calls come back `Unavailable` (a stopped listener) while in-flight ones run to completion, and `is_drained` reports when the last one has finished so the process may exit.
 
 ## Discovery, metrics, tracing
 
@@ -148,13 +171,13 @@ m.requests().value("GET /ping 200")            // request count for that label
 m.latency().mean()                             // mean request latency, ms
 ```
 
-- **`InMemoryRegistry`** — a [service registry](./registry.mbt) shaped like go-zero's etcd `discov` store: a `service -> instance -> endpoint` map with a monotonic store revision a watcher can compare against. `RoundRobin`, `pick_first` and `WeightedRoundRobin` balancers select an endpoint from a resolved set.
-- **`WeightedRoundRobin`** — a [weighted balancer](./registry.mbt) over `Endpoint::weight`, using smooth weighted round-robin: over one cycle each instance is served exactly its share, and a weight-5 instance is spread through the cycle rather than handed five requests in a row. An instance weighted zero or less is never picked.
-- **`PersistentRegistry`** — the [persisted, watchable registry](./discovery.mbt): adds a live `watch` (Put/Delete events in revision order), an `events_since` catch-up from any revision, and `snapshot`/`restore` that round-trip the whole keyspace through an etcd v3 `RangeResponse`-shaped JSON document without losing a revision — the bytes a file- or etcd-backed deployment persists and reloads.
-- **`LoadBalancedChannel`** — a [load-balanced zRPC client](./discovery.mbt) over a `Resolve` interface: it resolves a service, picks a live instance with the balancer, dials it through an `RpcCluster`, and makes the call, so instances registering or leaving between calls take effect on the next one. Any store exposing `resolver()` backs it; an etcd- or consul-backed store drops in unchanged. Unary, server-streaming, and bidi calls all go through the resolve-then-balance path.
+- **`InMemoryRegistry`** — a [service registry](./registry/registry.mbt) shaped like go-zero's etcd `discov` store: a `service -> instance -> endpoint` map with a monotonic store revision a watcher can compare against. `RoundRobin`, `pick_first` and `WeightedRoundRobin` balancers select an endpoint from a resolved set.
+- **`WeightedRoundRobin`** — a [weighted balancer](./registry/registry.mbt) over `Endpoint::weight`, using smooth weighted round-robin: over one cycle each instance is served exactly its share, and a weight-5 instance is spread through the cycle rather than handed five requests in a row. An instance weighted zero or less is never picked.
+- **`PersistentRegistry`** — the [persisted, watchable registry](./registry/discovery.mbt): adds a live `watch` (Put/Delete events in revision order), an `events_since` catch-up from any revision, and `snapshot`/`restore` that round-trip the whole keyspace through an etcd v3 `RangeResponse`-shaped JSON document without losing a revision — the bytes a file- or etcd-backed deployment persists and reloads.
+- **`LoadBalancedChannel`** — a [load-balanced zRPC client](./registry/discovery.mbt) over a `Resolve` interface: it resolves a service, picks a live instance with the balancer, dials it through an `RpcCluster`, and makes the call, so instances registering or leaving between calls take effect on the next one. Any store exposing `resolver()` backs it; an etcd- or consul-backed store drops in unchanged. Unary, server-streaming, and bidi calls all go through the resolve-then-balance path.
 - **`FileRegistry`** — real registry I/O in the native [`discov`](./discov/) sub-package (← go-zero's `discov` publisher/subscriber, over the filesystem instead of etcd's network): `persist_registry` writes the snapshot to a real file through `moonbitlang/async`'s fs, `FileRegistry::load` reads it back and exposes a `resolver()`, `reload` re-reads and returns the `Put`/`Delete` diff since the last load, and `watch`/`watch_once` block on a real filesystem watcher and reload on every change. Reader and publisher share only the file, exactly as an etcd subscriber and publisher share only the keyspace, so the balancer and load-balanced channel above drive it unchanged.
-- **`ServerMetrics`** — a [`CounterVec`](./metrics.mbt) of per-method/route/status request tallies and a cumulative latency `Histogram` (Prometheus `le` buckets, sum, count), driven by the `metrics` middleware that times each request on the clock.
-- **`tracing`** — [trace-id propagation](./tracing.mbt): continue an inbound W3C `traceparent` or start a new trace, mint a child span, and stamp `traceparent` + `x-trace-id` onto the response.
+- **`ServerMetrics`** — a [`CounterVec`](./metric/metric.mbt) of per-method/route/status request tallies and a cumulative latency `Histogram` (Prometheus `le` buckets, sum, count), driven by the `metrics` middleware that times each request on the clock.
+- **`tracing`** — [trace-id propagation](./trace/trace.mbt): continue an inbound W3C `traceparent` or start a new trace, mint a child span, and stamp `traceparent` + `x-trace-id` onto the response.
 
 ## Roadmap (transliterating go-zero)
 

@@ -1,0 +1,6 @@
+// W3C Trace Context: trace and span identifiers and the traceparent field.
+import {
+  "moonbitstack/moonvar/fixed",
+  "moonbitstack/moonbase/base16",
+  "moonbitlang/core/string",
+}

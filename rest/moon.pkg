@@ -1,0 +1,18 @@
+// The REST service: the engine that builds the middleware chain from
+// configuration, the server it runs on moonasgi, and route groups.
+import {
+  "moonbitstack/moonzero/clock",
+  "moonbitstack/moonzero/logx",
+  "moonbitstack/moonzero/metric",
+  "moonbitstack/moonzero/breaker",
+  "moonbitstack/moonzero/shedder",
+  "moonbitstack/moonzero/conf",
+  "moonbitstack/moonzero/limit",
+  "moonbitstack/moonzero/rest/handler",
+  "moonbitstack/moonapi",
+  "moonbitstack/moonasgi",
+}
+
+import {
+  "moonbitstack/moonlog",
+} for "wbtest"

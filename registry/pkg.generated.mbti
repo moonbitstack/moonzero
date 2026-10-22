@@ -1,0 +1,116 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/moonzero/registry"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitstack/moonrpc/wire",
+  "moonbitstack/moonzero/conf",
+  "moonbitstack/moonzero/zrpc",
+}
+
+// Values
+pub fn pick_first(Array[Endpoint]) -> Endpoint?
+
+pub fn resolve_one(InMemoryRegistry, String, RoundRobin) -> Endpoint?
+
+// Errors
+
+// Types and methods
+pub(all) enum Balancer {
+  RoundRobinBalancer(RoundRobin)
+  PickFirst
+  WeightedBalancer(WeightedRoundRobin)
+}
+pub fn Balancer::pick(Self, Array[Endpoint]) -> Endpoint?
+pub fn Balancer::round_robin() -> Self
+pub fn Balancer::weighted() -> Self
+
+pub(all) struct Endpoint {
+  host : String
+  port : Int32
+  weight : Int32
+} derive(Eq, @debug.Debug)
+pub fn Endpoint::address(Self) -> String
+pub fn Endpoint::equal(Self, Self) -> Bool
+pub fn Endpoint::new(String, Int32, weight? : Int32) -> Self
+pub fn Endpoint::not_equal(Self, Self) -> Bool
+pub fn Endpoint::parse(String) -> Self?
+pub fn Endpoint::to_repr(Self) -> @debug.Repr
+
+pub struct InMemoryRegistry {
+  instances : Map[String, Map[String, Endpoint]]
+  mut seq : Int32
+  mut revision : Int64
+}
+pub fn InMemoryRegistry::deregister(Self, String, String) -> Bool
+pub fn InMemoryRegistry::new() -> Self
+pub fn InMemoryRegistry::register(Self, String, Endpoint) -> String
+pub fn InMemoryRegistry::resolve(Self, String) -> Array[Endpoint]
+pub fn InMemoryRegistry::resolver(Self) -> (String) -> Array[Endpoint]
+pub fn InMemoryRegistry::revision(Self) -> Int64
+pub fn InMemoryRegistry::services(Self) -> Array[String]
+
+pub struct LoadBalancedChannel {
+  resolve : (String) -> Array[Endpoint]
+  cluster : RpcCluster
+  balancer : Balancer
+  service : String
+}
+pub fn LoadBalancedChannel::call(Self, String, Bytes) -> Result[Bytes, @wire.Status] raise
+pub fn LoadBalancedChannel::call_bidi_streaming(Self, String, Array[Bytes]) -> Result[Array[Bytes], @wire.Status] raise
+pub fn LoadBalancedChannel::call_server_streaming(Self, String, Bytes) -> Result[Array[Bytes], @wire.Status] raise
+pub fn LoadBalancedChannel::new((String) -> Array[Endpoint], RpcCluster, String, balancer? : Balancer) -> Self
+
+pub struct PersistentRegistry {
+  instances : Map[String, Map[String, Endpoint]]
+  key_rev : Map[String, Int64]
+  mut seq : Int32
+  mut revision : Int64
+  events : Array[RegistryEvent]
+  watchers : Array[(RegistryEvent) -> Unit]
+}
+pub fn PersistentRegistry::deregister(Self, String, String) -> Bool
+pub fn PersistentRegistry::events_since(Self, Int64) -> Array[RegistryEvent]
+pub fn PersistentRegistry::keyed_entries(Self) -> Array[(String, Endpoint, Int64)]
+pub fn PersistentRegistry::new() -> Self
+pub fn PersistentRegistry::register(Self, String, Endpoint) -> String
+pub fn PersistentRegistry::resolve(Self, String) -> Array[Endpoint]
+pub fn PersistentRegistry::resolver(Self) -> (String) -> Array[Endpoint]
+pub fn PersistentRegistry::restore(String) -> Self raise @conf.ConfigError
+pub fn PersistentRegistry::revision(Self) -> Int64
+pub fn PersistentRegistry::services(Self) -> Array[String]
+pub fn PersistentRegistry::snapshot(Self) -> String
+pub fn PersistentRegistry::watch(Self, (RegistryEvent) -> Unit) -> Unit
+
+pub(all) enum RegistryEvent {
+  Put(key~ : String, endpoint~ : Endpoint, revision~ : Int64)
+  Delete(key~ : String, revision~ : Int64)
+} derive(Eq, @debug.Debug)
+pub fn RegistryEvent::equal(Self, Self) -> Bool
+pub fn RegistryEvent::not_equal(Self, Self) -> Bool
+pub fn RegistryEvent::revision(Self) -> Int64
+pub fn RegistryEvent::to_repr(Self) -> @debug.Repr
+
+pub struct RoundRobin {
+  mut cursor : Int32
+}
+pub fn RoundRobin::new() -> Self
+pub fn RoundRobin::pick(Self, Array[Endpoint]) -> Endpoint?
+
+pub struct RpcCluster {
+  servers : Map[String, @zrpc.RpcServer]
+}
+pub fn RpcCluster::add(Self, Endpoint, @zrpc.RpcServer) -> Unit
+pub fn RpcCluster::dial(Self, Endpoint) -> @zrpc.RpcChannel?
+pub fn RpcCluster::new() -> Self
+
+pub struct WeightedRoundRobin {
+  scores : Map[String, Int32]
+}
+pub fn WeightedRoundRobin::new() -> Self
+pub fn WeightedRoundRobin::pick(Self, Array[Endpoint]) -> Endpoint?
+
+// Type aliases
+pub type Resolve = (String) -> Array[Endpoint]
+
+// Traits

@@ -22,21 +22,21 @@ async test "RedisPeriodLimit: two limiters on one key share one window" {
     quota=3,
     prefix="limit/",
   )
-  assert_eq(a.take("heke1228"), @moonzero.PeriodAllowed)
-  assert_eq(b.take("heke1228"), @moonzero.PeriodAllowed)
-  assert_eq(a.take("heke1228"), @moonzero.PeriodHitQuota)
-  assert_eq(b.take("heke1228"), @moonzero.PeriodOverQuota)
-  assert_eq(a.take("heke1228"), @moonzero.PeriodOverQuota)
+  assert_eq(a.take("heke1228"), PeriodAllowed)
+  assert_eq(b.take("heke1228"), PeriodAllowed)
+  assert_eq(a.take("heke1228"), PeriodHitQuota)
+  assert_eq(b.take("heke1228"), PeriodOverQuota)
+  assert_eq(a.take("heke1228"), PeriodOverQuota)
   // A different key keeps its own window.
-  assert_eq(a.take("lfanke"), @moonzero.PeriodAllowed)
+  assert_eq(a.take("lfanke"), PeriodAllowed)
   let local_a = @moonzero.PeriodLimit::new(period_secs=60, quota=3)
   let local_b = @moonzero.PeriodLimit::new(period_secs=60, quota=3)
   let mut admitted = 0
   for i = 0; i < 3; i = i + 1 {
-    if local_a.take("heke1228", 0L) != @moonzero.PeriodOverQuota {
+    if local_a.take("heke1228", 0L) != PeriodOverQuota {
       admitted += 1
     }
-    if local_b.take("heke1228", 0L) != @moonzero.PeriodOverQuota {
+    if local_b.take("heke1228", 0L) != PeriodOverQuota {
       admitted += 1
     }
   }
@@ -50,12 +50,12 @@ async test "RedisPeriodLimit: the window carries the period and reopens after it
   let redis = FakeRedis::new()
   let client = @moonzero.RedisClient::new(redis)
   let lim = @moonzero.RedisPeriodLimit::new(client, period_secs=60, quota=2)
-  assert_eq(lim.take("qwq"), @moonzero.PeriodAllowed)
-  assert_eq(client.command([b"TTL", b"qwq"]), @moonzero.Integer(60))
-  assert_eq(lim.take("qwq"), @moonzero.PeriodHitQuota)
-  assert_eq(lim.take("qwq"), @moonzero.PeriodOverQuota)
+  assert_eq(lim.take("qwq"), PeriodAllowed)
+  assert_eq(client.command([b"TTL", b"qwq"]), Integer(60))
+  assert_eq(lim.take("qwq"), PeriodHitQuota)
+  assert_eq(lim.take("qwq"), PeriodOverQuota)
   redis.advance(61L)
-  assert_eq(lim.take("qwq"), @moonzero.PeriodAllowed)
+  assert_eq(lim.take("qwq"), PeriodAllowed)
 }
 
 ///|
@@ -128,7 +128,7 @@ async test "the limiter loads its script once and then runs it by digest" {
   assert_eq(redis.evals, 0)
   assert_eq(redis.evalshas, 2)
   redis.scripts.clear()
-  assert_eq(lim.take("hhh"), @moonzero.PeriodAllowed)
+  assert_eq(lim.take("hhh"), PeriodAllowed)
   // The rejected digest, then the retry after re-loading.
   assert_eq(redis.evalshas, 4)
   assert_eq(redis.evals, 0)
@@ -232,12 +232,12 @@ async test "integration: two period limiters on a live redis share the window" {
     quota=3,
     prefix~,
   )
-  assert_eq(a.take(key), @moonzero.PeriodAllowed)
-  assert_eq(b.take(key), @moonzero.PeriodAllowed)
-  assert_eq(a.take(key), @moonzero.PeriodHitQuota)
-  assert_eq(b.take(key), @moonzero.PeriodOverQuota)
+  assert_eq(a.take(key), PeriodAllowed)
+  assert_eq(b.take(key), PeriodAllowed)
+  assert_eq(a.take(key), PeriodHitQuota)
+  assert_eq(b.take(key), PeriodOverQuota)
   match s1.command(["TTL", prefix + key]) {
-    @moonzero.Integer(ttl) => assert_eq(ttl > 0L && ttl <= 60L, true)
+    Integer(ttl) => assert_eq(ttl > 0L && ttl <= 60L, true)
     other => fail("unexpected TTL reply: " + @moonzero.resp_kind(other))
   }
   let _ = s1.command(["DEL", prefix + key])

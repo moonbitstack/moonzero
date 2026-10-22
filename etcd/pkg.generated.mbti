@@ -1,0 +1,205 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/moonzero/etcd"
+
+import {
+  "moonbitstack/moonrpc/proto",
+  "moonbitstack/moonzero/registry",
+  "moonbitstack/moonzero/zrpc",
+}
+
+// Values
+pub fn etcd_prefix_end(Bytes) -> Bytes
+
+pub fn etcd_service_prefix(String, String) -> String
+
+// Errors
+pub suberror EtcdError {
+  EtcdError(String)
+}
+
+// Types and methods
+pub struct EtcdClient {
+  channel : @zrpc.RpcChannel
+}
+pub fn EtcdClient::delete_range(Self, EtcdDeleteRangeRequest) -> EtcdDeleteRangeResponse raise
+pub fn EtcdClient::lease_grant(Self, EtcdLeaseGrantRequest) -> EtcdLeaseGrantResponse raise
+pub fn EtcdClient::new(@zrpc.RpcChannel) -> Self
+pub fn EtcdClient::put(Self, EtcdPutRequest) -> EtcdPutResponse raise
+pub fn EtcdClient::range(Self, EtcdRangeRequest) -> EtcdRangeResponse raise
+pub fn EtcdClient::watch(Self, EtcdWatchRequest) -> Array[EtcdWatchResponse] raise
+
+pub(all) struct EtcdDeleteRangeRequest {
+  key : Bytes
+  range_end : Bytes
+  prev_kv : Bool
+} derive(Eq)
+pub fn EtcdDeleteRangeRequest::decode(Bytes) -> Self raise @proto.PbError
+pub fn EtcdDeleteRangeRequest::encode(Self) -> Bytes
+pub fn EtcdDeleteRangeRequest::equal(Self, Self) -> Bool
+pub fn EtcdDeleteRangeRequest::not_equal(Self, Self) -> Bool
+
+pub(all) struct EtcdDeleteRangeResponse {
+  deleted : Int64
+  prev_kvs : Array[EtcdKeyValue]
+} derive(Eq)
+pub fn EtcdDeleteRangeResponse::decode(Bytes) -> Self raise @proto.PbError
+pub fn EtcdDeleteRangeResponse::encode(Self) -> Bytes
+pub fn EtcdDeleteRangeResponse::equal(Self, Self) -> Bool
+pub fn EtcdDeleteRangeResponse::not_equal(Self, Self) -> Bool
+
+pub struct EtcdDiscovery {
+  client : EtcdClient
+  prefix : String
+}
+pub fn EtcdDiscovery::deregister(Self, String) -> Unit raise
+pub fn EtcdDiscovery::new(EtcdClient, prefix? : String) -> Self
+pub fn EtcdDiscovery::register(Self, String, @registry.Endpoint, ttl? : Int64) -> Int64 raise
+pub fn EtcdDiscovery::resolve(Self, String) -> Array[@registry.Endpoint] raise
+pub fn EtcdDiscovery::resolver(Self) -> (String) -> Array[@registry.Endpoint]
+
+pub(all) struct EtcdEvent {
+  event_type : EtcdEventType
+  kv : EtcdKeyValue
+} derive(Eq)
+pub fn EtcdEvent::decode(Bytes) -> Self raise @proto.PbError
+pub fn EtcdEvent::encode(Self) -> Bytes
+pub fn EtcdEvent::equal(Self, Self) -> Bool
+pub fn EtcdEvent::not_equal(Self, Self) -> Bool
+
+pub(all) enum EtcdEventType {
+  Put
+  Delete
+} derive(Eq)
+pub fn EtcdEventType::equal(Self, Self) -> Bool
+pub fn EtcdEventType::from_int(Int32) -> Self
+pub fn EtcdEventType::not_equal(Self, Self) -> Bool
+pub fn EtcdEventType::to_int(Self) -> Int32
+
+pub(all) struct EtcdKeyValue {
+  key : Bytes
+  create_revision : Int64
+  mod_revision : Int64
+  version : Int64
+  value : Bytes
+  lease : Int64
+} derive(Eq)
+pub fn EtcdKeyValue::decode(Bytes) -> Self raise @proto.PbError
+pub fn EtcdKeyValue::empty() -> Self
+pub fn EtcdKeyValue::encode(Self) -> Bytes
+pub fn EtcdKeyValue::equal(Self, Self) -> Bool
+pub fn EtcdKeyValue::not_equal(Self, Self) -> Bool
+
+pub(all) struct EtcdLeaseGrantRequest {
+  ttl : Int64
+  id : Int64
+} derive(Eq)
+pub fn EtcdLeaseGrantRequest::decode(Bytes) -> Self raise @proto.PbError
+pub fn EtcdLeaseGrantRequest::encode(Self) -> Bytes
+pub fn EtcdLeaseGrantRequest::equal(Self, Self) -> Bool
+pub fn EtcdLeaseGrantRequest::not_equal(Self, Self) -> Bool
+
+pub(all) struct EtcdLeaseGrantResponse {
+  id : Int64
+  ttl : Int64
+  error : String
+} derive(Eq)
+pub fn EtcdLeaseGrantResponse::decode(Bytes) -> Self raise @proto.PbError
+pub fn EtcdLeaseGrantResponse::encode(Self) -> Bytes
+pub fn EtcdLeaseGrantResponse::equal(Self, Self) -> Bool
+pub fn EtcdLeaseGrantResponse::not_equal(Self, Self) -> Bool
+
+pub(all) struct EtcdLeaseKeepAliveRequest {
+  id : Int64
+} derive(Eq)
+pub fn EtcdLeaseKeepAliveRequest::decode(Bytes) -> Self raise @proto.PbError
+pub fn EtcdLeaseKeepAliveRequest::encode(Self) -> Bytes
+pub fn EtcdLeaseKeepAliveRequest::equal(Self, Self) -> Bool
+pub fn EtcdLeaseKeepAliveRequest::not_equal(Self, Self) -> Bool
+
+pub(all) struct EtcdLeaseKeepAliveResponse {
+  id : Int64
+  ttl : Int64
+} derive(Eq)
+pub fn EtcdLeaseKeepAliveResponse::decode(Bytes) -> Self raise @proto.PbError
+pub fn EtcdLeaseKeepAliveResponse::encode(Self) -> Bytes
+pub fn EtcdLeaseKeepAliveResponse::equal(Self, Self) -> Bool
+pub fn EtcdLeaseKeepAliveResponse::not_equal(Self, Self) -> Bool
+
+pub(all) struct EtcdPutRequest {
+  key : Bytes
+  value : Bytes
+  lease : Int64
+} derive(Eq)
+pub fn EtcdPutRequest::decode(Bytes) -> Self raise @proto.PbError
+pub fn EtcdPutRequest::encode(Self) -> Bytes
+pub fn EtcdPutRequest::equal(Self, Self) -> Bool
+pub fn EtcdPutRequest::not_equal(Self, Self) -> Bool
+
+pub(all) struct EtcdPutResponse {
+  prev_kv : EtcdKeyValue
+} derive(Eq)
+pub fn EtcdPutResponse::decode(Bytes) -> Self raise @proto.PbError
+pub fn EtcdPutResponse::encode(Self) -> Bytes
+pub fn EtcdPutResponse::equal(Self, Self) -> Bool
+pub fn EtcdPutResponse::not_equal(Self, Self) -> Bool
+
+pub(all) struct EtcdRangeRequest {
+  key : Bytes
+  range_end : Bytes
+  limit : Int64
+} derive(Eq)
+pub fn EtcdRangeRequest::decode(Bytes) -> Self raise @proto.PbError
+pub fn EtcdRangeRequest::encode(Self) -> Bytes
+pub fn EtcdRangeRequest::equal(Self, Self) -> Bool
+pub fn EtcdRangeRequest::not_equal(Self, Self) -> Bool
+
+pub(all) struct EtcdRangeResponse {
+  kvs : Array[EtcdKeyValue]
+  count : Int64
+} derive(Eq)
+pub fn EtcdRangeResponse::decode(Bytes) -> Self raise @proto.PbError
+pub fn EtcdRangeResponse::encode(Self) -> Bytes
+pub fn EtcdRangeResponse::equal(Self, Self) -> Bool
+pub fn EtcdRangeResponse::not_equal(Self, Self) -> Bool
+
+pub(all) struct EtcdWatchCancelRequest {
+  watch_id : Int64
+} derive(Eq)
+pub fn EtcdWatchCancelRequest::decode(Bytes) -> Self raise @proto.PbError
+pub fn EtcdWatchCancelRequest::encode(Self) -> Bytes
+pub fn EtcdWatchCancelRequest::equal(Self, Self) -> Bool
+pub fn EtcdWatchCancelRequest::not_equal(Self, Self) -> Bool
+
+pub(all) struct EtcdWatchCreateRequest {
+  key : Bytes
+  range_end : Bytes
+  start_revision : Int64
+} derive(Eq)
+pub fn EtcdWatchCreateRequest::decode(Bytes) -> Self raise @proto.PbError
+pub fn EtcdWatchCreateRequest::encode(Self) -> Bytes
+pub fn EtcdWatchCreateRequest::equal(Self, Self) -> Bool
+pub fn EtcdWatchCreateRequest::not_equal(Self, Self) -> Bool
+
+pub(all) enum EtcdWatchRequest {
+  Create(EtcdWatchCreateRequest)
+  Cancel(EtcdWatchCancelRequest)
+} derive(Eq)
+pub fn EtcdWatchRequest::decode(Bytes) -> Self raise @proto.PbError
+pub fn EtcdWatchRequest::encode(Self) -> Bytes
+pub fn EtcdWatchRequest::equal(Self, Self) -> Bool
+pub fn EtcdWatchRequest::not_equal(Self, Self) -> Bool
+
+pub(all) struct EtcdWatchResponse {
+  watch_id : Int64
+  created : Bool
+  canceled : Bool
+  events : Array[EtcdEvent]
+} derive(Eq)
+pub fn EtcdWatchResponse::decode(Bytes) -> Self raise @proto.PbError
+pub fn EtcdWatchResponse::encode(Self) -> Bytes
+pub fn EtcdWatchResponse::equal(Self, Self) -> Bool
+pub fn EtcdWatchResponse::not_equal(Self, Self) -> Bool
+
+// Type aliases
+
+// Traits

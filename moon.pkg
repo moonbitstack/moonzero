@@ -1,30 +1,26 @@
-// moonzero (<- go-zero): config-driven assembly of a moonapi application with
-// middleware into a runnable moonasgi AsgiApp. Depends only on moonapi + moonasgi,
-// so it stays backend-agnostic; a server (mooncat) runs the produced app.
+// moonzero (← go-zero): a microservice framework on the moonbitstack family.
+// The work is done in the subpackages; the root re-exports their surface.
 import {
-  "moonbitstack/moonvar/fixed",
-  "moonbitstack/moonbase/base16",
-  "moonbitstack/moonpool",
-  "moonbitstack/moonhttp/http2",
-  "moonbitstack/moonapi",
-  "moonbitstack/moonasgi",
-  "moonbitstack/moonrpc",
-  "moonbitstack/moonhttp/header",
-  "moonbitstack/moonhttp/hpack",
-  "moonbitstack/mooncrypt/hash/sha2",
-  "moonbitstack/mooncrypt/mac/hmac",
-  "moonbitstack/mooncrypt/spec",
-  "moonbitstack/mooncred/jwt",
-  "moonbitstack/moonyaml",
-  "moonbitstack/moonlog",
-  "moonbitlang/core/env",
-  "moonbitlang/core/json",
-  "moonbitlang/core/encoding/utf8",
-  "moonbitlang/core/double",
-  "moonbitlang/core/random",
-  "moonbitlang/core/string",
+  "moonbitstack/moonzero/clock",
+  "moonbitstack/moonzero/window",
+  "moonbitstack/moonzero/proc",
+  "moonbitstack/moonzero/logx",
+  "moonbitstack/moonzero/trace",
+  "moonbitstack/moonzero/metric",
+  "moonbitstack/moonzero/breaker",
+  "moonbitstack/moonzero/shedder",
+  "moonbitstack/moonzero/conf",
+  "moonbitstack/moonzero/zrpc",
+  "moonbitstack/moonzero/registry",
+  "moonbitstack/moonzero/consul",
+  "moonbitstack/moonzero/etcd",
+  "moonbitstack/moonzero/redis",
+  "moonbitstack/moonzero/limit",
+  "moonbitstack/moonzero/rest/handler",
+  "moonbitstack/moonzero/rest",
 }
 
 import {
-  "moonbitstack/moonbase/base16",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/json",
 } for "wbtest"

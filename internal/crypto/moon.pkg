@@ -1,0 +1,11 @@
+// The digests and the constant-time comparison the handlers and the Redis
+// registry share. Internal: they are mooncrypt's, not part of moonzero's surface.
+import {
+  "moonbitstack/mooncrypt/hash/sha2",
+  "moonbitstack/mooncrypt/mac/hmac",
+  "moonbitstack/mooncrypt/spec",
+}
+
+import {
+  "moonbitstack/moonbase/base16",
+} for "wbtest"

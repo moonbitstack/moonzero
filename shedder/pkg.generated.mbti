@@ -1,0 +1,19 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/moonzero/shedder"
+
+// Values
+
+// Errors
+
+// Types and methods
+pub struct Shedder {
+  threshold : Int64
+  usage : () -> Int64
+}
+pub fn Shedder::allow(Self) -> Bool
+pub fn Shedder::new(Int64, usage? : () -> Int64) -> Self
+pub fn Shedder::usage(Self) -> Int64
+
+// Type aliases
+
+// Traits

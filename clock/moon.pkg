@@ -1,0 +1,5 @@
+// A millisecond time source passed in as a value, so every timing decision
+// below is a function of an explicit clock rather than a hidden wall-clock read.
+import {
+  "moonbitlang/core/env",
+}

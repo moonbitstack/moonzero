@@ -24,4 +24,5 @@ import {
   "moonbitlang/core/string",
   "moonbitstack/moonlog",
   "moonbitstack/moonbase/base16",
+  "moonbitstack/mooncrypt/hash/sha2",
 } for "test"

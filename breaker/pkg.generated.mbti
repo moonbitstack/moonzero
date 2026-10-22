@@ -1,0 +1,34 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/moonzero/breaker"
+
+import {
+  "moonbitstack/moonzero/clock",
+  "moonbitstack/moonzero/window",
+}
+
+// Values
+
+// Errors
+pub suberror Unavailable
+
+// Types and methods
+pub struct Breaker {
+  win : @window.Window
+  clock : @clock.Clock
+  roll : () -> Double
+  mut last_pass : Int64?
+}
+pub fn Breaker::allow(Self) -> Promise?
+pub fn Breaker::drop_ratio(Self) -> Double
+pub fn Breaker::new(@clock.Clock, rand? : () -> Double, buckets? : Int32, bucket_ms? : Int64) -> Self
+pub fn[T] Breaker::run(Self, () -> T raise) -> T raise
+
+pub struct Promise {
+  b : Breaker
+}
+pub fn Promise::accept(Self) -> Unit
+pub fn Promise::reject(Self) -> Unit
+
+// Type aliases
+
+// Traits

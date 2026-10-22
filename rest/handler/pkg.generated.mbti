@@ -1,0 +1,119 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/moonzero/rest/handler"
+
+import {
+  "moonbitstack/moonapi",
+  "moonbitstack/moonapi/ctx",
+  "moonbitstack/moonasgi/http",
+  "moonbitstack/moonasgi/spec",
+  "moonbitstack/mooncred/jwt",
+  "moonbitstack/moonzero/breaker",
+  "moonbitstack/moonzero/clock",
+  "moonbitstack/moonzero/limit",
+  "moonbitstack/moonzero/logx",
+  "moonbitstack/moonzero/metric",
+  "moonbitstack/moonzero/shedder",
+}
+
+// Values
+pub fn auth(String, @clock.Clock) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+
+pub fn breaker(@breaker.Breaker, refusal? : Refusal) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+
+pub fn cors(CorsConf) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+
+pub fn jwt_authorized(String?, String, Int64) -> Bool
+
+pub fn jwt_sign(Map[String, Json], String, typ? : String?, extra? : Map[String, Json], wins? : @jwt.Wins, clash? : @jwt.OnClash[Map[String, Json]]) -> String
+
+pub fn jwt_verify(String, String, Int64, policy? : @jwt.Policy) -> Map[String, Json] raise @jwt.Rejected
+
+pub fn logging(async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+
+pub fn max_conns(@limit.MaxConns, refusal? : Refusal) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+
+pub fn maxbytes(Int32, refusal? : Refusal) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+
+pub fn metrics(@metric.ServerMetrics, @clock.Clock) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+
+pub fn metrics_handler(@metric.ServerMetrics) -> (@ctx.Context) -> @http.Response raise
+
+pub fn mount_metrics(@moonapi.App, @metric.ServerMetrics) -> Unit
+
+pub fn period_limit(@limit.PeriodLimit, @clock.Clock, key? : String, refusal? : Refusal) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+
+pub let plain_text : Array[(String, String)]
+
+pub fn rate_limit(@limit.TokenBucket, @clock.Clock, refusal? : Refusal) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+
+pub fn recovery(async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+
+pub fn redis_period_limit(@limit.RedisPeriodLimit, key? : String, refusal? : Refusal) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+
+pub fn redis_rate_limit(@limit.RedisTokenLimit, @clock.Clock, refusal? : Refusal) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+
+pub let refusal : Refusal
+
+pub fn request_id(header? : String) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+
+pub fn shedding(@shedder.Shedder, refusal? : Refusal) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+
+pub fn structured_logging(@clock.Clock, logger? : @logx.Logger) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+
+pub let timed_out : Refusal
+
+pub fn timeout(Int64, @clock.Clock, refusal? : Refusal) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+
+pub let too_large : Refusal
+
+pub let too_many : Refusal
+
+pub fn tracing(header? : String, ignore_paths? : Array[String]) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+
+pub let unavailable : Refusal
+
+// Errors
+
+// Types and methods
+pub(all) struct CorsConf {
+  allow_origin : String
+  allow_methods : String
+  allow_headers : String
+  allow_credentials : Bool
+  max_age : Int32
+}
+pub fn CorsConf::new(allow_origin? : String, allow_methods? : String, allow_headers? : String, allow_credentials? : Bool, max_age? : Int32) -> Self
+
+pub struct Deadline {
+  budget_ms : Int64
+  started_ms : Int64
+}
+pub fn Deadline::expired(Self, Int64) -> Bool
+pub fn Deadline::remaining(Self, Int64) -> Int64
+pub fn Deadline::start(Int64, Int64) -> Self
+
+pub(all) struct Refusal {
+  status : Int32
+  body : Bytes
+  headers : Array[(String, String)]
+}
+pub fn Refusal::events(Self) -> Array[@spec.Event]
+pub fn Refusal::new(status? : Int32, body? : Bytes, headers? : Array[(String, String)]) -> Self
+
+pub(all) struct RequestLog {
+  http_method : String
+  path : String
+  status : Int32
+  duration_ms : Int64
+  request_id : String
+  client_ip : String
+  user_agent : String
+}
+pub fn RequestLog::fields(Self) -> Array[(String, Json)]
+pub fn RequestLog::render(Self) -> String
+pub fn RequestLog::to_json(Self) -> Json
+
+// Type aliases
+pub type Middleware = (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+
+// Traits

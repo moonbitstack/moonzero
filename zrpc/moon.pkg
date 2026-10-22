@@ -1,0 +1,10 @@
+// zRPC (go-zero's zrpc) on moonrpc: the server with its method table and the
+// client channel.
+import {
+  "moonbitstack/moonzero/proc",
+  "moonbitstack/moonzero/conf",
+  "moonbitstack/moonhttp/http2",
+  "moonbitstack/moonrpc",
+  "moonbitstack/moonhttp/header",
+  "moonbitstack/moonhttp/hpack",
+}

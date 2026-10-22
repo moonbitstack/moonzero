@@ -65,25 +65,25 @@ fn FakeRedis::run(
   self : FakeRedis,
   args : Array[Bytes],
 ) -> @moonzero.RespValue raise {
-  guard args.length() > 0 else { return @moonzero.Error("empty command") }
+  guard args.length() > 0 else { return Error("empty command") }
   match text(args[0]) {
-    "PING" => @moonzero.SimpleString("PONG")
+    "PING" => SimpleString("PONG")
     "SET" => {
       self.store[text(args[1])] = args[2]
       if args.length() >= 5 && text(args[3]) == "EX" {
         self.expiry[text(args[1])] = self.now + int_of(args[4])
       }
-      @moonzero.SimpleString("OK")
+      SimpleString("OK")
     }
     "SETEX" => {
       self.store[text(args[1])] = args[3]
       self.expiry[text(args[1])] = self.now + int_of(args[2])
-      @moonzero.SimpleString("OK")
+      SimpleString("OK")
     }
     "GET" =>
       match self.store.get(text(args[1])) {
-        Some(v) => @moonzero.BulkString(v)
-        None => @moonzero.Null
+        Some(v) => BulkString(v)
+        None => Null
       }
     "INCRBY" => {
       let key = text(args[1])
@@ -93,25 +93,25 @@ fn FakeRedis::run(
       }
       let next = base + int_of(args[2])
       self.store[key] = @utf8.encode(next.to_string())
-      @moonzero.Integer(next)
+      Integer(next)
     }
     "EXPIRE" => {
       let key = text(args[1])
       if self.store.contains(key) {
         self.expiry[key] = self.now + int_of(args[2])
-        @moonzero.Integer(1)
+        Integer(1)
       } else {
-        @moonzero.Integer(0)
+        Integer(0)
       }
     }
     "TTL" => {
       let key = text(args[1])
       if !self.store.contains(key) {
-        @moonzero.Integer(-2)
+        Integer(-2)
       } else {
         match self.expiry.get(key) {
-          Some(at) => @moonzero.Integer(at - self.now)
-          None => @moonzero.Integer(-1)
+          Some(at) => Integer(at - self.now)
+          None => Integer(-1)
         }
       }
     }
@@ -125,26 +125,26 @@ fn FakeRedis::run(
           gone += 1L
         }
       }
-      @moonzero.Integer(gone)
+      Integer(gone)
     }
     "SCAN" => {
       let pattern = text(args[3])
       let keys : Array[@moonzero.RespValue] = []
       for k, _ in self.store {
         if glob_match(pattern, k) {
-          keys.push(@moonzero.BulkString(@utf8.encode(k)))
+          keys.push(BulkString(@utf8.encode(k)))
         }
       }
-      @moonzero.Array([@moonzero.BulkString(b"0"), @moonzero.Array(keys)])
+      Array([BulkString(b"0"), Array(keys)])
     }
     "SCRIPT" =>
       if text(args[1]) == "LOAD" {
         let source = text(args[2])
         let sha = digest(source)
         self.scripts[sha] = source
-        @moonzero.BulkString(@utf8.encode(sha))
+        BulkString(@utf8.encode(sha))
       } else {
-        @moonzero.Error("ERR unsupported SCRIPT subcommand")
+        Error("ERR unsupported SCRIPT subcommand")
       }
     "EVAL" => {
       self.evals = self.evals + 1
@@ -158,10 +158,10 @@ fn FakeRedis::run(
           let (keys, argv) = split_script_args(args)
           self.eval(source, keys, argv)
         }
-        None => @moonzero.Error("NOSCRIPT No matching script. Please use EVAL.")
+        None => Error("NOSCRIPT No matching script. Please use EVAL.")
       }
     }
-    other => @moonzero.Error("unknown command " + other)
+    other => Error("unknown command " + other)
   }
 }
 
@@ -179,9 +179,7 @@ fn FakeRedis::eval(
   } else if source == @moonzero.token_script {
     self.eval_token(keys, argv)
   } else {
-    @moonzero.Error(
-      "ERR this fake only evaluates moonzero's two limiter scripts",
-    )
+    Error("ERR this fake only evaluates moonzero's two limiter scripts")
   }
 }
 
@@ -196,18 +194,18 @@ fn FakeRedis::eval_period(
   let limit = int_of(argv[0])
   let window = argv[1]
   let current = match self.run([b"INCRBY", keys[0], b"1"]) {
-    @moonzero.Integer(n) => n
+    Integer(n) => n
     _ => 0L
   }
   if current == 1L {
     let _ = self.run([b"EXPIRE", keys[0], window])
   }
   if current < limit {
-    @moonzero.Integer(1)
+    Integer(1)
   } else if current == limit {
-    @moonzero.Integer(2)
+    Integer(2)
   } else {
-    @moonzero.Integer(0)
+    Integer(0)
   }
 }
 
@@ -226,11 +224,11 @@ fn FakeRedis::eval_token(
   let requested = num_of(argv[3])
   let ttl = @utf8.encode((capacity / rate * 2.0).to_int().to_string())
   let last_tokens = match self.run([b"GET", keys[0]]) {
-    @moonzero.BulkString(v) => num_of(v)
+    BulkString(v) => num_of(v)
     _ => capacity
   }
   let last_refreshed = match self.run([b"GET", keys[1]]) {
-    @moonzero.BulkString(v) => num_of(v)
+    BulkString(v) => num_of(v)
     _ => 0.0
   }
   let delta = if now - last_refreshed > 0.0 {
@@ -250,9 +248,9 @@ fn FakeRedis::eval_token(
   ])
   let _ = self.run([b"SETEX", keys[1], ttl, @utf8.encode(now.to_string())])
   if allowed {
-    @moonzero.Integer(1)
+    Integer(1)
   } else {
-    @moonzero.Null
+    Null
   }
 }
 
@@ -277,7 +275,7 @@ fn split_script_args(args : Array[Bytes]) -> (Array[Bytes], Array[Bytes]) {
 /// A stable 40-hex-character digest standing in for the SHA1 redis addresses a script
 /// by; the shape is what matters, not the algorithm.
 fn digest(source : String) -> String {
-  @base16.encode(@moonzero.sha256(@utf8.encode(source))[0:20])
+  @base16.encode(@sha2.hash(@utf8.encode(source)[:])[0:20])
 }
 
 ///|

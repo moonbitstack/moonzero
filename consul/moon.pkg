@@ -1,0 +1,6 @@
+// A Consul agent client over its HTTP API, and discovery on top of it.
+import {
+  "moonbitstack/moonzero/registry",
+  "moonbitlang/core/json",
+  "moonbitlang/core/encoding/utf8",
+}

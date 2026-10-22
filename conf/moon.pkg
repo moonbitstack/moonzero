@@ -1,0 +1,9 @@
+// Configuration: loading JSON and YAML into typed records with go-zero's
+// default, optional, options and range rules, and the service, REST and RPC
+// configuration records themselves.
+import {
+  "moonbitstack/moonzero/logx",
+  "moonbitstack/moonyaml",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+}

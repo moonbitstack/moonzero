@@ -1,0 +1,49 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/moonzero/metric"
+
+// Values
+pub let default_latency_buckets : Array[Double]
+
+pub let exposition_content_type : String
+
+// Errors
+
+// Types and methods
+pub struct CounterVec {
+  counts : Map[String, Int64]
+}
+pub fn CounterVec::add(Self, String, Int64) -> Unit
+pub fn CounterVec::inc(Self, String) -> Unit
+pub fn CounterVec::labels(Self) -> Array[String]
+pub fn CounterVec::new() -> Self
+pub fn CounterVec::to_exposition(Self, name~ : String, help~ : String, label? : String) -> String
+pub fn CounterVec::total(Self) -> Int64
+pub fn CounterVec::value(Self, String) -> Int64
+
+pub struct Histogram {
+  bounds : Array[Double]
+  bucket : Array[Int64]
+  mut sum : Double
+  mut count : Int64
+}
+pub fn Histogram::bounds(Self) -> Array[Double]
+pub fn Histogram::bucket_count(Self, Int32) -> Int64
+pub fn Histogram::mean(Self) -> Double
+pub fn Histogram::new(bounds? : Array[Double]) -> Self
+pub fn Histogram::observe(Self, Double) -> Unit
+pub fn Histogram::sum_value(Self) -> Double
+pub fn Histogram::to_exposition(Self, name~ : String, help~ : String) -> String
+pub fn Histogram::total(Self) -> Int64
+
+pub struct ServerMetrics {
+  requests : CounterVec
+  latency : Histogram
+}
+pub fn ServerMetrics::latency(Self) -> Histogram
+pub fn ServerMetrics::new() -> Self
+pub fn ServerMetrics::requests(Self) -> CounterVec
+pub fn ServerMetrics::to_exposition(Self) -> String
+
+// Type aliases
+
+// Traits

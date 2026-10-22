@@ -1,0 +1,103 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/moonzero/redis"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitstack/moonzero/registry",
+}
+
+// Values
+pub fn redis_instance_key(String, String, @registry.Endpoint) -> String
+
+pub fn redis_service_pattern(String, String) -> String
+
+pub fn redis_service_prefix(String, String) -> String
+
+pub fn resp_command(Array[String]) -> Bytes
+
+pub fn resp_encode_command(Array[Bytes]) -> Bytes
+
+pub fn resp_kind(RespValue) -> String
+
+// Errors
+pub(all) suberror RedisError {
+  RedisError(String)
+}
+
+pub suberror RespError {
+  RespError(String)
+}
+
+// Types and methods
+pub struct RedisClient {
+  conn : &RedisConn
+}
+pub async fn RedisClient::command(Self, Array[Bytes]) -> RespValue raise RedisError
+pub async fn RedisClient::del(Self, Array[Bytes]) -> Int64 raise RedisError
+pub async fn RedisClient::eval(Self, String, Array[Bytes], Array[Bytes]) -> RespValue raise RedisError
+pub async fn RedisClient::evalsha(Self, String, Array[Bytes], Array[Bytes]) -> RespValue raise RedisError
+pub async fn RedisClient::expire(Self, Bytes, Int32) -> Bool raise RedisError
+pub async fn RedisClient::get(Self, Bytes) -> Bytes? raise RedisError
+pub fn RedisClient::new(&RedisConn) -> Self
+pub async fn RedisClient::ping(Self) -> String raise RedisError
+pub async fn RedisClient::scan_match(Self, Bytes, Int32) -> Array[Bytes] raise RedisError
+pub async fn RedisClient::script_load(Self, String) -> String raise RedisError
+pub async fn RedisClient::set_ex(Self, Bytes, Bytes, Int32) -> Unit raise RedisError
+
+pub struct RedisDiscovery {
+  client : RedisClient
+  prefix : String
+  seen : Map[String, Array[@registry.Endpoint]]
+}
+pub async fn RedisDiscovery::deregister(Self, String) -> Unit
+pub async fn RedisDiscovery::deregister_instance(Self, String, @registry.Endpoint) -> Unit
+pub async fn RedisDiscovery::keepalive(Self, String, @registry.Endpoint, ttl? : Int32) -> Bool
+pub fn RedisDiscovery::last(Self, String) -> Array[@registry.Endpoint]
+pub fn RedisDiscovery::new(RedisClient, prefix? : String) -> Self
+pub async fn RedisDiscovery::register(Self, String, @registry.Endpoint, ttl? : Int32) -> String
+pub async fn RedisDiscovery::resolve(Self, String) -> Array[@registry.Endpoint]
+pub fn RedisDiscovery::resolver(Self) -> (String) -> Array[@registry.Endpoint]
+
+pub struct RedisScript {
+  source : String
+  mut sha : String?
+}
+pub fn RedisScript::new(String) -> Self
+pub async fn RedisScript::run(Self, RedisClient, Array[Bytes], Array[Bytes]) -> RespValue raise RedisError
+pub fn RedisScript::source(Self) -> String
+
+pub struct RespReader {
+  data : Bytes
+  mut pos : Int32
+}
+pub fn RespReader::at_end(Self) -> Bool
+pub fn RespReader::new(Bytes) -> Self
+pub fn RespReader::read(Self) -> RespValue raise RespError
+
+pub(all) enum RespValue {
+  SimpleString(String)
+  Error(String)
+  Integer(Int64)
+  BulkString(Bytes)
+  Null
+  Array(Array[RespValue])
+  Boolean(Bool)
+  Double(Double)
+  BigNumber(String)
+  BulkError(String)
+  VerbatimString(String, Bytes)
+  RespMap(Array[(RespValue, RespValue)])
+  RespSet(Array[RespValue])
+  Push(Array[RespValue])
+} derive(Eq, @debug.Debug)
+pub fn RespValue::decode(Bytes) -> Self raise RespError
+pub fn RespValue::equal(Self, Self) -> Bool
+pub fn RespValue::not_equal(Self, Self) -> Bool
+pub fn RespValue::to_repr(Self) -> @debug.Repr
+
+// Type aliases
+
+// Traits
+pub(open) trait RedisConn {
+  async fn execute(Self, Array[Bytes]) -> RespValue
+}

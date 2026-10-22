@@ -1,0 +1,12 @@
+// Service registration and discovery: endpoints, an in-memory and a persisted
+// registry, and the balancers that pick among endpoints.
+import {
+  "moonbitstack/moonzero/conf",
+  "moonbitstack/moonzero/zrpc",
+  "moonbitstack/moonrpc",
+  "moonbitlang/core/json",
+}
+
+import {
+  "moonbitlang/core/encoding/utf8",
+} for "wbtest"

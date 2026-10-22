@@ -1,0 +1,59 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/moonzero/consul"
+
+import {
+  "moonbitstack/moonzero/registry",
+}
+
+// Values
+pub fn consul_check_id(String) -> String
+
+pub fn consul_int_field(Json, String) -> Int32
+
+pub fn consul_parse_health(Bytes) -> Array[@registry.Endpoint] raise ConsulError
+
+pub fn consul_register_body(String, String, String, Int32, Int32) -> Bytes
+
+pub fn consul_str_field(Json, String) -> String
+
+// Errors
+pub suberror ConsulError {
+  ConsulError(String)
+}
+
+// Types and methods
+pub struct ConsulClient {
+  http : &ConsulHttp
+}
+pub fn ConsulClient::agent_services(Self) -> Array[(String, String)] raise ConsulError
+pub fn ConsulClient::check_pass(Self, String) -> Unit raise ConsulError
+pub fn ConsulClient::deregister_service(Self, String) -> Unit raise ConsulError
+pub fn ConsulClient::health_service(Self, String) -> Array[@registry.Endpoint] raise ConsulError
+pub fn ConsulClient::new(&ConsulHttp) -> Self
+pub fn ConsulClient::register_service(Self, String, String, String, Int32, Int32) -> Unit raise ConsulError
+
+pub struct ConsulDiscovery {
+  client : ConsulClient
+}
+pub fn ConsulDiscovery::deregister(Self, String) -> Unit raise
+pub fn ConsulDiscovery::deregister_instance(Self, String, @registry.Endpoint) -> Unit raise
+pub fn ConsulDiscovery::keepalive(Self, String, @registry.Endpoint) -> Unit raise
+pub fn ConsulDiscovery::new(ConsulClient) -> Self
+pub fn ConsulDiscovery::register(Self, String, @registry.Endpoint, ttl? : Int32) -> String raise
+pub fn ConsulDiscovery::resolve(Self, String) -> Array[@registry.Endpoint] raise
+pub fn ConsulDiscovery::resolver(Self) -> (String) -> Array[@registry.Endpoint]
+
+pub struct ConsulResponse {
+  status : Int32
+  body : Bytes
+}
+pub fn ConsulResponse::body(Self) -> Bytes
+pub fn ConsulResponse::new(Int32, Bytes) -> Self
+pub fn ConsulResponse::status(Self) -> Int32
+
+// Type aliases
+
+// Traits
+pub(open) trait ConsulHttp {
+  fn request(Self, String, String, Bytes) -> ConsulResponse raise
+}

@@ -8,19 +8,21 @@
 #coverage.skip
 fn main {
   // SHA-256 of "abc" — the FIPS 180-4 vector mooncrypt is checked against.
-  println("sha256(\"abc\") = " + @base16.encode(@moonzero.sha256(b"abc")))
+  println("sha256(\"abc\") = " + @base16.encode(@sha2.hash(b"abc"[:])))
   println(
     "hmac_sha256 = " +
-    @base16.encode(@moonzero.hmac_sha256(b"key", b"heke1228")),
+    @base16.encode(
+      @hmac.mac(b"key"[:], b"heke1228"[:], () => @sha2.Hasher::new()),
+    ),
   )
 
   // Constant-time equality: same bytes match, different bytes do not.
-  let a = @moonzero.sha256(b"qwe")
+  let a = @sha2.hash(b"qwe"[:])
   println(
     "constant_time_eq(a,a)=" +
-    @moonzero.constant_time_eq(a, a).to_string() +
+    @spec.eq(a[:], a[:]).to_string() +
     " (a,b)=" +
-    @moonzero.constant_time_eq(a, @moonzero.sha256(b"qwq")).to_string(),
+    @spec.eq(a[:], @sha2.hash(b"qwq"[:])[:]).to_string(),
   )
   let secret = "topsecret"
   let claims : Map[String, Json] = Map([

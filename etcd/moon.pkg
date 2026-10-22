@@ -1,0 +1,11 @@
+// An etcd v3 client over its gRPC API, and discovery on top of it.
+import {
+  "moonbitstack/moonzero/zrpc",
+  "moonbitstack/moonzero/registry",
+  "moonbitstack/moonrpc",
+  "moonbitlang/core/encoding/utf8",
+}
+
+import {
+  "moonbitstack/moonzero/conf",
+} for "wbtest"

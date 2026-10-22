@@ -29,16 +29,16 @@ async fn scan_all(
     first = false
     let reply = sock.command(["SCAN", cursor, "MATCH", pattern, "COUNT", "100"])
     match reply {
-      @moonzero.Array([c, ks]) => {
+      Array([c, ks]) => {
         cursor = match c {
-          @moonzero.BulkString(b) => @utf8.decode_lossy(b[:])
+          BulkString(b) => @utf8.decode_lossy(b[:])
           _ => "0"
         }
         match ks {
-          @moonzero.Array(items) =>
+          Array(items) =>
             for it in items {
               match it {
-                @moonzero.BulkString(b) => out.push(@utf8.decode_lossy(b[:]))
+                BulkString(b) => out.push(@utf8.decode_lossy(b[:]))
                 _ => ()
               }
             }
@@ -70,7 +70,7 @@ async test "integration: RESP discovery register/resolve/deregister over a real 
   let sock = @discov.RedisSocket::connect(redis_test_host(), 6379)
   defer sock.close()
   // Liveness over the real socket.
-  assert_eq(sock.command(["PING"]), @moonzero.SimpleString("PONG"))
+  assert_eq(sock.command(["PING"]), SimpleString("PONG"))
   let prefix = "moonzero-ci/"
   let service = "greeter"
   let pattern = @moonzero.redis_service_pattern(prefix, service)
@@ -82,11 +82,11 @@ async test "integration: RESP discovery register/resolve/deregister over a real 
   // Register: SET <key> <addr> EX 30.
   assert_eq(
     sock.command(["SET", k1, ep1.address(), "EX", "30"]),
-    @moonzero.SimpleString("OK"),
+    SimpleString("OK"),
   )
   assert_eq(
     sock.command(["SET", k2, ep2.address(), "EX", "30"]),
-    @moonzero.SimpleString("OK"),
+    SimpleString("OK"),
   )
   // Resolve: SCAN the prefix, GET each value.
   let keys = scan_all(sock, pattern)
@@ -94,15 +94,15 @@ async test "integration: RESP discovery register/resolve/deregister over a real 
   let addrs : Array[String] = []
   for key in keys {
     match sock.command(["GET", key]) {
-      @moonzero.BulkString(v) => addrs.push(@utf8.decode_lossy(v[:]))
+      BulkString(v) => addrs.push(@utf8.decode_lossy(v[:]))
       _ => ()
     }
   }
   assert_eq(addrs.contains("10.0.0.1:9090"), true)
   assert_eq(addrs.contains("10.0.0.2:9090"), true)
   // Keep-alive: EXPIRE on a live key reports 1.
-  assert_eq(sock.command(["EXPIRE", k1, "60"]), @moonzero.Integer(1))
+  assert_eq(sock.command(["EXPIRE", k1, "60"]), Integer(1))
   // Deregister: DEL both keys, then the prefix scans empty.
-  assert_eq(sock.command(["DEL", k1, k2]), @moonzero.Integer(2))
+  assert_eq(sock.command(["DEL", k1, k2]), Integer(2))
   assert_eq(scan_all(sock, pattern).length(), 0)
 }

@@ -1,0 +1,27 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/moonzero/trace"
+
+// Values
+pub fn generate_span_id(Int64) -> String
+
+pub fn generate_trace_id(Int64) -> String
+
+pub fn next_trace_context(String?, Int64) -> TraceContext
+
+pub fn parse_traceparent(String) -> TraceContext?
+
+// Errors
+
+// Types and methods
+pub(all) struct TraceContext {
+  trace_id : String
+  span_id : String
+  flags : Int32
+}
+pub fn TraceContext::span_id(Self) -> String
+pub fn TraceContext::to_traceparent(Self) -> String
+pub fn TraceContext::trace_id(Self) -> String
+
+// Type aliases
+
+// Traits

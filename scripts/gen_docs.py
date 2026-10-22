@@ -6,54 +6,50 @@ import re, html, pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SECTIONS = [
-    ("service", "zero.mbt", "Service assembly",
+    ("service", "rest/server.mbt", "Service assembly",
      "ServiceConf (typed config: name, host, port, timeout, log level) + Server "
      "tie a moonapi App and a middleware onion into a runnable AsgiApp; logging "
      "is a built-in middleware. Served by mooncat."),
-    ("middleware", "middleware.mbt", "Middleware set",
+    ("middleware", "rest/handler/middleware.mbt", "Middleware set",
      "The onion layers that wrap the app: recovery (500 instead of a panic), "
      "cors (Access-Control-* headers), and request_id (x-request-id per request)."),
-    ("group", "group.mbt", "Route groups",
+    ("group", "rest/group.mbt", "Route groups",
      "Group registers a set of moonapi routes under a shared path prefix, so "
      "related endpoints are declared without repeating the prefix."),
-    ("config", "config.mbt", "Typed config loading",
+    ("config", "conf/service.mbt", "Typed config loading",
      "Parse a JSON or YAML config string into a ServiceConf: a strict derived "
      "FromJson path plus lenient ServiceConf::from_json / from_yaml loaders that "
      "fill omitted fields from the new() defaults, the way go-zero's conf.Load "
      "applies ,optional/,default= tags."),
-    ("crypto", "crypto.mbt", "Crypto primitives",
-     "Self-built SHA-256 (FIPS 180-4) and HMAC-SHA256 (RFC 2104), verified "
-     "against NIST/RFC vectors, plus a constant-time byte comparison — the "
-     "primitives behind JWT HS256, since MoonBit's core ships no crypto."),
-    ("jwt", "jwt.mbt", "JWT (HS256)",
+    ("jwt", "rest/handler/jwt.mbt", "JWT (HS256)",
      "base64url plus compact-JWT signing and verification under HS256: "
      "jwt_sign / jwt_verify check the signature in constant time and enforce "
      "exp/nbf, rejecting the alg:none downgrade — go-zero's token auth core."),
-    ("auth", "auth.mbt", "JWT auth middleware",
+    ("auth", "rest/handler/auth.mbt", "JWT auth middleware",
      "The auth middleware requires every HTTP request to carry a valid "
      "Authorization: Bearer <jwt>, rejecting absent/malformed/tampered/expired "
      "tokens with 401 before the app runs."),
-    ("rpc", "rpc.mbt", "zRPC service groups",
+    ("rpc", "zrpc/server.mbt", "zRPC service groups",
      "An RpcServer (config-driven) registers moonrpc Method handlers by gRPC "
      "path and dispatches unary calls, returning Unimplemented for unknown "
      "methods; RpcGroup registers a set of methods under one package.Service."),
-    ("zrpc", "zrpc.mbt", "zRPC over the h2c transport",
+    ("zrpc", "zrpc/client.mbt", "zRPC over the h2c transport",
      "RpcServer::to_h2 exposes the registered handlers as a moonrpc H2Server, and "
      "RpcChannel drives real unary, server/client-streaming, and bidirectional "
      "calls over that transport: HPACK-coded HEADERS, length-prefixed DATA frames, "
      "and the grpc-status trailer read back off the reply. A BidiCall keeps the "
      "stream open both ways — send returns the replies produced right then, "
      "close_send runs the server's on_end and reports the final grpc-status."),
-    ("shutdown", "shutdown.mbt", "Graceful shutdown",
+    ("shutdown", "proc/shutdown.mbt", "Graceful shutdown",
      "A ShutdownCoordinator that drains in-flight zRPC calls: dispatch_graceful "
      "counts each call for its duration, initiate_shutdown makes new calls come "
      "back Unavailable while in-flight ones finish, and is_drained reports when "
      "the last one has completed."),
-    ("registry", "registry.mbt", "Service registry & discovery",
+    ("registry", "registry/registry.mbt", "Service registry & discovery",
      "An InMemoryRegistry (etcd-shaped: service -> instance -> endpoint with a "
      "store revision) plus RoundRobin/pick_first balancers and resolve_one, the "
      "resolve-then-balance step a client runs before a call."),
-    ("discovery", "discovery.mbt", "Persisted registry & load-balanced client",
+    ("discovery", "registry/discovery.mbt", "Persisted registry & load-balanced client",
      "A PersistentRegistry that adds watch, events_since catch-up, and "
      "snapshot/restore through an etcd v3 RangeResponse-shaped JSON document, and "
      "a LoadBalancedChannel that resolves a service through the Resolve interface, "
@@ -64,46 +60,46 @@ SECTIONS = [
      "to a real file through moonbitlang/async's fs, FileRegistry loads it back and "
      "exposes a resolver(), reload returns the Put/Delete diff since the last load, "
      "and watch/watch_once reload on every real filesystem change."),
-    ("metrics", "metrics.mbt", "Metrics",
+    ("metrics", "metric/metric.mbt", "Metrics",
      "A CounterVec of per-method/route/status request tallies and a cumulative "
      "latency Histogram (Prometheus le buckets), wired by the metrics middleware "
      "that times each request on the clock."),
-    ("tracing", "tracing.mbt", "Trace-id propagation",
+    ("tracing", "trace/trace.mbt", "Trace-id propagation",
      "W3C traceparent parsing and formatting with SplitMix64-derived trace/span "
      "ids, and the tracing middleware that continues an inbound trace or starts a "
      "new one and stamps traceparent + x-trace-id onto the response."),
-    ("clock", "clock.mbt", "Clock abstraction",
+    ("clock", "clock/clock.mbt", "Clock abstraction",
      "A millisecond time source injected into the resilience middlewares so "
      "their timing is a pure function of an explicit clock; ManualClock drives "
      "them deterministically in tests."),
-    ("ratelimit", "ratelimit.mbt", "Rate limiting",
+    ("ratelimit", "limit/ratelimit.mbt", "Rate limiting",
      "A token-bucket limiter (pure counter over the clock) and the rate_limit "
      "middleware, which answers 429 Too Many Requests when the bucket is empty."),
-    ("window", "window.mbt", "Rolling window",
+    ("window", "window/window.mbt", "Rolling window",
      "A window of call outcomes in time buckets (40 x 250ms, go-zero's ten "
      "seconds), which ages out on its own and is what the breaker reads a "
      "backend's recent health from."),
-    ("breaker", "breaker.mbt", "Circuit breaker",
+    ("breaker", "breaker/breaker.mbt", "Circuit breaker",
      "go-zero's googleBreaker: Google SRE client-side throttling over the "
      "rolling window, which sheds a computed fraction of calls rather than "
      "opening, and the breaker middleware that answers 503 for a shed request."),
-    ("limits", "limits.mbt", "Timeout & max-bytes",
+    ("limits", "rest/handler/limits.mbt", "Timeout & max-bytes",
      "A request Deadline plus the timeout middleware (deadline-enforced on the "
      "response path; preemptive cancel is the async boundary) and maxbytes, "
      "which rejects over-limit Content-Length with 413."),
-    ("logging", "logging.mbt", "Structured logging",
+    ("logging", "rest/handler/logging.mbt", "Structured logging",
      "RequestLog captures typed access-log fields (method, path, status, "
      "duration, request-id, client-ip, user-agent) and renders one JSON line "
      "per request; the structured_logging middleware emits it, timed on the clock."),
-    ("etcd", ("etcd.mbt", "etcd_client.mbt", "etcd_discovery.mbt"), "etcd",
+    ("etcd", ("etcd/message.mbt", "etcd/client.mbt", "etcd/discovery.mbt"), "etcd",
      "The etcd v3 client and the discovery driver over it: leases keep a registered "
      "instance alive, watches stream membership changes, and a lapsed lease is what "
      "removes a dead instance."),
-    ("consul", ("consul.mbt", "consul_discovery.mbt"), "consul",
+    ("consul", ("consul/client.mbt", "consul/discovery.mbt"), "consul",
      "The consul agent API and the discovery driver over it: a service registers "
      "with a TTL check, a keep-alive passes that check, and deregistering removes "
      "it — the lease pattern consul spells differently."),
-    ("redis", ("redis.mbt", "redis_discovery.mbt", "resp.mbt"), "redis",
+    ("redis", ("redis/client.mbt", "redis/discovery.mbt", "redis/resp.mbt"), "redis",
      "The RESP protocol codec, the redis client over it, and the discovery driver "
      "that keeps instances in a keyed set with an expiry."),
     ("transports", ("discov/etcd_socket.mbt", "discov/consul_socket.mbt", "discov/redis_socket.mbt"),
@@ -111,27 +107,27 @@ SECTIONS = [
      "What actually talks to a real server: the etcd gRPC socket, the consul HTTP "
      "socket and the redis socket. The HTTP/1.1 messages are moonhttp's. "
      "Native-only, which is why the portable core is written against traits instead."),
-    ("limiting", ("maxconns.mbt", "periodlimit.mbt"), "Admission control",
+    ("limiting", ("limit/maxconns.mbt", "limit/periodlimit.mbt"), "Admission control",
      "The concurrency limiter that sheds load past a ceiling — releasing its permit "
      "with defer, so cancellation cannot wedge it shut — and the period limiter that "
      "counts requests per window."),
-    ("conf", "conf.mbt", "Config keys",
+    ("conf", "conf/conf.mbt", "Config keys",
      "go-zero's canonical key form: lowercased, `_` and `-` dropped, so MaxBytes, "
      "maxBytes, max_bytes and max-bytes all name one field and a genuine etc/*.yaml "
      "loads unchanged."),
-    ("restconf", "restconf.mbt", "Engine configuration",
+    ("restconf", "conf/rest.mbt", "Engine configuration",
      "Which built-in layers the engine installs (<- MiddlewaresConf), every flag on by "
      "default, so an etc/*.yaml that says nothing about middleware still gets the whole "
      "chain."),
-    ("logx", "logx.mbt", "Logging",
+    ("logx", "logx/logx.mbt", "Logging",
      "go-zero's logx over moonlog's sink: the four level names its etc/*.yaml carries, "
      "the @timestamp / content keys its collectors index, the WithDuration view, and a "
      "logger whose level and destination move at runtime."),
-    ("refusal", "refusal.mbt", "Turning a request away",
+    ("refusal", "rest/handler/refusal.mbt", "Turning a request away",
      "What a request refused by a middleware receives: 503 for an open breaker, a spent "
      "connection budget or a passed deadline, 429 for a rate limit, 413 for a body too "
      "large. Each is a parameter."),
-    ("shedder", "shedder.mbt", "Load shedding",
+    ("shedder", "shedder/shedder.mbt", "Load shedding",
      "Shedding under CPU pressure (<- load.AdaptiveShedder, wired from "
      "RestConf.CpuThreshold): admit at or below the threshold, shed above it, both "
      "numbers per-mille as go-zero writes them."),

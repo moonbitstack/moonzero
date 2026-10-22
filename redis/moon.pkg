@@ -1,0 +1,7 @@
+// A Redis client over RESP, and discovery on top of it.
+import {
+  "moonbitstack/moonzero/registry",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/double",
+  "moonbitlang/core/string",
+}

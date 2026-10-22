@@ -1,0 +1,23 @@
+// The HTTP middlewares (go-zero's rest/handler): recovery, CORS, request ids,
+// timeouts, body limits, JWT, signatures, breaker, shedding, rate limits,
+// tracing, metrics and access logs, each an ASGI app wrapping an ASGI app.
+import {
+  "moonbitstack/moonzero/clock",
+  "moonbitstack/moonzero/logx",
+  "moonbitstack/moonzero/trace",
+  "moonbitstack/moonzero/metric",
+  "moonbitstack/moonzero/breaker",
+  "moonbitstack/moonzero/shedder",
+  "moonbitstack/moonzero/limit",
+  "moonbitstack/moonapi",
+  "moonbitstack/moonasgi",
+  "moonbitstack/mooncrypt/hash/sha2",
+  "moonbitstack/mooncrypt/mac/hmac",
+  "moonbitstack/mooncred/jwt",
+  "moonbitlang/core/encoding/utf8",
+}
+
+import {
+  "moonbitlang/core/json",
+  "moonbitstack/moonlog",
+} for "wbtest"

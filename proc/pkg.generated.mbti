@@ -1,0 +1,23 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/moonzero/proc"
+
+// Values
+
+// Errors
+
+// Types and methods
+pub struct ShutdownCoordinator {
+  mut shutting_down : Bool
+  mut in_flight : Int32
+}
+pub fn ShutdownCoordinator::begin_call(Self) -> Bool
+pub fn ShutdownCoordinator::end_call(Self) -> Unit
+pub fn ShutdownCoordinator::in_flight(Self) -> Int32
+pub fn ShutdownCoordinator::initiate_shutdown(Self) -> Unit
+pub fn ShutdownCoordinator::is_drained(Self) -> Bool
+pub fn ShutdownCoordinator::is_shutting_down(Self) -> Bool
+pub fn ShutdownCoordinator::new() -> Self
+
+// Type aliases
+
+// Traits
