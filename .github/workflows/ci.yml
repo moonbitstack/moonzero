@@ -12,21 +12,21 @@ jobs:
       contents: read
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-26.04, macos-26, windows-2025]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
       - name: install-unix
-        if: ${{ matrix.os != 'windows-latest' }}
+        if: ${{ runner.os != 'Windows' }}
         run: |
           curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
           echo "$HOME/.moon/bin" >> $GITHUB_PATH
 
       - name: install-windows
-        if: ${{ matrix.os == 'windows-latest' }}
+        if: ${{ runner.os == 'Windows' }}
         run: |
           Set-ExecutionPolicy RemoteSigned -Scope CurrentUser; irm https://cli.moonbitlang.com/install/powershell.ps1 | iex
           "C:\Users\runneradmin\.moon\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
@@ -49,12 +49,16 @@ jobs:
         run: |
           moon fmt && git diff --exit-code
 
+      - name: interfaces are up to date
+        run: |
+          moon info --target all && git diff --exit-code
+
   # The discovery drivers' real round trips run against live backends. redis speaks
   # RESP over a socket; the native discov tests register, resolve, keep-alive, and
   # deregister against it, gated on MOON_REDIS_TEST so the normal suite skips them.
   discovery:
     name: discovery drivers (native, live redis)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
     services:
@@ -68,7 +72,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
@@ -94,11 +98,11 @@ jobs:
   # MOON_CONSUL_TEST.
   discovery-consul:
     name: discovery drivers (native, live consul)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
@@ -137,11 +141,11 @@ jobs:
   # gated on MOON_ETCD_TEST.
   discovery-etcd:
     name: discovery drivers (native, live etcd)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
