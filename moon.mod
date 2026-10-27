@@ -17,7 +17,7 @@ keywords = [
   "moonbit",
 ]
 
-description = "A service framework for MoonBit after go-zero: config-driven REST engine and middleware over moonapi, zRPC over moonrpc, discovery on etcd, consul and redis, and go-zero's breaker, shedder and limiters over moonward."
+description = "A service framework for MoonBit."
 
 import {
   "moonbitstack/moonapi@0.16.0",
