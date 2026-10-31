@@ -22,4 +22,5 @@ import {
 import {
   "moonbitlang/core/json",
   "moonbitstack/moonlog",
+  "moonbitlang/async",
 } for "wbtest"

@@ -7,23 +7,20 @@ test "metrics middleware assembles into an AsgiApp" {
 }
 
 ///|
-test "mounted /metrics endpoint serves a scrapeable exposition" {
+async test "mounted /metrics endpoint serves a scrapeable exposition" {
   let m = @metric.ServerMetrics::new()
   m.requests().add("GET /ping 200", 23333L)
   m.latency().observe(233.0)
   let app = @moonapi.App::new()
   mount_metrics(app, m)
   let _ = app.to_asgi()
-  let ctx : @moonapi.Context = {
-    request: {
-      http_method: "GET",
-      path: "/metrics",
-      query_string: b"",
-      headers: [],
-      body: b"",
-    },
-    params: Map([]),
-  }
+  let ctx = @moonapi.Context::new({
+    http_method: "GET",
+    path: "/metrics",
+    query_string: b"",
+    headers: [],
+    body: b"",
+  })
   let resp = metrics_handler(m)(ctx) catch {
     e => fail("metrics handler must not raise: \{e}")
   }

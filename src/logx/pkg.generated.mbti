@@ -13,6 +13,8 @@ pub let duration_key : String
 
 pub fn entry(@moonlog.Record) -> String
 
+pub let level_key : String
+
 pub fn level_name(@moonlog.Level) -> String
 
 pub let logx : Logger

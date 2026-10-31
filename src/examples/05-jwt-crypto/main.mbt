@@ -85,7 +85,7 @@ fn reject(token : String, secret : String, now : Int64) -> String {
 }
 
 ///|
-fn jwt_reason(e : @jwt.Rejected) -> String {
+fn jwt_reason(e : @jwt.Refused) -> String {
   match e {
     Shape(m) => "malformed: " + m
     Algorithm(want~, got~) => "unsupported-alg: " + got + " (want " + want + ")"

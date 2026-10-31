@@ -47,7 +47,12 @@ pub fn Group::route(
   handler : @moonapi.ApiHandler,
   summary~ : String = "",
 ) -> Unit {
-  self.app.route(verb, join_path(self.prefix, path), handler, summary~)
+  self.app.route(
+    verb,
+    template(join_path(self.prefix, path)),
+    handler,
+    summary~,
+  )
 }
 
 ///|
@@ -103,4 +108,21 @@ pub fn Group::delete(
   summary~ : String = "",
 ) -> Unit {
   self.route(Delete, path, handler, summary~)
+}
+
+///|
+/// A go-zero path as moonapi writes it: go-zero names a path parameter `:id`,
+/// moonapi `{id}`, so a route copied from an `.api` file registers unchanged.
+fn template(path : String) -> String {
+  path
+  .split("/")
+  .map(segment => {
+    if segment.has_prefix(":") {
+      "{" + segment.view(start_offset=1).to_owned() + "}"
+    } else {
+      segment.to_owned()
+    }
+  })
+  .collect()
+  .join("/")
 }

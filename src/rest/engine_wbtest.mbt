@@ -39,7 +39,7 @@ fn test_engine(conf : @conf.RestConf) -> RestEngine raise @conf.ConfigError {
   RestEngine::new(
     conf,
     clock~,
-    logger=@logx.Logger::new(clock, sink=@moonlog.Discard::{ }),
+    logger=@logx.Logger::new(clock, sink=@moonlog.Discard::new()),
   )
 }
 
@@ -144,7 +144,7 @@ test "a strict signature with no keys is refused" {
 ///|
 test "the engine points the logger at the configured level" {
   let clock = @clock.ManualClock::new().as_clock()
-  let logger = @logx.Logger::new(clock, sink=@moonlog.Discard::{ })
+  let logger = @logx.Logger::new(clock, sink=@moonlog.Discard::new())
   let conf = @conf.RestConf::from_yaml(gozero_yaml())
   let _ = RestEngine::new(conf, clock~, logger~)
   assert_eq(logger.level(), Error)

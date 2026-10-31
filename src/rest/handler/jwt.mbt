@@ -51,6 +51,6 @@ pub fn jwt_verify(
   secret : String,
   now_secs : Int64,
   policy~ : @jwt.Policy = @jwt.policy,
-) -> Map[String, Json] raise @jwt.Rejected {
+) -> Map[String, Json] raise @jwt.Refused {
   @jwt.verify(token, HS256, hs256(secret), now=At(now_secs), policy~)
 }

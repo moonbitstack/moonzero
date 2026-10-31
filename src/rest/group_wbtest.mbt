@@ -9,7 +9,7 @@ test "join_path normalises prefix and route" {
 }
 
 ///|
-test "group prefixes routes onto the underlying app" {
+async test "group prefixes routes onto the underlying app" {
   let app = @moonapi.App::new()
   let g = Group::new(app, "/api/v1")
   assert_eq(g.prefix(), "/api/v1")
@@ -24,4 +24,12 @@ test "group prefixes routes onto the underlying app" {
   assert_eq(app.handle(mkreq("GET", "/users")).status, 404)
   // right path, wrong method -> 405
   assert_eq(app.handle(mkreq("PUT", "/api/v1/users")).status, 405)
+}
+
+///|
+test "go-zero's :name parameters become moonapi's {name}" {
+  assert_eq(template("/users/:id"), "/users/{id}")
+  assert_eq(template("/orgs/:org/repos/:repo"), "/orgs/{org}/repos/{repo}")
+  assert_eq(template("/users/{id}"), "/users/{id}")
+  assert_eq(template("/plain"), "/plain")
 }

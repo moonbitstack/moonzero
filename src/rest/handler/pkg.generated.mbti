@@ -26,7 +26,7 @@ pub fn jwt_authorized(String?, String, Int64) -> Bool
 
 pub fn jwt_sign(Map[String, Json], String, typ? : String?, extra? : Map[String, Json], wins? : @jwt.Wins, clash? : @jwt.OnClash[Map[String, Json]]) -> String
 
-pub fn jwt_verify(String, String, Int64, policy? : @jwt.Policy) -> Map[String, Json] raise @jwt.Rejected
+pub fn jwt_verify(String, String, Int64, policy? : @jwt.Policy) -> Map[String, Json] raise @jwt.Refused
 
 pub fn logging(async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
@@ -36,7 +36,7 @@ pub fn maxbytes(Int32, refusal? : Refusal) -> (async (@spec.Scope, async () -> @
 
 pub fn metrics(@metric.ServerMetrics, @clock.Clock) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
-pub fn metrics_handler(@metric.ServerMetrics) -> (@ctx.Context) -> @http.Response raise
+pub fn metrics_handler(@metric.ServerMetrics) -> async (@ctx.Context) -> @http.Response
 
 pub fn mount_metrics(@moonapi.App, @metric.ServerMetrics) -> Unit
 

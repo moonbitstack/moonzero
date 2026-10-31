@@ -52,7 +52,7 @@ test "config-driven server assembly + describe" {
 }
 
 ///|
-test "full middleware onion assembles and describes" {
+async test "full middleware onion assembles and describes" {
   let app = @moonapi.App::new()
   let g = Group::new(app, "/api")
   g.get("/health", _ctx => @moonapi.text(200, "ok"))

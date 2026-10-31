@@ -54,45 +54,81 @@ pub fn entry(record : @moonlog.Record) -> String {
   let out : Map[String, Json] = Map([])
   for field in record.fields {
     if field.0 == stamp_key {
-      out[stamp_key] = field.1
+      out[stamp_key] = json_of(field.1)
     }
   }
-  out[@moonlog.level_key] = Json::string(level_name(record.level))
-  out[message_key] = Json::string(record.message)
+  out[level_key] = Json::string(level_name(record.level))
+  out[message_key] = Json::string(record.msg)
   for field in record.fields {
     if field.0 != stamp_key {
-      out[field.0] = field.1
+      out[field.0] = json_of(field.1)
     }
   }
   Json::object(out).stringify()
 }
 
 ///|
-/// go-zero's name for a level. `Fatal` reads as `severe`, which is what go-zero
+/// The key the level is written under.
+pub let level_key : String = "level"
+
+///|
+/// go-zero's name for a level. `fatal` reads as `severe`, which is what go-zero
 /// calls its top level and what its collectors filter on.
 pub fn level_name(level : @moonlog.Level) -> String {
-  match level {
-    Trace => "trace"
-    Debug => "debug"
-    Info => "info"
-    Warning => "warn"
-    Error => "error"
-    Fatal => "severe"
+  if level.value >= @moonlog.fatal.value {
+    "severe"
+  } else {
+    level.name
+  }
+}
+
+///|
+/// A field's JSON as a `moonlog` value. Numbers stay doubles, so the line an
+/// entry renders to is the one the JSON would have printed.
+fn value_of(json : Json) -> @moonlog.Value {
+  match json {
+    Null => Null
+    True => Bool(true)
+    False => Bool(false)
+    Number(n, ..) => Float(n)
+    String(s) => Str(s)
+    Array(items) => List(items.map(value_of))
+    Object(members) => Map(members.to_array().map(m => (m.0, value_of(m.1))))
+  }
+}
+
+///|
+/// A `moonlog` value back as JSON, for the go-zero line.
+fn json_of(value : @moonlog.Value) -> Json {
+  match value {
+    Null => Json::null()
+    Bool(b) => Json::boolean(b)
+    Int(i) => Json::number(i.to_double())
+    Float(f) => Json::number(f)
+    Str(s) | Other(s) => Json::string(s)
+    List(items) => Json::array(items.map(json_of))
+    Map(members) =>
+      Json::object(Map::from_array(members.map(m => (m.0, json_of(m.1)))))
+    Error(message, causes) =>
+      Json::object(
+        Map::from_array([
+          ("message", Json::string(message)),
+          ("causes", Json::array(causes.map(Json::string))),
+        ]),
+      )
   }
 }
 
 ///|
 /// A logger writing to `sink` at `level` and above.
 ///
-/// The default sink prints one [`entry`] per line. `Logger::new(clock,
-/// sink=@moonlog.Discard::{  })` is how a test silences one.
+/// Every record reaches the sink with its [`entry`] line already rendered; the
+/// default sink prints that line. `Logger::new(clock,
+/// sink=@moonlog.Discard::new())` is how a test silences one.
 pub fn Logger::new(
   clock : @clock.Clock,
   level~ : LogLevel = Info,
-  sink~ : &@moonlog.Sink = @moonlog.Lines::new(
-    line => println(line),
-    format=entry,
-  ),
+  sink~ : &@moonlog.Sink = @moonlog.Lines::new(line => println(line)),
 ) -> Logger {
   { state: { level, sink, }, clock, duration_ms: None, }
 }
@@ -112,7 +148,8 @@ pub fn Logger::set_level(self : Logger, level : LogLevel) -> Unit {
 
 ///|
 /// Send entries to another sink, for this logger and every view derived from
-/// it — a file, a collector client, a buffer under test.
+/// it — a file, a collector client, a buffer under test. The sink is handed the
+/// record and go-zero's line, and may write either.
 pub fn Logger::set_sink(self : Logger, sink : &@moonlog.Sink) -> Unit {
   self.state.sink = sink
 }
@@ -121,7 +158,7 @@ pub fn Logger::set_sink(self : Logger, sink : &@moonlog.Sink) -> Unit {
 /// Send entries somewhere other than stdout (← `logx.SetWriter`), keeping
 /// go-zero's line format. [`Logger::set_sink`] changes the format too.
 pub fn Logger::set_writer(self : Logger, writer : (String) -> Unit) -> Unit {
-  self.state.sink = @moonlog.Lines::new(writer, format=entry)
+  self.state.sink = @moonlog.Lines::new(writer)
 }
 
 ///|
@@ -158,11 +195,11 @@ pub fn Logger::log(
   for field in fields {
     carried.push(field)
   }
-  self.state.sink.write({
-    level: level.as_level(),
-    message: content,
-    fields: carried,
-  })
+  let record = @moonlog.Record::of(level.as_level(), "logx", content).sets(
+    carried.map(f => (f.0, value_of(f.1))),
+  )
+  // A sink that fails is the sink's to report; logging never raises.
+  ignore(self.state.sink.write({ record, line: entry(record), }))
 }
 
 ///|

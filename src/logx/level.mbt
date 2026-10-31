@@ -21,14 +21,14 @@ pub fn LogLevel::to_string(self : LogLevel) -> String {
 
 ///|
 /// The `moonlog` level this one records as. go-zero's ladder has four rungs and
-/// `moonlog`'s has six, so the map is one-way: `Severe` records as `Fatal`, and
+/// `moonlog`'s has six, so the map is one-way: `Severe` records as `fatal`, and
 /// [`level_name`] writes it back out as `severe`.
 pub fn LogLevel::as_level(self : LogLevel) -> @moonlog.Level {
   match self {
-    Debug => Debug
-    Info => Info
-    Error => Error
-    Severe => Fatal
+    Debug => @moonlog.debug
+    Info => @moonlog.info
+    Error => @moonlog.error
+    Severe => @moonlog.fatal
   }
 }
 

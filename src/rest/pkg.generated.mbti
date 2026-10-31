@@ -4,9 +4,9 @@ package "moonbitstack/moonzero/rest"
 import {
   "moonbitstack/moonapi",
   "moonbitstack/moonapi/ctx",
-  "moonbitstack/moonapi/route",
   "moonbitstack/moonasgi/http",
   "moonbitstack/moonasgi/spec",
+  "moonbitstack/moonhttp/method",
   "moonbitstack/moonzero/breaker",
   "moonbitstack/moonzero/clock",
   "moonbitstack/moonzero/conf",
@@ -25,14 +25,14 @@ pub struct Group {
   app : @moonapi.App
   prefix : String
 }
-pub fn Group::delete(Self, String, (@ctx.Context) -> @http.Response raise, summary? : String) -> Unit
-pub fn Group::get(Self, String, (@ctx.Context) -> @http.Response raise, summary? : String) -> Unit
+pub fn Group::delete(Self, String, async (@ctx.Context) -> @http.Response, summary? : String) -> Unit
+pub fn Group::get(Self, String, async (@ctx.Context) -> @http.Response, summary? : String) -> Unit
 pub fn Group::new(@moonapi.App, String) -> Self
-pub fn Group::patch(Self, String, (@ctx.Context) -> @http.Response raise, summary? : String) -> Unit
-pub fn Group::post(Self, String, (@ctx.Context) -> @http.Response raise, summary? : String) -> Unit
+pub fn Group::patch(Self, String, async (@ctx.Context) -> @http.Response, summary? : String) -> Unit
+pub fn Group::post(Self, String, async (@ctx.Context) -> @http.Response, summary? : String) -> Unit
 pub fn Group::prefix(Self) -> String
-pub fn Group::put(Self, String, (@ctx.Context) -> @http.Response raise, summary? : String) -> Unit
-pub fn Group::route(Self, @route.Method, String, (@ctx.Context) -> @http.Response raise, summary? : String) -> Unit
+pub fn Group::put(Self, String, async (@ctx.Context) -> @http.Response, summary? : String) -> Unit
+pub fn Group::route(Self, @method.Method, String, async (@ctx.Context) -> @http.Response, summary? : String) -> Unit
 
 pub(all) struct Layer {
   name : String

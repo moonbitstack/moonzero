@@ -8,7 +8,7 @@ fn collecting(
   @logx.Logger::new(
     clock.unwrap_or(@clock.ManualClock::new(start=233L).as_clock()),
     level~,
-    sink=@moonlog.Lines::new(line => lines.push(line), format=@logx.entry),
+    sink=@moonlog.Lines::new(line => lines.push(line)),
   )
 }
 

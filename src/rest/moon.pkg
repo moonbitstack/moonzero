@@ -15,4 +15,5 @@ import {
 
 import {
   "moonbitstack/moonlog",
+  "moonbitlang/async",
 } for "wbtest"
