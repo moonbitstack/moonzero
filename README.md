@@ -60,8 +60,7 @@ The layout follows go-zero's own: algorithms in packages of their own, every HTT
 | `trace` | W3C trace context | `core/trace` |
 | `proc` | graceful shutdown | `core/proc` |
 | `conf` | configuration loading and the service, REST and RPC configuration | `core/conf` |
-| `registry` | endpoints, registries and balancers | `core/discov` |
-| `redis`, `etcd`, `consul` | the three stores' clients, and discovery on each | `core/stores/redis`, `core/discov` |
+| `balance` | balancers and the load-balanced zRPC channel, over [moonsd](https://github.com/moonbitstack/moonsd) and [moonpool](https://github.com/moonbitstack/moonpool) | `core/discov`, `zrpc` |
 | `zrpc` | the zRPC server and client on moonrpc | `zrpc` |
 | `rest/handler` | the middlewares | `rest/handler` |
 | `rest` | the engine, the server and route groups | `rest` |
@@ -148,21 +147,15 @@ call.close_send()     // -> Ok([on_end replies...]) | Err(status)
 ## Discovery, metrics, tracing
 
 ```moonbit
-// Persisted, watchable registry (etcd v3-shaped): register, watch, snapshot
-let reg = @moonzero.PersistentRegistry::new()
-reg.watch(e => log(e))                         // Put/Delete events in revision order
-reg.register("greeter", @moonzero.Endpoint::new("10.0.0.1", 9090))
-reg.register("greeter", @moonzero.Endpoint::new("10.0.0.2", 9090))
-let saved = reg.snapshot()                      // persist to a file/etcd; restore reloads it
+// An instance keeps its registration for as long as its task runs
+@moonzero.hold(registry, "greeter", @moonzero.Endpoint::new("10.0.0.1", 9090))
 
-// Real registry I/O over a file (native): a publisher persists, a reader watches
-@discov.persist_registry(path, reg)             // write the snapshot to a real file
-let reader = @discov.FileRegistry::load(path)   // load it back
-reader.reload()                                 // re-read -> the Put/Delete diff since last load
-reader.watch(dir, e => log(e))                  // reload on every filesystem change
+// A client follows the service in a task of its own, and reads the view without waiting
+let view = @moonzero.View::new()
+group.spawn_bg(no_wait=true, () => view.follow(registry, "greeter"))
 
-// Load-balanced client: resolve an instance, then call it over h2c
-let ch = @moonzero.LoadBalancedChannel::new(reg.resolver(), cluster, "greeter")
+// Load-balanced client: choose an instance, then call it
+let ch = @moonzero.LoadBalancedChannel::new(_ => view.endpoints(), cluster, "greeter")
 ch.call("/hello.Greeter/SayHello", request)     // dials 10.0.0.1, then .2, cycling
 
 // Metrics read out for a /metrics scrape after serving
@@ -171,11 +164,10 @@ m.requests().value("GET /ping 200")            // request count for that label
 m.latency().mean()                             // mean request latency, ms
 ```
 
-- **`InMemoryRegistry`** — a [service registry](src/registry/registry.mbt) shaped like go-zero's etcd `discov` store: a `service -> instance -> endpoint` map with a monotonic store revision a watcher can compare against. `RoundRobin`, `pick_first` and `WeightedRoundRobin` balancers select an endpoint from a resolved set.
-- **`WeightedRoundRobin`** — a [weighted balancer](src/registry/registry.mbt) over `Endpoint::weight`, using smooth weighted round-robin: over one cycle each instance is served exactly its share, and a weight-5 instance is spread through the cycle rather than handed five requests in a row. An instance weighted zero or less is never picked.
-- **`PersistentRegistry`** — the [persisted, watchable registry](src/registry/discovery.mbt): adds a live `watch` (Put/Delete events in revision order), an `events_since` catch-up from any revision, and `snapshot`/`restore` that round-trip the whole keyspace through an etcd v3 `RangeResponse`-shaped JSON document without losing a revision — the bytes a file- or etcd-backed deployment persists and reloads.
-- **`LoadBalancedChannel`** — a [load-balanced zRPC client](src/registry/discovery.mbt) over a `Resolve` interface: it resolves a service, picks a live instance with the balancer, dials it through an `RpcCluster`, and makes the call, so instances registering or leaving between calls take effect on the next one. Any store exposing `resolver()` backs it; an etcd- or consul-backed store drops in unchanged. Unary, server-streaming, and bidi calls all go through the resolve-then-balance path.
-- **`FileRegistry`** — real registry I/O in the native [`discov`](src/discov/) sub-package (← go-zero's `discov` publisher/subscriber, over the filesystem instead of etcd's network): `persist_registry` writes the snapshot to a real file through `moonbitlang/async`'s fs, `FileRegistry::load` reads it back and exposes a `resolver()`, `reload` re-reads and returns the `Put`/`Delete` diff since the last load, and `watch`/`watch_once` block on a real filesystem watcher and reload on every change. Reader and publisher share only the file, exactly as an etcd subscriber and publisher share only the keyspace, so the balancer and load-balanced channel above drive it unchanged.
+- **Registries** come from the clients, not from here: `@sd.Registry` in [moonredis](https://github.com/moonbitstack/moonredis), [moonetcd](https://github.com/moonbitstack/moonetcd) and [moonconsul](https://github.com/moonbitstack/moonconsul), and `@memory.Registry` in [moonsd](https://github.com/moonbitstack/moonsd). Each implements `Registrar` and `Discovery`, so `hold` and `View` work on all of them. `moonzero` re-exports the contract.
+- **`Balancer`** — [how a channel chooses](src/balance/balance.mbt): `round_robin()`, `weighted()` (smooth weighted round-robin, over [moonpool](https://github.com/moonbitstack/moonpool)'s `RoundRobin` and `Weighted`) or `PickFirst`.
+- **`LoadBalancedChannel`** — a [load-balanced zRPC client](src/balance/balance.mbt) over a `Resolve` function: it resolves a service, picks an instance, dials it through an `RpcCluster` and makes the call, so instances coming and going take effect on the next call.
+- **`FileDiscovery`** — discovery over a file in the native [`discov`](src/discov/) package: `publish` writes what a `@memory.Registry` holds, and `FileDiscovery` resolves and watches it as a `@moonsd.Discovery`.
 - **`ServerMetrics`** — a [`CounterVec`](src/metric/metric.mbt) of per-method/route/status request tallies and a cumulative latency `Histogram` (Prometheus `le` buckets, sum, count), driven by the `metrics` middleware that times each request on the clock.
 - **`tracing`** — [trace-id propagation](src/trace/trace.mbt): continue an inbound W3C `traceparent` or start a new trace, mint a child span, and stamp `traceparent` + `x-trace-id` onto the response.
 

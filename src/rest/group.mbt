@@ -118,7 +118,7 @@ fn template(path : String) -> String {
   .split("/")
   .map(segment => {
     if segment.has_prefix(":") {
-      "{" + segment.view(start_offset=1).to_owned() + "}"
+      "{" + segment.exact_view(start=1).to_owned() + "}"
     } else {
       segment.to_owned()
     }

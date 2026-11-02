@@ -1,0 +1,13 @@
+// Choosing an instance of a service and calling it: moonsd says who is there, moonpool how to
+// choose, and this is the part that dials.
+import {
+  "moonbitstack/moonzero/zrpc",
+  "moonbitstack/moonrpc",
+  "moonbitstack/moonsd",
+  "moonbitstack/moonpool",
+}
+
+import {
+  "moonbitstack/moonzero/conf",
+  "moonbitlang/core/encoding/utf8",
+} for "wbtest"

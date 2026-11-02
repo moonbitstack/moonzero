@@ -76,75 +76,23 @@ pub using @zrpc {
 }
 
 ///|
-pub using @registry {
+pub using @balance {
   type Balancer,
-  type Endpoint,
-  type InMemoryRegistry,
   type LoadBalancedChannel,
-  type PersistentRegistry,
-  type RegistryEvent,
   type Resolve,
-  type RoundRobin,
   type RpcCluster,
-  type WeightedRoundRobin,
-  pick_first,
-  resolve_one,
 }
 
 ///|
-pub using @consul {
-  trait ConsulHttp,
-  type ConsulClient,
-  type ConsulDiscovery,
-  type ConsulError,
-  type ConsulResponse,
-  consul_check_id,
-  consul_parse_health,
-  consul_register_body,
-}
-
-///|
-pub using @etcd {
-  type EtcdClient,
-  type EtcdDeleteRangeRequest,
-  type EtcdDeleteRangeResponse,
-  type EtcdDiscovery,
-  type EtcdError,
-  type EtcdEvent,
-  type EtcdEventType,
-  type EtcdKeyValue,
-  type EtcdLeaseGrantRequest,
-  type EtcdLeaseGrantResponse,
-  type EtcdLeaseKeepAliveRequest,
-  type EtcdLeaseKeepAliveResponse,
-  type EtcdPutRequest,
-  type EtcdPutResponse,
-  type EtcdRangeRequest,
-  type EtcdRangeResponse,
-  type EtcdWatchCancelRequest,
-  type EtcdWatchCreateRequest,
-  type EtcdWatchRequest,
-  type EtcdWatchResponse,
-  etcd_prefix_end,
-  etcd_service_prefix,
-}
-
-///|
-pub using @redis {
-  trait RedisConn,
-  type RedisClient,
-  type RedisDiscovery,
-  type RedisError,
-  type RedisScript,
-  type RespError,
-  type RespReader,
-  type RespValue,
-  redis_instance_key,
-  redis_service_pattern,
-  redis_service_prefix,
-  resp_command,
-  resp_encode_command,
-  resp_kind,
+pub using @moonsd {
+  trait Discovery,
+  trait Registrar,
+  trait Watcher,
+  type Endpoint,
+  type Lease,
+  type Update,
+  type View,
+  hold,
 }
 
 ///|

@@ -45,21 +45,14 @@ SECTIONS = [
      "counts each call for its duration, initiate_shutdown makes new calls come "
      "back Unavailable while in-flight ones finish, and is_drained reports when "
      "the last one has completed."),
-    ("registry", "registry/registry.mbt", "Service registry & discovery",
-     "An InMemoryRegistry (etcd-shaped: service -> instance -> endpoint with a "
-     "store revision) plus RoundRobin/pick_first balancers and resolve_one, the "
-     "resolve-then-balance step a client runs before a call."),
-    ("discovery", "registry/discovery.mbt", "Persisted registry & load-balanced client",
-     "A PersistentRegistry that adds watch, events_since catch-up, and "
-     "snapshot/restore through an etcd v3 RangeResponse-shaped JSON document, and "
-     "a LoadBalancedChannel that resolves a service through the Resolve interface, "
-     "balances to a live instance, and dials it over the h2c transport."),
-    ("discov", "discov/discov.mbt", "Real file-backed registry I/O",
-     "The native discov driver (go-zero's discov publisher/subscriber over the "
-     "filesystem instead of etcd's network): persist_registry writes the snapshot "
-     "to a real file through moonbitlang/async's fs, FileRegistry loads it back and "
-     "exposes a resolver(), reload returns the Put/Delete diff since the last load, "
-     "and watch/watch_once reload on every real filesystem change."),
+    ("balance", "balance/balance.mbt", "Balancers & load-balanced client",
+     "Balancers over moonpool's RoundRobin and Weighted, and a LoadBalancedChannel "
+     "that resolves a service through the Resolve interface, picks an instance, and "
+     "dials it over the h2c transport. Registries come from moonsd and the clients "
+     "that implement it; a View of moonsd's is what a program resolves through."),
+    ("discov", "discov/discov.mbt", "Discovery over a file",
+     "A moonsd Discovery over a file: publish writes what a memory registry holds, "
+     "FileDiscovery resolves from it and watches it through moonbitlang/async's fs."),
     ("metrics", "metric/metric.mbt", "Metrics",
      "A CounterVec of per-method/route/status request tallies and a cumulative "
      "latency Histogram (Prometheus le buckets), wired by the metrics middleware "

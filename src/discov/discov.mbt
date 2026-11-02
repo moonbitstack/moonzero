@@ -1,166 +1,79 @@
-// Real registry I/O for moonzero's service discovery. go-zero's `discov` publishes
-// service instances into etcd and watches for changes over the network; this driver
-// does the same round-trip over a real medium a CI job always has — the local
-// filesystem — through `moonbitlang/async`'s fs. A publisher persists the registry
-// snapshot to a file; a reader loads it, exposes a `Resolve`, and either reloads on
-// demand or watches the directory and reloads on every change, emitting the same
-// `RegistryEvent` diff a watcher of an etcd keyspace would. All protocol shapes
-// (the snapshot document, the event diff, the balancers) live in the backend-
-// agnostic root package; this file only moves bytes to and from disk.
+// Copyright 2026 Leo Cheng
+// SPDX-License-Identifier: Apache-2.0
+
+// Discovery over a file: one process writes what `moonsd/memory` holds, the others read it. For a
+// deployment that hands out its instances as a file, as Prometheus's `file_sd` takes them, and for
+// a program with no registry service to talk to.
 
 ///|
-/// Persist a registry's whole keyspace to `path` as its etcd v3 `RangeResponse`-
-/// shaped snapshot document (← go-zero's `discov.Publisher` writing instance keys
-/// into etcd). The file is truncated and rewritten, so it always holds the current
-/// state and its revisions; a reader `load`s or `reload`s from exactly these bytes.
-pub async fn persist_registry(
-  path : String,
-  reg : @moonzero.PersistentRegistry,
-) -> Unit {
-  @fs.write_file(path, reg.snapshot(), create_mode=CreateOrTruncate)
+/// Write everything `registry` holds to `path`, replacing what was there.
+pub async fn publish(path : String, registry : @memory.Registry) -> Unit {
+  @fs.write_file(path, registry.snapshot(), create_mode=CreateOrTruncate)
 }
 
 ///|
-/// A file-backed view of a service registry (← go-zero's `discov.Subscriber`): it
-/// holds the last-loaded `PersistentRegistry` and the file it came from. `resolve`
-/// answers from the in-memory copy; `reload` re-reads the file and returns the
-/// `Put`/`Delete` events that the change produced; `watch_once`/`watch` block on a
-/// real filesystem watcher and reload when the file changes. The reader and the
-/// publisher share only the file, exactly as an etcd subscriber and publisher share
-/// only the etcd keyspace.
-pub struct FileRegistry {
+/// A `@moonsd.Discovery` over the file at `path`, and a file that is not there is no instances, so
+/// a reader can start before the publisher has written anything. It reads the file on every
+/// `resolve`, and a watcher wakes when the file's directory changes.
+pub struct FileDiscovery {
   path : String
-  mut reg : @moonzero.PersistentRegistry
 }
 
 ///|
-/// Read the registry snapshot at `path` into a fresh `FileRegistry`. A missing file
-/// is treated as an empty registry, so a reader can start before the publisher has
-/// written anything and pick the state up on the first `reload`/`watch`.
-pub async fn FileRegistry::load(path : String) -> FileRegistry {
-  { path, reg: read_snapshot(path), }
+pub fn FileDiscovery::new(path : String) -> FileDiscovery {
+  { path, }
 }
 
 ///|
-/// The current file path this registry loads from.
-pub fn FileRegistry::path(self : FileRegistry) -> String {
-  self.path
+async fn FileDiscovery::read(self : FileDiscovery) -> @memory.Registry {
+  guard @fs.exists(self.path) else { return @memory.Registry::new() }
+  @memory.Registry::restore(@fs.read_file(self.path).text())
 }
 
 ///|
-/// The store revision of the last-loaded snapshot.
-pub fn FileRegistry::revision(self : FileRegistry) -> Int64 {
-  self.reg.revision()
+pub extend FileDiscovery with @moonsd.Discovery::{resolve, watch}
+
+///|
+pub impl @moonsd.Discovery for FileDiscovery with fn resolve(self, service) {
+  self.read().resolve(service)
 }
 
 ///|
-/// The endpoints registered for `service` in the last-loaded snapshot.
-pub fn FileRegistry::resolve(
-  self : FileRegistry,
-  service : String,
-) -> Array[@moonzero.Endpoint] {
-  self.reg.resolve(service)
+/// A service followed through changes to the file.
+priv struct FileWatcher {
+  discovery : FileDiscovery
+  service : String
+  changes : @fs.Watcher
+  mut last : Array[@moonsd.Endpoint]?
 }
 
 ///|
-/// This file registry as a `Resolve` interface value, so a balancer and the
-/// load-balanced channel drive it exactly as they drive the in-memory registry.
-/// The closure reads whatever snapshot was last loaded, so a `reload`/`watch` in
-/// between calls is reflected on the next resolve.
-pub fn FileRegistry::resolver(self : FileRegistry) -> @moonzero.Resolve {
-  service => self.resolve(service)
-}
-
-///|
-/// Re-read the file and adopt it as the current state, returning the `RegistryEvent`
-/// diff from the previously loaded state: a `Put` for every instance that is new or
-/// whose endpoint changed, a `Delete` for every instance that went away. The events
-/// carry the mod-revision the reloaded snapshot recorded, so a client can stay in
-/// revision order across reloads.
-pub async fn FileRegistry::reload(
-  self : FileRegistry,
-) -> Array[@moonzero.RegistryEvent] {
-  let fresh = read_snapshot(self.path)
-  let events = diff_registries(self.reg, fresh)
-  self.reg = fresh
-  events
-}
-
-///|
-/// Block on `watcher` until the watched directory changes, then `reload` and return
-/// the diff — one watch cycle. The caller owns the `@fs.Watcher` (built over the
-/// directory holding the registry file) and its lifetime, so a single cycle is easy
-/// to drive to completion and join; `watch` loops this for a long-running reader.
-pub async fn FileRegistry::watch_once(
-  self : FileRegistry,
-  watcher : @fs.Watcher,
-) -> Array[@moonzero.RegistryEvent] {
-  let _ = watcher.wait()
-  self.reload()
-}
-
-///|
-/// Watch `dir` (the directory holding the registry file) and invoke `on_event` for
-/// every `RegistryEvent` produced by every change, indefinitely — the long-running
-/// subscribe loop (← go-zero's `discov.Subscriber` watch goroutine). Runs until the
-/// surrounding task group is torn down; drive it with `TaskGroup::spawn`.
-pub async fn FileRegistry::watch(
-  self : FileRegistry,
-  dir : String,
-  on_event : (@moonzero.RegistryEvent) -> Unit,
-) -> Unit {
-  let watcher = @fs.Watcher(dir)
+impl @moonsd.Watcher for FileWatcher with fn next(self) {
   for ;; {
-    for event in self.watch_once(watcher) {
-      on_event(event)
+    let registry = self.discovery.read()
+    let endpoints = registry.resolve(self.service)
+    if self.last != Some(endpoints) {
+      self.last = Some(endpoints)
+      return { endpoints, revision: registry.revision(), }
     }
+    ignore(self.changes.wait())
   }
 }
 
 ///|
-/// Read and parse the snapshot at `path`, or an empty registry if the file is
-/// absent.
-async fn read_snapshot(path : String) -> @moonzero.PersistentRegistry {
-  if @fs.exists(path) {
-    let data = @fs.read_file(path)
-    @moonzero.PersistentRegistry::restore(data.text())
-  } else {
-    @moonzero.PersistentRegistry::new()
-  }
+impl @moonsd.Watcher for FileWatcher with fn close(self) {
+  self.changes.close()
 }
 
 ///|
-/// Compute the `RegistryEvent` diff turning `old` into `new`, keyed by instance
-/// key: a `Put` for each key present in `new` but absent or changed in `old`
-/// (carrying `new`'s mod-revision), and a `Delete` for each key present in `old` but
-/// gone from `new` (carrying `new`'s store revision).
-fn diff_registries(
-  old : @moonzero.PersistentRegistry,
-  new : @moonzero.PersistentRegistry,
-) -> Array[@moonzero.RegistryEvent] {
-  let old_map : Map[String, @moonzero.Endpoint] = Map([])
-  for entry in old.keyed_entries() {
-    let (key, ep, _) = entry
-    old_map[key] = ep
+pub impl @moonsd.Discovery for FileDiscovery with fn watch(self, service) {
+  let at = self.path.rev_find("/").unwrap_or(0)
+  let directory = if at == 0 { "." } else { self.path[:at].to_owned() }
+  let watcher : &@moonsd.Watcher = FileWatcher::{
+    discovery: self,
+    service,
+    changes: @fs.Watcher(directory),
+    last: None,
   }
-  let events : Array[@moonzero.RegistryEvent] = []
-  let present : Map[String, Bool] = Map([])
-  for entry in new.keyed_entries() {
-    let (key, ep, rev) = entry
-    present[key] = true
-    let changed = match old_map.get(key) {
-      Some(prev) => !(prev == ep)
-      None => true
-    }
-    if changed {
-      events.push(Put(key~, endpoint=ep, revision=rev))
-    }
-  }
-  for entry in old.keyed_entries() {
-    let (key, _, _) = entry
-    if !present.contains(key) {
-      events.push(Delete(key~, revision=new.revision()))
-    }
-  }
-  events
+  watcher
 }

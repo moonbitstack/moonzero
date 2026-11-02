@@ -11,13 +11,13 @@
 async test "RedisPeriodLimit: two limiters on one key share one window" {
   let redis = FakeRedis::new()
   let a = @moonzero.RedisPeriodLimit::new(
-    @moonzero.RedisClient::new(redis),
+    @moonredis.Client::new(redis),
     period_secs=60,
     quota=3,
     prefix="limit/",
   )
   let b = @moonzero.RedisPeriodLimit::new(
-    @moonzero.RedisClient::new(redis),
+    @moonredis.Client::new(redis),
     period_secs=60,
     quota=3,
     prefix="limit/",
@@ -48,7 +48,7 @@ async test "RedisPeriodLimit: two limiters on one key share one window" {
 /// window has to be carrying a TTL and has to reopen when it lapses.
 async test "RedisPeriodLimit: the window carries the period and reopens after it" {
   let redis = FakeRedis::new()
-  let client = @moonzero.RedisClient::new(redis)
+  let client = @moonredis.Client::new(redis)
   let lim = @moonzero.RedisPeriodLimit::new(client, period_secs=60, quota=2)
   assert_eq(lim.take("qwq"), PeriodAllowed)
   assert_eq(client.command([b"TTL", b"qwq"]), Integer(60))
@@ -63,13 +63,13 @@ async test "RedisPeriodLimit: the window carries the period and reopens after it
 async test "RedisTokenLimit: two limiters on one key share one bucket" {
   let redis = FakeRedis::new()
   let a = @moonzero.RedisTokenLimit::new(
-    @moonzero.RedisClient::new(redis),
+    @moonredis.Client::new(redis),
     rate=1,
     burst=3,
     key="qwe",
   )
   let b = @moonzero.RedisTokenLimit::new(
-    @moonzero.RedisClient::new(redis),
+    @moonredis.Client::new(redis),
     rate=1,
     burst=3,
     key="qwe",
@@ -84,7 +84,7 @@ async test "RedisTokenLimit: two limiters on one key share one bucket" {
   assert_eq(b.allow(1000L), false)
   // A bucket under a different key is untouched by any of that.
   let other = @moonzero.RedisTokenLimit::new(
-    @moonzero.RedisClient::new(redis),
+    @moonredis.Client::new(redis),
     rate=1,
     burst=3,
     key="orz",
@@ -98,7 +98,7 @@ async test "RedisTokenLimit: two limiters on one key share one bucket" {
 async test "RedisTokenLimit: an unreachable redis falls back to the local bucket" {
   let redis = FakeRedis::new()
   let lim = @moonzero.RedisTokenLimit::new(
-    @moonzero.RedisClient::new(redis),
+    @moonredis.Client::new(redis),
     rate=1,
     burst=2,
     key="orx",
@@ -119,7 +119,7 @@ async test "RedisTokenLimit: an unreachable redis falls back to the local bucket
 async test "the limiter loads its script once and then runs it by digest" {
   let redis = FakeRedis::new()
   let lim = @moonzero.RedisPeriodLimit::new(
-    @moonzero.RedisClient::new(redis),
+    @moonredis.Client::new(redis),
     period_secs=60,
     quota=99,
   )
@@ -141,7 +141,7 @@ async test "redis_period_limit: two assembled apps share one quota" {
   let redis = FakeRedis::new()
   let app_a = @moonzero.redis_period_limit(
     @moonzero.RedisPeriodLimit::new(
-      @moonzero.RedisClient::new(redis),
+      @moonredis.Client::new(redis),
       period_secs=60,
       quota=2,
     ),
@@ -149,7 +149,7 @@ async test "redis_period_limit: two assembled apps share one quota" {
   )(responder(200))
   let app_b = @moonzero.redis_period_limit(
     @moonzero.RedisPeriodLimit::new(
-      @moonzero.RedisClient::new(redis),
+      @moonredis.Client::new(redis),
       period_secs=60,
       quota=2,
     ),
@@ -168,7 +168,7 @@ async test "redis_period_limit: an unreachable redis admits" {
   let redis = FakeRedis::new()
   let app = @moonzero.redis_period_limit(
     @moonzero.RedisPeriodLimit::new(
-      @moonzero.RedisClient::new(redis),
+      @moonredis.Client::new(redis),
       period_secs=60,
       quota=1,
     ),
@@ -186,7 +186,7 @@ async test "redis_rate_limit: two assembled apps share one bucket" {
   let clock = @moonzero.Clock::new(() => 0L)
   let app_a = @moonzero.redis_rate_limit(
     @moonzero.RedisTokenLimit::new(
-      @moonzero.RedisClient::new(redis),
+      @moonredis.Client::new(redis),
       rate=1,
       burst=2,
       key="mw",
@@ -195,7 +195,7 @@ async test "redis_rate_limit: two assembled apps share one bucket" {
   )(responder(200))
   let app_b = @moonzero.redis_rate_limit(
     @moonzero.RedisTokenLimit::new(
-      @moonzero.RedisClient::new(redis),
+      @moonredis.Client::new(redis),
       rate=1,
       burst=2,
       key="mw",
@@ -209,53 +209,48 @@ async test "redis_rate_limit: two assembled apps share one bucket" {
 }
 
 ///|
-/// The shared window over a real redis, through two independent connections — the same
-/// arrangement two replicas have. Gated on `MOON_REDIS_TEST`.
+/// A connection to the live redis of `MOON_REDIS_TEST`, as a replica would hold one.
+async fn live_redis() -> @moonredis.Client {
+  let options = {
+    ..@moonredis.client_default,
+    host: @env.get_env_var("MOON_REDIS_HOST").unwrap_or("127.0.0.1"),
+  }
+  @moonredis.Client::new(@socket.Connection::connect(options))
+}
+
+///|
+/// The shared window over a real redis, through two independent connections: the same
+/// arrangement two replicas have.
 async test "integration: two period limiters on a live redis share the window" {
   guard @env.get_env_var("MOON_REDIS_TEST") is Some(_) else { return }
-  let s1 = @discov.RedisSocket::connect(redis_test_host(), 6379)
-  defer s1.close()
-  let s2 = @discov.RedisSocket::connect(redis_test_host(), 6379)
-  defer s2.close()
+  let one = live_redis()
+  let two = live_redis()
   let prefix = "moonzero-ci-limit/"
   let key = "period"
-  let _ = s1.command(["DEL", prefix + key])
-  let a = @moonzero.RedisPeriodLimit::new(
-    s1.client(),
-    period_secs=60,
-    quota=3,
-    prefix~,
-  )
-  let b = @moonzero.RedisPeriodLimit::new(
-    s2.client(),
-    period_secs=60,
-    quota=3,
-    prefix~,
-  )
+  ignore(one.del([prefix + key]))
+  let a = @moonzero.RedisPeriodLimit::new(one, period_secs=60, quota=3, prefix~)
+  let b = @moonzero.RedisPeriodLimit::new(two, period_secs=60, quota=3, prefix~)
   assert_eq(a.take(key), PeriodAllowed)
   assert_eq(b.take(key), PeriodAllowed)
   assert_eq(a.take(key), PeriodHitQuota)
   assert_eq(b.take(key), PeriodOverQuota)
-  match s1.command(["TTL", prefix + key]) {
-    Integer(ttl) => assert_eq(ttl > 0L && ttl <= 60L, true)
-    other => fail("unexpected TTL reply: " + @moonzero.resp_kind(other))
-  }
-  let _ = s1.command(["DEL", prefix + key])
+  let ttl = one.ttl(prefix + key)
+  assert_true(ttl > 0L && ttl <= 60L)
+  ignore(one.del([prefix + key]))
 }
 
 ///|
 /// The shared bucket over a real redis. The instant is fixed rather than read from the
-/// clock so the refill step is exact. Gated on `MOON_REDIS_TEST`.
+/// clock so the refill step is exact.
 async test "integration: two token limiters on a live redis share the bucket" {
   guard @env.get_env_var("MOON_REDIS_TEST") is Some(_) else { return }
-  let s1 = @discov.RedisSocket::connect(redis_test_host(), 6379)
-  defer s1.close()
-  let s2 = @discov.RedisSocket::connect(redis_test_host(), 6379)
-  defer s2.close()
+  let one = live_redis()
+  let two = live_redis()
   let key = "moonzero-ci-limit/token"
-  let _ = s1.command(["DEL", "{" + key + "}.tokens", "{" + key + "}.ts"])
-  let a = @moonzero.RedisTokenLimit::new(s1.client(), rate=1, burst=3, key~)
-  let b = @moonzero.RedisTokenLimit::new(s2.client(), rate=1, burst=3, key~)
+  let keys = ["{" + key + "}.tokens", "{" + key + "}.ts"]
+  ignore(one.del(keys))
+  let a = @moonzero.RedisTokenLimit::new(one, rate=1, burst=3, key~)
+  let b = @moonzero.RedisTokenLimit::new(two, rate=1, burst=3, key~)
   let now = 1700000000000L
   assert_eq(a.allow(now), true)
   assert_eq(b.allow(now), true)
@@ -264,5 +259,5 @@ async test "integration: two token limiters on a live redis share the bucket" {
   assert_eq(a.allow(now), false)
   assert_eq(a.allow(now + 1000L), true)
   assert_eq(b.allow(now + 1000L), false)
-  let _ = s1.command(["DEL", "{" + key + "}.tokens", "{" + key + "}.ts"])
+  ignore(one.del(keys))
 }

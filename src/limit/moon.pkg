@@ -1,10 +1,9 @@
 // Rate limits: the token bucket, the fixed period limit and the connection
 // limit, each in memory or on Redis (go-zero's core/limit and core/syncx).
 import {
-  "moonbitstack/moonzero/redis",
+  "moonbitstack/moonredis",
   "moonbitstack/moondate",
   "moonbitstack/moonward",
-  "moonbitlang/core/encoding/utf8",
 }
 
 import {

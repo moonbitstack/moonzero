@@ -9,17 +9,15 @@ import {
   "moonbitstack/mooncred/jwt",
   "moonbitstack/moonlog",
   "moonbitstack/moonrpc/wire",
+  "moonbitstack/moonsd",
+  "moonbitstack/moonzero/balance",
   "moonbitstack/moonzero/breaker",
   "moonbitstack/moonzero/clock",
   "moonbitstack/moonzero/conf",
-  "moonbitstack/moonzero/consul",
-  "moonbitstack/moonzero/etcd",
   "moonbitstack/moonzero/limit",
   "moonbitstack/moonzero/logx",
   "moonbitstack/moonzero/metric",
   "moonbitstack/moonzero/proc",
-  "moonbitstack/moonzero/redis",
-  "moonbitstack/moonzero/registry",
   "moonbitstack/moonzero/rest",
   "moonbitstack/moonzero/rest/handler",
   "moonbitstack/moonzero/shedder",
@@ -34,12 +32,6 @@ pub fn breaker(@breaker.Breaker, refusal? : @handler.Refusal) -> (async (@spec.S
 
 pub fn canonical_key(String) -> String
 
-pub fn consul_check_id(String) -> String
-
-pub fn consul_parse_health(Bytes) -> Array[@registry.Endpoint] raise @consul.ConsulError
-
-pub fn consul_register_body(String, String, String, Int32, Int32) -> Bytes
-
 pub fn cors(@handler.CorsConf) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
 pub let default_latency_buckets : Array[Double]
@@ -48,15 +40,13 @@ pub let duration_key : String
 
 pub fn entry(@moonlog.Record) -> String
 
-pub fn etcd_prefix_end(Bytes) -> Bytes
-
-pub fn etcd_service_prefix(String, String) -> String
-
 pub let exposition_content_type : String
 
 pub fn generate_span_id(Int64) -> String
 
 pub fn generate_trace_id(Int64) -> String
+
+pub async fn hold(&@moonsd.Registrar, String, @moonsd.Endpoint, ttl? : Int32, report? : (Error) -> Unit) -> Unit
 
 pub fn jwt_authorized(String?, String, Int64) -> Bool
 
@@ -90,8 +80,6 @@ pub fn period_limit(@limit.PeriodLimit, @clock.Clock, key? : String, refusal? : 
 
 pub let period_script : String
 
-pub fn pick_first(Array[@registry.Endpoint]) -> @registry.Endpoint?
-
 pub let plain_text : Array[(String, String)]
 
 pub let port : Int32
@@ -100,27 +88,13 @@ pub fn rate_limit(@limit.TokenBucket, @clock.Clock, refusal? : @handler.Refusal)
 
 pub fn recovery(async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
-pub fn redis_instance_key(String, String, @registry.Endpoint) -> String
-
 pub fn redis_period_limit(@limit.RedisPeriodLimit, key? : String, refusal? : @handler.Refusal) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
 pub fn redis_rate_limit(@limit.RedisTokenLimit, @clock.Clock, refusal? : @handler.Refusal) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
-pub fn redis_service_pattern(String, String) -> String
-
-pub fn redis_service_prefix(String, String) -> String
-
 pub let refusal : @handler.Refusal
 
 pub fn request_id(header? : String) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
-
-pub fn resolve_one(@registry.InMemoryRegistry, String, @registry.RoundRobin) -> @registry.Endpoint?
-
-pub fn resp_command(Array[String]) -> Bytes
-
-pub fn resp_encode_command(Array[Bytes]) -> Bytes
-
-pub fn resp_kind(@redis.RespValue) -> String
 
 pub let rpc_port : Int32
 
@@ -157,7 +131,7 @@ pub let unavailable : @handler.Refusal
 // Types and methods
 
 // Type aliases
-pub using @registry {type Balancer}
+pub using @balance {type Balancer}
 
 pub using @zrpc {type BidiCall}
 
@@ -175,69 +149,21 @@ pub using @conf {type Conf}
 
 pub using @conf {type ConfigError}
 
-pub using @consul {type ConsulClient}
-
-pub using @consul {type ConsulDiscovery}
-
-pub using @consul {type ConsulError}
-
-pub using @consul {type ConsulResponse}
-
 pub using @handler {type CorsConf}
 
 pub using @metric {type CounterVec}
 
-pub using @registry {type Endpoint}
-
-pub using @etcd {type EtcdClient}
-
-pub using @etcd {type EtcdDeleteRangeRequest}
-
-pub using @etcd {type EtcdDeleteRangeResponse}
-
-pub using @etcd {type EtcdDiscovery}
-
-pub using @etcd {type EtcdError}
-
-pub using @etcd {type EtcdEvent}
-
-pub using @etcd {type EtcdEventType}
-
-pub using @etcd {type EtcdKeyValue}
-
-pub using @etcd {type EtcdLeaseGrantRequest}
-
-pub using @etcd {type EtcdLeaseGrantResponse}
-
-pub using @etcd {type EtcdLeaseKeepAliveRequest}
-
-pub using @etcd {type EtcdLeaseKeepAliveResponse}
-
-pub using @etcd {type EtcdPutRequest}
-
-pub using @etcd {type EtcdPutResponse}
-
-pub using @etcd {type EtcdRangeRequest}
-
-pub using @etcd {type EtcdRangeResponse}
-
-pub using @etcd {type EtcdWatchCancelRequest}
-
-pub using @etcd {type EtcdWatchCreateRequest}
-
-pub using @etcd {type EtcdWatchRequest}
-
-pub using @etcd {type EtcdWatchResponse}
+pub using @moonsd {type Endpoint}
 
 pub using @rest {type Group}
 
 pub using @metric {type Histogram}
 
-pub using @registry {type InMemoryRegistry}
-
 pub using @rest {type Layer}
 
-pub using @registry {type LoadBalancedChannel}
+pub using @moonsd {type Lease}
+
+pub using @balance {type LoadBalancedChannel}
 
 pub using @logx {type LogLevel}
 
@@ -255,47 +181,27 @@ pub using @limit {type PeriodLimit}
 
 pub using @limit {type PeriodResult}
 
-pub using @registry {type PersistentRegistry}
-
 pub using @conf {type PrivateKeyConf}
 
 pub using @breaker {type Promise}
 
-pub using @redis {type RedisClient}
-
-pub using @redis {type RedisDiscovery}
-
-pub using @redis {type RedisError}
-
 pub using @limit {type RedisPeriodLimit}
-
-pub using @redis {type RedisScript}
 
 pub using @limit {type RedisTokenLimit}
 
 pub using @handler {type Refusal}
 
-pub using @registry {type RegistryEvent}
-
 pub using @handler {type RequestLog}
 
-pub type Resolve = (String) -> Array[@registry.Endpoint]
-
-pub using @redis {type RespError}
-
-pub using @redis {type RespReader}
-
-pub using @redis {type RespValue}
+pub type Resolve = (String) -> Array[@moonsd.Endpoint]
 
 pub using @conf {type RestConf}
 
 pub using @rest {type RestEngine}
 
-pub using @registry {type RoundRobin}
-
 pub using @zrpc {type RpcChannel}
 
-pub using @registry {type RpcCluster}
+pub using @balance {type RpcCluster}
 
 pub using @zrpc {type RpcGroup}
 
@@ -327,10 +233,14 @@ pub using @trace {type TraceContext}
 
 pub using @breaker {type Unavailable}
 
-pub using @registry {type WeightedRoundRobin}
+pub using @moonsd {type Update}
 
-pub using @consul {trait ConsulHttp}
+pub using @moonsd {type View}
 
-pub using @redis {trait RedisConn}
+pub using @moonsd {trait Discovery}
+
+pub using @moonsd {trait Registrar}
+
+pub using @moonsd {trait Watcher}
 
 // Traits

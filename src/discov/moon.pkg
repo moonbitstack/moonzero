@@ -1,23 +1,27 @@
-// The native discovery driver: it gives moonzero's persisted registry real I/O by
-// reading and writing a real file through `moonbitlang/async`'s fs, and a live
-// watcher that reloads on file change. Native-only, because `moonbitlang/async`
-// (real files, the OS watch backend) has no JS/Wasm backend.
+// A moonsd backend over a file: one process writes a snapshot, others read and watch it. Native
+// only, because `moonbitlang/async`'s fs has no JS or Wasm backend. The tests of the live services
+// are here too, since an async test needs a real event loop.
 supported_targets = "native"
 
 import {
-  "moonbitstack/moonzero",
-  "moonbitstack/moonrpc/net",
-  "moonbitstack/moonhttp/http1",
-  "moonbitstack/moonhttp/header",
-  "moonbitlang/async",
+  "moonbitstack/moonsd",
+  "moonbitstack/moonsd/memory",
   "moonbitlang/async/fs",
-  "moonbitlang/async/io",
-  "moonbitlang/async/socket",
 }
 
 import {
+  "moonbitstack/moonzero",
   "moonbitstack/moonapi",
   "moonbitstack/moonasgi",
+  "moonbitstack/moonconsul/fetch",
+  "moonbitstack/moonconsul/sd" @consul_sd,
+  "moonbitstack/moonetcd",
+  "moonbitstack/moonetcd/client",
+  "moonbitstack/moonetcd/sd" @etcd_sd,
+  "moonbitstack/moonredis",
+  "moonbitstack/moonredis/resp",
+  "moonbitstack/moonredis/sd" @redis_sd,
+  "moonbitstack/moonredis/socket",
   "moonbitlang/async",
   "moonbitlang/core/env",
   "moonbitlang/core/encoding/utf8",

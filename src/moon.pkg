@@ -10,16 +10,9 @@ import {
   "moonbitstack/moonzero/shedder",
   "moonbitstack/moonzero/conf",
   "moonbitstack/moonzero/zrpc",
-  "moonbitstack/moonzero/registry",
-  "moonbitstack/moonzero/consul",
-  "moonbitstack/moonzero/etcd",
-  "moonbitstack/moonzero/redis",
+  "moonbitstack/moonzero/balance",
+  "moonbitstack/moonsd",
   "moonbitstack/moonzero/limit",
   "moonbitstack/moonzero/rest/handler",
   "moonbitstack/moonzero/rest",
 }
-
-import {
-  "moonbitlang/core/encoding/utf8",
-  "moonbitlang/core/json",
-} for "wbtest"

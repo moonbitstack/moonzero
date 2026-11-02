@@ -4,8 +4,8 @@ package "moonbitstack/moonzero/limit"
 import {
   "moonbitlang/core/debug",
   "moonbitstack/moondate",
+  "moonbitstack/moonredis",
   "moonbitstack/moonward",
-  "moonbitstack/moonzero/redis",
 }
 
 // Values
@@ -43,27 +43,27 @@ pub fn PeriodResult::not_equal(Self, Self) -> Bool
 pub fn PeriodResult::to_repr(Self) -> @debug.Repr
 
 pub struct RedisPeriodLimit {
-  client : @redis.RedisClient
-  script : @redis.RedisScript
+  client : @moonredis.Client
+  script : @moonredis.Script
   period_secs : Int32
   quota : Int32
   prefix : String
 }
-pub fn RedisPeriodLimit::new(@redis.RedisClient, period_secs~ : Int32, quota~ : Int32, prefix? : String) -> Self
-pub async fn RedisPeriodLimit::take(Self, String) -> PeriodResult raise @redis.RedisError
+pub fn RedisPeriodLimit::new(@moonredis.Client, period_secs~ : Int32, quota~ : Int32, prefix? : String) -> Self
+pub async fn RedisPeriodLimit::take(Self, String) -> PeriodResult raise @moonredis.RedisError
 
 pub struct RedisTokenLimit {
-  client : @redis.RedisClient
-  script : @redis.RedisScript
+  client : @moonredis.Client
+  script : @moonredis.Script
   rate : Int32
   burst : Int32
-  token_key : Bytes
-  ts_key : Bytes
+  token_key : String
+  ts_key : String
   rescue : TokenBucket
 }
 pub async fn RedisTokenLimit::allow(Self, Int64) -> Bool
 pub async fn RedisTokenLimit::allow_n(Self, Int32, Int64) -> Bool
-pub fn RedisTokenLimit::new(@redis.RedisClient, rate~ : Int32, burst~ : Int32, key~ : String) -> Self
+pub fn RedisTokenLimit::new(@moonredis.Client, rate~ : Int32, burst~ : Int32, key~ : String) -> Self
 pub fn RedisTokenLimit::rescue(Self) -> TokenBucket
 
 pub struct TokenBucket {

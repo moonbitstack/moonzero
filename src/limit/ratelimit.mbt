@@ -113,12 +113,12 @@ pub let token_script : String =
 /// `rescue`, its process-local `TokenBucket`, the way go-zero drops to its in-process
 /// `rescueLimiter` rather than letting an outage open the gate.
 pub struct RedisTokenLimit {
-  client : @redis.RedisClient
-  script : @redis.RedisScript
+  client : @moonredis.Client
+  script : @moonredis.Script
   rate : Int32
   burst : Int32
-  token_key : Bytes
-  ts_key : Bytes
+  token_key : String
+  ts_key : String
   rescue : TokenBucket
 }
 
@@ -126,18 +126,18 @@ pub struct RedisTokenLimit {
 /// A limiter admitting `rate` requests per second with room for a `burst` of that many
 /// back-to-back, over the bucket `key` names in `client`'s redis.
 pub fn RedisTokenLimit::new(
-  client : @redis.RedisClient,
+  client : @moonredis.Client,
   rate~ : Int32,
   burst~ : Int32,
   key~ : String,
 ) -> RedisTokenLimit {
   {
     client,
-    script: @redis.RedisScript::new(token_script),
+    script: @moonredis.Script::new(token_script),
     rate,
     burst,
-    token_key: @utf8.encode("{" + key + "}.tokens"),
-    ts_key: @utf8.encode("{" + key + "}.ts"),
+    token_key: "{" + key + "}.tokens",
+    ts_key: "{" + key + "}.ts",
     rescue: TokenBucket::new(rate.to_double(), burst=burst.to_double()),
   }
 }
@@ -169,12 +169,12 @@ pub async fn RedisTokenLimit::allow_n(
   now_ms : Int64,
 ) -> Bool {
   let reply = self.script.run(self.client, [self.token_key, self.ts_key], [
-    @utf8.encode(self.rate.to_string()),
-    @utf8.encode(self.burst.to_string()),
-    @utf8.encode((now_ms / 1000L).to_string()),
-    @utf8.encode(n.to_string()),
+    self.rate.to_string(),
+    self.burst.to_string(),
+    (now_ms / 1000L).to_string(),
+    n.to_string(),
   ]) catch {
-    RedisError(_) => return self.rescue.allow_n(n.to_double(), now_ms)
+    _ => return self.rescue.allow_n(n.to_double(), now_ms)
   }
   match reply {
     Integer(code) => code == 1L

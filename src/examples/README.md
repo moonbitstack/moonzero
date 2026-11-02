@@ -1,7 +1,7 @@
 # Examples
 
 Runnable `main` packages that drive the public `@moonzero` API in-process, so no
-port is bound and no live etcd/consul/redis is needed. Each prints the actual
+port is bound and no live service is needed. Each prints the actual
 results — status codes, decoded bodies, generated wire bytes, round-trips — so
 running it proves the feature works.
 
@@ -20,17 +20,14 @@ moon run --target native examples/00-metrics    # native-only ones await the asy
 | 05 | [`jwt-crypto`](05-jwt-crypto/) | SHA-256 / HMAC / constant-time compare, then HS256 sign + verify with the tampered / expired / `alg:none` rejections | `@sha2.hash`, `@hmac.mac`, `jwt_sign`, `jwt_verify`, `jwt_authorized`, `base64url_encode` |
 | 06 | [`tracing`](06-tracing/) | W3C Trace Context: start a new trace, continue an inbound one, reject a malformed header | `next_trace_context`, `parse_traceparent`, `TraceContext`, `generate_trace_id` |
 | 07 | [`zrpc`](07-zrpc/) | A zRPC service with all four cardinalities over the in-process h2c channel, plus the UNIMPLEMENTED an unknown method answers | `RpcServer`, `RpcGroup`, `RpcChannel::call`/`call_server_streaming`/`call_client_streaming`/`open_bidi` |
-| 08 | [`discovery`](08-discovery/) | Registries, round-robin / pick-first balancers, a watch + snapshot/restore round-trip, and a load-balanced channel across two instances | `InMemoryRegistry`, `PersistentRegistry`, `RoundRobin`, `Balancer`, `RpcCluster`, `LoadBalancedChannel` |
+| 08 | [`discovery`](08-discovery/) | moonsd's in-memory registry, the balancers, a `View` following a service, and a load-balanced zRPC channel over two instances | `Balancer`, `LoadBalancedChannel`, `View` |
 | 09 | [`shutdown`](09-shutdown/) | The graceful-shutdown gate draining in-flight calls while new ones come back Unavailable | `ShutdownCoordinator`, `RpcServer::dispatch_graceful` |
-| 10 | [`etcd`](10-etcd/) | The `etcdserverpb` messages round-tripping, and `EtcdDiscovery` / `EtcdClient` over an in-process mock etcd | `EtcdKeyValue`, `EtcdClient`, `EtcdDiscovery`, `etcd_prefix_end` |
-| 11 | [`consul`](11-consul/) | The consul driver's wire surface: the register body, the check id, and the `health/service` parser | `consul_register_body`, `consul_check_id`, `consul_parse_health`, `ConsulResponse` |
-| 12 | [`redis`](12-redis/) | The RESP codec: encode a command, decode every RESP2/RESP3 reply shape, stream pipelined replies, build discovery keys | `resp_command`, `RespValue::decode`, `RespReader`, `redis_instance_key` |
-| 14 | [`discov-file`](14-discov-file/) | The native `discov` driver over a real file: publish a snapshot, load it, and reload the Put/Delete diff | `@discov.persist_registry`, `@discov.FileRegistry::load`/`reload`/`resolver` |
+| 14 | [`discov-file`](14-discov-file/) | Discovery over a file: publish what a registry holds, resolve it from another handle | `publish`, `FileDiscovery` |
 
 ## Native-only examples
 
-`00-metrics`, `02-middleware`, `04-resilience-mw`, and `14-discov-file` are
-`supported_targets = "native"`. The first three await the async `AsgiApp` the
+`00-metrics`, `02-middleware`, `04-resilience-mw`, `08-discovery` and `14-discov-file`
+are `supported_targets = "native"`. The first three await the async `AsgiApp` the
 middleware wraps — driving the onion in-process records each request on its
 response path exactly as a live server would. `14-discov-file` reads and writes a
 real file through `moonbitlang/async`'s fs. The other examples run on every

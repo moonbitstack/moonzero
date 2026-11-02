@@ -1,11 +1,13 @@
-// The native discovery driver reads and writes a real file through
-// `moonbitlang/async`'s fs, so this example is native-only, like the driver.
+// The file backend reads a real file through `moonbitlang/async`'s fs, so this example is
+// native-only, like the package.
 supported_targets = "native"
 
 import {
   "moonbitstack/moonzero",
   "moonbitstack/moonzero/discov",
+  "moonbitstack/moonsd/memory",
   "moonbitlang/async",
+  "moonbitlang/async/fs",
 }
 
 pkgtype(kind: "executable")

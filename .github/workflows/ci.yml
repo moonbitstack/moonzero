@@ -62,9 +62,8 @@ jobs:
         run: |
           moon info --target all && git diff --exit-code
 
-  # The discovery drivers' real round trips run against live backends. redis speaks
-  # RESP over a socket; the native discov tests register, resolve, keep-alive, and
-  # deregister against it, gated on MOON_REDIS_TEST so the normal suite skips them.
+  # The path from registration to a load-balanced call against each real service, and the
+  # shared limiters against redis, gated on MOON_REDIS_TEST and its siblings.
   discovery:
     name: discovery drivers (native, live redis)
     runs-on: ubuntu-26.04
@@ -102,9 +101,7 @@ jobs:
         run: moon test --target native
 
   # consul's agent needs `agent -dev` arguments, so it is started with docker run
-  # rather than a service container; the native discov tests register a service with a
-  # TTL check, pass it, resolve the healthy set, and deregister, gated on
-  # MOON_CONSUL_TEST.
+  # rather than a service container.
   discovery-consul:
     name: discovery drivers (native, live consul)
     runs-on: ubuntu-26.04
@@ -127,7 +124,7 @@ jobs:
 
       - name: start consul (dev agent)
         run: |
-          docker run -d --name consul -p 8500:8500 hashicorp/consul:1.19 agent -dev -client 0.0.0.0
+          docker run -d --name consul -p 8500:8500 hashicorp/consul:1.20 agent -dev -client 0.0.0.0
 
       - name: wait for consul
         run: |
@@ -145,9 +142,6 @@ jobs:
           MOON_CONSUL_HOST: "127.0.0.1"
         run: moon test --target native
 
-  # etcd serves plaintext gRPC (h2c) on 2379; the native discov client drives real
-  # KV/Lease calls over moonrpc's socket channel to register, resolve, and deregister,
-  # gated on MOON_ETCD_TEST.
   discovery-etcd:
     name: discovery drivers (native, live etcd)
     runs-on: ubuntu-26.04

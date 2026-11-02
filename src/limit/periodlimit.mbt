@@ -94,8 +94,8 @@ pub let period_script : String =
 /// the first time it appears, so every replica pointed at the same redis and key draws
 /// on one quota instead of each getting its own.
 pub struct RedisPeriodLimit {
-  client : @redis.RedisClient
-  script : @redis.RedisScript
+  client : @moonredis.Client
+  script : @moonredis.Script
   period_secs : Int32
   quota : Int32
   prefix : String
@@ -105,14 +105,14 @@ pub struct RedisPeriodLimit {
 /// A limiter admitting `quota` requests per `period_secs` seconds per key, counting in
 /// `client`'s redis under `prefix`-prefixed keys.
 pub fn RedisPeriodLimit::new(
-  client : @redis.RedisClient,
+  client : @moonredis.Client,
   period_secs~ : Int32,
   quota~ : Int32,
   prefix~ : String = "",
 ) -> RedisPeriodLimit {
   {
     client,
-    script: @redis.RedisScript::new(period_script),
+    script: @moonredis.Script::new(period_script),
     period_secs,
     quota,
     prefix,
@@ -127,10 +127,10 @@ pub fn RedisPeriodLimit::new(
 pub async fn RedisPeriodLimit::take(
   self : RedisPeriodLimit,
   key : String,
-) -> PeriodResult raise @redis.RedisError {
-  let reply = self.script.run(self.client, [@utf8.encode(self.prefix + key)], [
-    @utf8.encode(self.quota.to_string()),
-    @utf8.encode(self.period_secs.to_string()),
+) -> PeriodResult raise @moonredis.RedisError {
+  let reply = self.script.run(self.client, [self.prefix + key], [
+    self.quota.to_string(),
+    self.period_secs.to_string(),
   ])
   match reply {
     Integer(code) =>
@@ -139,14 +139,11 @@ pub async fn RedisPeriodLimit::take(
         1 => PeriodAllowed
         2 => PeriodHitQuota
         _ =>
-          raise @redis.RedisError(
+          raise @moonredis.Protocol(
             "unknown period-limit code: " + code.to_string(),
           )
       }
-    other =>
-      raise @redis.RedisError(
-        "unexpected period-limit reply: " + @redis.resp_kind(other),
-      )
+    _ => raise @moonredis.Protocol("a period-limit reply that is not a number")
   }
 }
 

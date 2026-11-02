@@ -42,9 +42,7 @@ pub fn redis_period_limit(
     (scope, receive, send) => {
       match scope {
         Http(_) => {
-          let outcome = limiter.take(key) catch {
-            RedisError(_) => PeriodAllowed
-          }
+          let outcome = limiter.take(key) catch { _ => PeriodAllowed }
           match outcome {
             PeriodOverQuota =>
               for event in refusal.events() {

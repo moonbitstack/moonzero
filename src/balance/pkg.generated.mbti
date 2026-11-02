@@ -1,0 +1,46 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/moonzero/balance"
+
+import {
+  "moonbitstack/moonpool",
+  "moonbitstack/moonrpc/wire",
+  "moonbitstack/moonsd",
+  "moonbitstack/moonzero/zrpc",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub(all) enum Balancer {
+  RoundRobin(@moonpool.RoundRobin)
+  PickFirst
+  Weighted(@moonpool.Weighted)
+}
+pub fn Balancer::pick(Self, Array[@moonsd.Endpoint]) -> @moonsd.Endpoint?
+pub fn Balancer::round_robin() -> Self
+pub fn Balancer::weighted() -> Self
+
+pub struct LoadBalancedChannel {
+  resolve : (String) -> Array[@moonsd.Endpoint]
+  cluster : RpcCluster
+  balancer : Balancer
+  service : String
+}
+pub fn LoadBalancedChannel::call(Self, String, Bytes) -> Result[Bytes, @wire.Status] raise
+pub fn LoadBalancedChannel::call_bidi_streaming(Self, String, Array[Bytes]) -> Result[Array[Bytes], @wire.Status] raise
+pub fn LoadBalancedChannel::call_server_streaming(Self, String, Bytes) -> Result[Array[Bytes], @wire.Status] raise
+pub fn LoadBalancedChannel::new((String) -> Array[@moonsd.Endpoint], RpcCluster, String, balancer? : Balancer) -> Self
+
+pub struct RpcCluster {
+  servers : Map[String, @zrpc.RpcServer]
+}
+pub fn RpcCluster::add(Self, @moonsd.Endpoint, @zrpc.RpcServer) -> Unit
+pub fn RpcCluster::dial(Self, @moonsd.Endpoint) -> @zrpc.RpcChannel?
+pub fn RpcCluster::new() -> Self
+
+// Type aliases
+pub type Resolve = (String) -> Array[@moonsd.Endpoint]
+
+// Traits

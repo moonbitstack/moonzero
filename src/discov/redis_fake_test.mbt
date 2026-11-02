@@ -7,10 +7,6 @@
 // an async test.
 
 ///|
-/// A connection that is simply gone, so a limiter's fallback path can be exercised.
-suberror FakeDown
-
-///|
 /// A redis keyspace in a `Map`, with expiry against a clock the test advances by hand.
 /// `fails` cuts the connection; `evals` and `evalshas` count how each script call went
 /// out, which is how the `SCRIPT LOAD` / `EVALSHA` caching is observed.
@@ -54,9 +50,11 @@ fn FakeRedis::advance(self : FakeRedis, secs : Int64) -> Unit {
 }
 
 ///|
-impl @moonzero.RedisConn for FakeRedis with fn execute(self, args) {
-  guard !self.fails else { raise FakeDown }
-  self.run(args)
+impl @moonredis.RedisConn for FakeRedis with fn execute(self, args) {
+  guard !self.fails else { raise @moonredis.Connection("gone") }
+  self.run(args) catch {
+    e => raise @moonredis.Protocol("\{e}")
+  }
 }
 
 ///|
@@ -64,7 +62,7 @@ impl @moonzero.RedisConn for FakeRedis with fn execute(self, args) {
 fn FakeRedis::run(
   self : FakeRedis,
   args : Array[Bytes],
-) -> @moonzero.RespValue raise {
+) -> @resp.RespValue raise {
   guard args.length() > 0 else { return Error("empty command") }
   match text(args[0]) {
     "PING" => SimpleString("PONG")
@@ -129,7 +127,7 @@ fn FakeRedis::run(
     }
     "SCAN" => {
       let pattern = text(args[3])
-      let keys : Array[@moonzero.RespValue] = []
+      let keys : Array[@resp.RespValue] = []
       for k, _ in self.store {
         if glob_match(pattern, k) {
           keys.push(BulkString(@utf8.encode(k)))
@@ -173,7 +171,7 @@ fn FakeRedis::eval(
   source : String,
   keys : Array[Bytes],
   argv : Array[Bytes],
-) -> @moonzero.RespValue raise {
+) -> @resp.RespValue raise {
   if source == @moonzero.period_script {
     self.eval_period(keys, argv)
   } else if source == @moonzero.token_script {
@@ -190,7 +188,7 @@ fn FakeRedis::eval_period(
   self : FakeRedis,
   keys : Array[Bytes],
   argv : Array[Bytes],
-) -> @moonzero.RespValue raise {
+) -> @resp.RespValue raise {
   let limit = int_of(argv[0])
   let window = argv[1]
   let current = match self.run([b"INCRBY", keys[0], b"1"]) {
@@ -217,7 +215,7 @@ fn FakeRedis::eval_token(
   self : FakeRedis,
   keys : Array[Bytes],
   argv : Array[Bytes],
-) -> @moonzero.RespValue raise {
+) -> @resp.RespValue raise {
   let rate = num_of(argv[0])
   let capacity = num_of(argv[1])
   let now = num_of(argv[2])
@@ -331,66 +329,4 @@ fn glob_match(pattern : String, s : String) -> Bool {
     pi += 1
   }
   pi == np
-}
-
-///|
-async test "redis discovery: register two instances, resolve both, then deregister" {
-  let disc = @moonzero.RedisDiscovery::new(
-    @moonzero.RedisClient::new(FakeRedis::new()),
-  )
-  // Two instances of one service coexist under distinct per-address keys.
-  let _ = disc.register("greeter", @moonzero.Endpoint::new("10.0.0.1", 9090))
-  let _ = disc.register("greeter", @moonzero.Endpoint::new("10.0.0.2", 9090))
-  let eps = disc.resolve("greeter")
-  assert_eq(eps.length(), 2)
-  let addrs = eps.map(e => e.address())
-  assert_eq(addrs.contains("10.0.0.1:9090"), true)
-  assert_eq(addrs.contains("10.0.0.2:9090"), true)
-  // An unregistered service resolves to nothing.
-  assert_eq(disc.resolve("other").length(), 0)
-  // A service whose name is a prefix of another does not bleed across the `/` boundary.
-  let _ = disc.register("greet", @moonzero.Endpoint::new("10.0.0.9", 7000))
-  assert_eq(disc.resolve("greeter").length(), 2)
-  assert_eq(disc.resolve("greet").length(), 1)
-  // The Resolve interface value the balancer consumes sees the last resolved set.
-  assert_eq(disc.resolver()("greeter").length(), 2)
-  // A keep-alive on a live instance succeeds; on a gone one it reports lapsed.
-  assert_eq(
-    disc.keepalive("greeter", @moonzero.Endpoint::new("10.0.0.1", 9090)),
-    true,
-  )
-  assert_eq(
-    disc.keepalive("greeter", @moonzero.Endpoint::new("10.0.0.7", 9090)),
-    false,
-  )
-  // Deregistering one instance leaves the other; deregistering the service clears it.
-  disc.deregister_instance("greeter", @moonzero.Endpoint::new("10.0.0.1", 9090))
-  assert_eq(disc.resolve("greeter").length(), 1)
-  disc.deregister("greeter")
-  assert_eq(disc.resolve("greeter").length(), 0)
-}
-
-///|
-async test "redis discovery: PING and RESP command encoding round-trip" {
-  let client = @moonzero.RedisClient::new(FakeRedis::new())
-  assert_eq(client.ping(), "PONG")
-  // SET then GET returns the stored bytes; a missing key is None.
-  client.set_ex(b"k", b"v", 30)
-  assert_eq(client.get(b"k"), Some(b"v"))
-  assert_eq(client.get(b"absent"), None)
-  assert_eq(client.del([b"k"]), 1)
-  assert_eq(client.get(b"k"), None)
-}
-
-///|
-/// A registered key is held by a lease, so it has to go when the lease does.
-async test "redis discovery: a registration lapses when its TTL runs out" {
-  let redis = FakeRedis::new()
-  let disc = @moonzero.RedisDiscovery::new(@moonzero.RedisClient::new(redis))
-  let ep = @moonzero.Endpoint::new("10.0.0.1", 9090)
-  let _ = disc.register("greeter", ep, ttl=10)
-  assert_eq(disc.resolve("greeter").length(), 1)
-  redis.advance(11L)
-  assert_eq(disc.resolve("greeter").length(), 0)
-  assert_eq(disc.keepalive("greeter", ep), false)
 }
