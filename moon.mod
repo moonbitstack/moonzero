@@ -1,6 +1,6 @@
 name = "moonbitstack/moonzero"
 
-version = "0.14.4"
+version = "0.14.5"
 
 readme = "README.md"
 
@@ -11,9 +11,25 @@ license = "Apache-2.0"
 keywords = [
   "go-zero",
   "microservice",
-  "server",
+  "microservices",
+  "service-framework",
+  "framework",
+  "rest",
+  "rpc",
+  "zrpc",
+  "grpc",
   "middleware",
+  "circuit-breaker",
+  "rate-limit",
+  "load-shedding",
+  "load-balancing",
+  "service-discovery",
+  "metrics",
+  "tracing",
+  "logging",
+  "config",
   "moonapi",
+  "server",
   "moonbit",
 ]
 
