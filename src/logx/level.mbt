@@ -1,12 +1,13 @@
 ///|
 /// Log verbosity (← go-zero's `LogConf.Level`), ordered from most to least
 /// verbose. `Compare` follows that order so thresholds can be tested directly.
+#derive(Eq, Compare, Debug)
 pub(all) enum LogLevel {
   Debug
   Info
   Error
   Severe
-} derive(Eq, Compare, Debug)
+}
 
 ///|
 /// The canonical lowercase name go-zero uses on the wire.

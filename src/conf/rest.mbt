@@ -2,6 +2,7 @@
 /// Which of go-zero's built-in layers the engine installs (← `MiddlewaresConf`).
 /// Every flag defaults to `true`, so an `etc/*.yaml` that says nothing about
 /// middleware still gets the whole chain.
+#derive(Eq, Debug)
 pub(all) struct MiddlewaresConf {
   trace : Bool
   log : Bool
@@ -14,7 +15,7 @@ pub(all) struct MiddlewaresConf {
   metrics : Bool
   max_bytes : Bool
   gunzip : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 /// The full chain, which is what go-zero defaults to.
@@ -49,10 +50,11 @@ pub fn MiddlewaresConf::new(
 ///|
 /// One signing key the request-signature check would verify against (←
 /// `rest.PrivateKeyConf`).
+#derive(Eq, Debug)
 pub(all) struct PrivateKeyConf {
   fingerprint : String
   key_file : String
-} derive(Eq, Debug)
+}
 
 ///|
 /// Request-signature settings (← `rest.SignatureConf`): whether an unsigned or
@@ -62,11 +64,12 @@ pub(all) struct PrivateKeyConf {
 /// moonzero loads and validates this config — a strict service with no keys is
 /// refused at assembly, as go-zero's `ErrSignatureConfig` does — but ships no
 /// content-signature layer to consume it.
+#derive(Eq, Debug)
 pub(all) struct SignatureConf {
   strict : Bool
   expiry_ms : Int64
   private_keys : Array[PrivateKeyConf]
-} derive(Eq, Debug)
+}
 
 ///|
 /// Signature settings that verify nothing: not strict, go-zero's one-hour

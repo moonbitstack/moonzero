@@ -2,6 +2,7 @@
 package "moonbitstack/moonzero/rest/handler"
 
 import {
+  "moonbitlang/core/json",
   "moonbitstack/moonapi",
   "moonbitstack/moonapi/ctx",
   "moonbitstack/moonasgi/http",
@@ -24,9 +25,9 @@ pub fn cors(CorsConf) -> (async (@spec.Scope, async () -> @spec.Event, async (@s
 
 pub fn jwt_authorized(String?, String, Int64) -> Bool
 
-pub fn jwt_sign(Map[String, Json], String, typ? : String?, extra? : Map[String, Json], wins? : @jwt.Wins, clash? : @jwt.OnClash[Map[String, Json]]) -> String
+pub fn jwt_sign(Map[String, @json.Json], String, typ? : String?, extra? : Map[String, @json.Json], wins? : @jwt.Wins, clash? : @jwt.OnClash[Map[String, @json.Json]]) -> String
 
-pub fn jwt_verify(String, String, Int64, policy? : @jwt.Policy) -> Map[String, Json] raise @jwt.Refused
+pub fn jwt_verify(String, String, Int64, policy? : @jwt.Policy) -> Map[String, @json.Json] raise @jwt.Refused
 
 pub fn logging(async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
@@ -101,9 +102,9 @@ pub(all) struct RequestLog {
   client_ip : String
   user_agent : String
 }
-pub fn RequestLog::fields(Self) -> Array[(String, Json)]
+pub fn RequestLog::fields(Self) -> Array[(String, @json.Json)]
 pub fn RequestLog::render(Self) -> String
-pub fn RequestLog::to_json(Self) -> Json
+pub fn RequestLog::to_json(Self) -> @json.Json
 
 // Type aliases
 pub type Middleware = (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit

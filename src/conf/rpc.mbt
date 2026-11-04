@@ -3,12 +3,13 @@
 /// name, the address it listens on, and a per-call timeout in milliseconds
 /// (`0` disables it). The registry/etcd fields of go-zero's conf are modelled by
 /// the separate discovery layer; this is the transport-facing core.
+#derive(FromJson, Eq, Debug)
 pub(all) struct RpcServerConf {
   name : String
   host : String
   port : Int32
   timeout_ms : Int32
-} derive(FromJson, Eq, Debug)
+}
 
 ///|
 /// Build an RPC server config with go-zero-style defaults (`0.0.0.0:8080`, 2s

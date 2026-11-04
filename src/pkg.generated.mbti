@@ -2,6 +2,7 @@
 package "moonbitstack/moonzero"
 
 import {
+  "moonbitlang/core/json",
   "moonbitstack/moonapi",
   "moonbitstack/moonapi/ctx",
   "moonbitstack/moonasgi/http",
@@ -50,9 +51,9 @@ pub async fn hold(&@moonsd.Registrar, String, @moonsd.Endpoint, ttl? : Int32, re
 
 pub fn jwt_authorized(String?, String, Int64) -> Bool
 
-pub fn jwt_sign(Map[String, Json], String, typ? : String?, extra? : Map[String, Json], wins? : @jwt.Wins, clash? : @jwt.OnClash[Map[String, Json]]) -> String
+pub fn jwt_sign(Map[String, @json.Json], String, typ? : String?, extra? : Map[String, @json.Json], wins? : @jwt.Wins, clash? : @jwt.OnClash[Map[String, @json.Json]]) -> String
 
-pub fn jwt_verify(String, String, Int64, policy? : @jwt.Policy) -> Map[String, Json] raise @jwt.Refused
+pub fn jwt_verify(String, String, Int64, policy? : @jwt.Policy) -> Map[String, @json.Json] raise @jwt.Refused
 
 pub fn level_name(@moonlog.Level) -> String
 

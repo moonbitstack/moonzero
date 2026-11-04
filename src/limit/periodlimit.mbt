@@ -2,11 +2,12 @@
 /// The outcome of a `PeriodLimit.take` (← go-zero's period-limit result codes): a
 /// request within quota, the one that reaches it exactly (still admitted), or one
 /// beyond it (rejected).
+#derive(Eq, Debug)
 pub(all) enum PeriodResult {
   PeriodAllowed
   PeriodHitQuota
   PeriodOverQuota
-} derive(Eq, Debug)
+}
 
 ///|
 /// A fixed-window rate limiter kept in this process: each key may make up to `quota`

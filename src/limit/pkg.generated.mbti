@@ -33,11 +33,12 @@ pub struct PeriodLimit {
 pub fn PeriodLimit::new(period_secs~ : Int32, quota~ : Int32, align? : Bool) -> Self
 pub fn PeriodLimit::take(Self, String, Int64) -> PeriodResult
 
+#derive(Eq, @debug.Debug)
 pub(all) enum PeriodResult {
   PeriodAllowed
   PeriodHitQuota
   PeriodOverQuota
-} derive(Eq, @debug.Debug)
+}
 pub fn PeriodResult::equal(Self, Self) -> Bool
 pub fn PeriodResult::not_equal(Self, Self) -> Bool
 pub fn PeriodResult::to_repr(Self) -> @debug.Repr

@@ -21,9 +21,9 @@ pub(all) suberror ConfigError {
 
 // Types and methods
 pub struct Conf {
-  root : Map[String, Json]
+  root : Map[String, @json.Json]
 }
-pub fn Conf::at(Self, String) -> Json?
+pub fn Conf::at(Self, String) -> @json.Json?
 pub fn Conf::bool(Self, String, default? : Bool, env? : String, also? : Array[String]) -> Bool raise ConfigError
 pub fn Conf::int(Self, String, default? : Int32, range? : String, env? : String, also? : Array[String]) -> Int32 raise ConfigError
 pub fn Conf::int64(Self, String, default? : Int64, range? : String, env? : String, also? : Array[String]) -> Int64 raise ConfigError
@@ -33,6 +33,7 @@ pub fn Conf::of_yaml(String) -> Self raise ConfigError
 pub fn Conf::string(Self, String, default? : String, options? : Array[String], env? : String, also? : Array[String]) -> String raise ConfigError
 pub fn Conf::strings(Self, String, default? : Array[String], env? : String, also? : Array[String]) -> Array[String] raise ConfigError
 
+#derive(Eq, @debug.Debug)
 pub(all) struct MiddlewaresConf {
   trace : Bool
   log : Bool
@@ -45,16 +46,17 @@ pub(all) struct MiddlewaresConf {
   metrics : Bool
   max_bytes : Bool
   gunzip : Bool
-} derive(Eq, @debug.Debug)
+}
 pub fn MiddlewaresConf::equal(Self, Self) -> Bool
 pub fn MiddlewaresConf::new(trace? : Bool, log? : Bool, prometheus? : Bool, max_conns? : Bool, breaker? : Bool, shedding? : Bool, timeout? : Bool, recover? : Bool, metrics? : Bool, max_bytes? : Bool, gunzip? : Bool) -> Self
 pub fn MiddlewaresConf::not_equal(Self, Self) -> Bool
 pub fn MiddlewaresConf::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct PrivateKeyConf {
   fingerprint : String
   key_file : String
-} derive(Eq, @debug.Debug)
+}
 pub fn PrivateKeyConf::equal(Self, Self) -> Bool
 pub fn PrivateKeyConf::not_equal(Self, Self) -> Bool
 pub fn PrivateKeyConf::to_repr(Self) -> @debug.Repr
@@ -79,12 +81,13 @@ pub fn RestConf::port(Self) -> Int32
 pub fn RestConf::timeout_ms(Self) -> Int32
 pub fn RestConf::tls(Self) -> Bool
 
+#derive(Eq, @debug.Debug, @json.FromJson)
 pub(all) struct RpcServerConf {
   name : String
   host : String
   port : Int32
   timeout_ms : Int32
-} derive(Eq, @debug.Debug, @json.FromJson)
+}
 pub fn RpcServerConf::equal(Self, Self) -> Bool
 pub fn RpcServerConf::from_json(String) -> Self raise ConfigError
 pub fn RpcServerConf::from_yaml(String) -> Self raise ConfigError
@@ -92,24 +95,26 @@ pub fn RpcServerConf::new(name? : String, host? : String, port? : Int32, timeout
 pub fn RpcServerConf::not_equal(Self, Self) -> Bool
 pub fn RpcServerConf::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @json.FromJson)
 pub(all) struct ServiceConf {
   name : String
   host : String
   port : Int32
   timeout_ms : Int32
   log_level : @logx.LogLevel
-} derive(Eq, @json.FromJson)
+}
 pub fn ServiceConf::equal(Self, Self) -> Bool
 pub fn ServiceConf::from_json(String) -> Self raise ConfigError
 pub fn ServiceConf::from_yaml(String) -> Self raise ConfigError
 pub fn ServiceConf::new(name? : String, host? : String, port? : Int32, timeout_ms? : Int32, log_level? : @logx.LogLevel) -> Self
 pub fn ServiceConf::not_equal(Self, Self) -> Bool
 
+#derive(Eq, @debug.Debug)
 pub(all) struct SignatureConf {
   strict : Bool
   expiry_ms : Int64
   private_keys : Array[PrivateKeyConf]
-} derive(Eq, @debug.Debug)
+}
 pub fn SignatureConf::equal(Self, Self) -> Bool
 pub fn SignatureConf::new(strict? : Bool, expiry_ms? : Int64, private_keys? : Array[PrivateKeyConf]) -> Self
 pub fn SignatureConf::not_equal(Self, Self) -> Bool

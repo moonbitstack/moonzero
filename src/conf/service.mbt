@@ -2,13 +2,14 @@
 /// Service configuration (← go-zero's `ServiceConf`): the service name, its bind
 /// address, a request timeout, and the log level. `timeout_ms` is the per-request
 /// budget in milliseconds; `0` disables the deadline.
+#derive(FromJson, Eq)
 pub(all) struct ServiceConf {
   name : String
   host : String
   port : Int32
   timeout_ms : Int32
   log_level : @logx.LogLevel
-} derive(FromJson, Eq)
+}
 
 ///|
 /// Build a config with sensible defaults (`0.0.0.0:12000`, 3s timeout, `info`).
