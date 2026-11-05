@@ -28,9 +28,10 @@ pub using @handler {
   default_latency_buckets,
   exposition_content_type,
   trace_id_of,
-  trace_clock,
-  tracer,
 }
+
+///|
+pub using @telemetry {tracer, trace_clock}
 
 ///|
 pub using @breaker {type Breaker, type Promise, type Unavailable}
@@ -43,6 +44,9 @@ pub using @conf {
   type Conf,
   type Refused,
   type MiddlewaresConf,
+  type RpcClientConf,
+  type RpcClientMiddlewaresConf,
+  type RpcServerMiddlewaresConf,
   type PrivateKeyConf,
   type RestConf,
   type RpcServerConf,
@@ -58,12 +62,38 @@ pub using @zrpc {
   type BidiCall,
   type BidiStreamFactory,
   type BidiStreamHandler,
+  type Call,
+  type ClientDeps,
   type ClientStreamHandler,
+  type Interceptor,
+  type Invoker,
+  type MethodTimeout,
   type RpcChannel,
   type RpcGroup,
   type RpcHandler,
+  type RpcMetrics,
   type RpcServer,
+  type ServerDeps,
   type ServerStreamHandler,
+  type StatConf,
+  chain,
+  client_breaker,
+  client_duration,
+  client_interceptors,
+  client_prometheus,
+  client_timeout,
+  client_tracing,
+  server_auth,
+  server_breaker,
+  server_interceptors,
+  server_prometheus,
+  server_recover,
+  server_shedding,
+  server_stat,
+  server_timeout,
+  server_tracing,
+  status_code,
+  status_name,
   status_of_code,
 }
 

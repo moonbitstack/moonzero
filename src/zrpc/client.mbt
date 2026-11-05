@@ -106,6 +106,7 @@ pub struct RpcChannel {
   decoder : @hpack.Decoder
   authority : String
   mut next_stream_id : Int32
+  interceptors : Array[Interceptor]
 }
 
 ///|
@@ -123,10 +124,53 @@ pub fn RpcChannel::connect(
     decoder: @hpack.Decoder::new(),
     authority,
     next_stream_id: 1,
+    interceptors: [],
   }
   // Client connection preface SETTINGS; the ack is consumed and discarded.
   let _ = engine.feed(Settings(params=[], ack=false))
   ch
+}
+
+///|
+/// A channel with `interceptors` as its client chain, outermost first.
+pub fn RpcChannel::with_interceptors(
+  self : RpcChannel,
+  interceptors : Array[Interceptor],
+) -> RpcChannel {
+  {
+    engine: self.engine,
+    encoder: self.encoder,
+    decoder: self.decoder,
+    authority: self.authority,
+    next_stream_id: self.next_stream_id,
+    interceptors,
+  }
+}
+
+///|
+/// The interceptors this channel's unary calls run through, outermost first.
+pub fn RpcChannel::interceptors(self : RpcChannel) -> Array[Interceptor] {
+  self.interceptors
+}
+
+///|
+/// Invoke `path` through the client interceptor chain. The chain sees every
+/// failure the transport reports, including an unknown method, and can refuse a
+/// call before it reaches the wire.
+pub fn RpcChannel::call_through(
+  self : RpcChannel,
+  path : String,
+  request : Bytes,
+  parent? : @trace.TraceContext,
+) -> Result[Bytes, @moonrpc.Status] {
+  let base : Invoker = call => {
+    self.call(call.path, call.request) catch {
+      _ => Err(internal_status())
+    }
+  }
+  chain(self.interceptors, base)({ path, request, parent, }) catch {
+    _ => Err(internal_status())
+  }
 }
 
 ///|

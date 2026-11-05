@@ -33,6 +33,20 @@ pub fn breaker(@breaker.Breaker, refusal? : @handler.Refusal) -> (async (@spec.S
 
 pub fn canonical_key(String) -> String
 
+pub fn chain(Array[((@zrpc.Call) -> Result[Bytes, @wire.Status] raise) -> (@zrpc.Call) -> Result[Bytes, @wire.Status] raise], (@zrpc.Call) -> Result[Bytes, @wire.Status] raise) -> (@zrpc.Call) -> Result[Bytes, @wire.Status] raise
+
+pub fn client_breaker(@breaker.Breaker) -> ((@zrpc.Call) -> Result[Bytes, @wire.Status] raise) -> (@zrpc.Call) -> Result[Bytes, @wire.Status] raise
+
+pub fn client_duration(@clock.Clock, logger? : @logx.Logger, slow_ms? : Int64, mute? : Array[String]) -> ((@zrpc.Call) -> Result[Bytes, @wire.Status] raise) -> (@zrpc.Call) -> Result[Bytes, @wire.Status] raise
+
+pub fn client_interceptors(@conf.RpcClientMiddlewaresConf, @zrpc.ClientDeps) -> Array[((@zrpc.Call) -> Result[Bytes, @wire.Status] raise) -> (@zrpc.Call) -> Result[Bytes, @wire.Status] raise]
+
+pub fn client_prometheus(@zrpc.RpcMetrics, @clock.Clock) -> ((@zrpc.Call) -> Result[Bytes, @wire.Status] raise) -> (@zrpc.Call) -> Result[Bytes, @wire.Status] raise
+
+pub fn client_timeout(Int64, @clock.Clock) -> ((@zrpc.Call) -> Result[Bytes, @wire.Status] raise) -> (@zrpc.Call) -> Result[Bytes, @wire.Status] raise
+
+pub fn client_tracing(@trace.Tracer, now? : () -> Int64) -> ((@zrpc.Call) -> Result[Bytes, @wire.Status] raise) -> (@zrpc.Call) -> Result[Bytes, @wire.Status] raise
+
 pub fn content_security(@handler.SignatureVerifier, @clock.Clock, header? : String) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
 pub fn cors(@handler.CorsConf) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
@@ -103,6 +117,24 @@ pub fn request_id(header? : String) -> (async (@spec.Scope, async () -> @spec.Ev
 
 pub let rpc_port : Int32
 
+pub fn server_auth(&@zrpc.Authenticator) -> ((@zrpc.Call) -> Result[Bytes, @wire.Status] raise) -> (@zrpc.Call) -> Result[Bytes, @wire.Status] raise
+
+pub fn server_breaker(@breaker.Breaker) -> ((@zrpc.Call) -> Result[Bytes, @wire.Status] raise) -> (@zrpc.Call) -> Result[Bytes, @wire.Status] raise
+
+pub fn server_interceptors(@conf.RpcServerMiddlewaresConf, @zrpc.ServerDeps) -> Array[((@zrpc.Call) -> Result[Bytes, @wire.Status] raise) -> (@zrpc.Call) -> Result[Bytes, @wire.Status] raise]
+
+pub fn server_prometheus(@zrpc.RpcMetrics, @clock.Clock) -> ((@zrpc.Call) -> Result[Bytes, @wire.Status] raise) -> (@zrpc.Call) -> Result[Bytes, @wire.Status] raise
+
+pub fn server_recover(logger? : @logx.Logger) -> ((@zrpc.Call) -> Result[Bytes, @wire.Status] raise) -> (@zrpc.Call) -> Result[Bytes, @wire.Status] raise
+
+pub fn server_shedding(@shedder.Shedder) -> ((@zrpc.Call) -> Result[Bytes, @wire.Status] raise) -> (@zrpc.Call) -> Result[Bytes, @wire.Status] raise
+
+pub fn server_stat(@clock.Clock, conf? : @zrpc.StatConf, logger? : @logx.Logger) -> ((@zrpc.Call) -> Result[Bytes, @wire.Status] raise) -> (@zrpc.Call) -> Result[Bytes, @wire.Status] raise
+
+pub fn server_timeout(Int64, @clock.Clock, methods? : Array[@zrpc.MethodTimeout]) -> ((@zrpc.Call) -> Result[Bytes, @wire.Status] raise) -> (@zrpc.Call) -> Result[Bytes, @wire.Status] raise
+
+pub fn server_tracing(@trace.Tracer, now? : () -> Int64) -> ((@zrpc.Call) -> Result[Bytes, @wire.Status] raise) -> (@zrpc.Call) -> Result[Bytes, @wire.Status] raise
+
 pub fn set_log_level(@logx.LogLevel) -> Unit
 
 pub fn set_log_sink(&@moonlog.Sink) -> Unit
@@ -112,6 +144,10 @@ pub fn set_log_writer((String) -> Unit) -> Unit
 pub fn shedding(@shedder.Shedder, refusal? : @handler.Refusal) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
 pub let stamp_key : String
+
+pub fn status_code(@wire.Status) -> Int32
+
+pub fn status_name(@wire.Status) -> String
 
 pub fn status_of_code(Int32) -> @wire.Status
 
@@ -154,6 +190,10 @@ pub using @zrpc {type BidiStreamHandler}
 
 pub using @breaker {type Breaker}
 
+pub using @zrpc {type Call}
+
+pub using @zrpc {type ClientDeps}
+
 pub type ClientStreamHandler = (Array[Bytes]) -> Bytes
 
 pub using @clock {type Clock}
@@ -170,6 +210,10 @@ pub using @handler {type Files}
 
 pub using @rest {type Group}
 
+pub type Interceptor = ((@zrpc.Call) -> Result[Bytes, @wire.Status] raise) -> (@zrpc.Call) -> Result[Bytes, @wire.Status] raise
+
+pub type Invoker = (@zrpc.Call) -> Result[Bytes, @wire.Status] raise
+
 pub using @rest {type JwtRoute}
 
 pub using @rest {type Layer}
@@ -185,6 +229,8 @@ pub using @logx {type Logger}
 pub using @clock {type ManualClock}
 
 pub using @limit {type MaxConns}
+
+pub using @zrpc {type MethodTimeout}
 
 pub type Middleware = (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
@@ -218,17 +264,27 @@ pub using @rest {type RouteOptions}
 
 pub using @zrpc {type RpcChannel}
 
+pub using @conf {type RpcClientConf}
+
+pub using @conf {type RpcClientMiddlewaresConf}
+
 pub using @balance {type RpcCluster}
 
 pub using @zrpc {type RpcGroup}
 
 pub type RpcHandler = (Bytes) -> Bytes
 
+pub using @zrpc {type RpcMetrics}
+
 pub using @zrpc {type RpcServer}
 
 pub using @conf {type RpcServerConf}
 
+pub using @conf {type RpcServerMiddlewaresConf}
+
 pub using @rest {type Server}
+
+pub using @zrpc {type ServerDeps}
 
 pub using @handler {type ServerMetrics}
 
@@ -247,6 +303,8 @@ pub using @handler {type SignatureInput}
 pub using @handler {type SignatureKey}
 
 pub using @handler {type SignatureVerifier}
+
+pub using @zrpc {type StatConf}
 
 pub using @shedder {type Ticket}
 

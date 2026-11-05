@@ -4,6 +4,7 @@ import {
   "moonbitstack/moonzero/clock",
   "moonbitstack/moonzero/proc",
   "moonbitstack/moonzero/logx",
+  "moonbitstack/moonzero/telemetry",
   "moonbitstack/moonzero/breaker",
   "moonbitstack/moonzero/shedder",
   "moonbitstack/moonzero/conf",

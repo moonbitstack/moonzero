@@ -5,6 +5,8 @@ import {
   "moonbitstack/moonrpc",
   "moonbitstack/moonsd",
   "moonbitstack/moonpool",
+  "moonbitstack/moonzero/clock",
+  "moonbitlang/core/math",
 }
 
 import {

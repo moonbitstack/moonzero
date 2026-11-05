@@ -61,7 +61,7 @@ pub fn RestEngine::new(
       }
   }
   let recorder = @trace.Recorder::new()
-  let tracer = tracer.unwrap_or(@handler.tracer(sink=recorder))
+  let tracer = tracer.unwrap_or(@telemetry.tracer(sink=recorder))
   let priority_threshold = (conf.cpu_threshold + 1000L) >> 1
   {
     conf,

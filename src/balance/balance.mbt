@@ -10,6 +10,8 @@ pub(all) enum Balancer {
   RoundRobin(@moonpool.RoundRobin)
   PickFirst
   Weighted(@moonpool.Weighted)
+  /// Power of two choices over each instance's measured load.
+  P2c(P2c)
 }
 
 ///|
@@ -25,17 +27,47 @@ pub fn Balancer::weighted() -> Balancer {
 }
 
 ///|
+/// Power-of-two-choices over measured load.
+pub fn Balancer::p2c(
+  clock~ : @clock.Clock = @clock.Clock::system(),
+  conf~ : P2cConf = p2c_default,
+) -> Balancer {
+  P2c(P2c::new(clock~, conf~))
+}
+
+///|
 /// One of `endpoints`, or `None` if there is nothing to choose.
 pub fn Balancer::pick(
   self : Balancer,
   endpoints : Array[@moonsd.Endpoint],
 ) -> @moonsd.Endpoint? {
-  let at = match self {
-    RoundRobin(turns) => turns.pick(endpoints.length())
-    PickFirst => if endpoints.is_empty() { -1 } else { 0 }
-    Weighted(shares) => shares.pick(endpoints.map(e => (e.id, e.weight)))
+  match self {
+    P2c(picker) => picker.pick(endpoints)
+    _ => {
+      let at = match self {
+        RoundRobin(turns) => turns.pick(endpoints.length())
+        PickFirst => if endpoints.is_empty() { -1 } else { 0 }
+        Weighted(shares) => shares.pick(endpoints.map(e => (e.id, e.weight)))
+        P2c(_) => 0
+      }
+      endpoints.get(at)
+    }
   }
-  endpoints.get(at)
+}
+
+///|
+/// Report how a call to `endpoint` ended, so a load-aware balancer can move its
+/// numbers. Balancers that choose without feedback ignore it.
+pub fn Balancer::report(
+  self : Balancer,
+  endpoint : @moonsd.Endpoint,
+  started_ms : Int64,
+  ok : Bool,
+) -> Unit {
+  match self {
+    P2c(picker) => picker.done(endpoint, started_ms, ok)
+    _ => ()
+  }
 }
 
 ///|
@@ -89,6 +121,7 @@ pub struct LoadBalancedChannel {
   cluster : RpcCluster
   balancer : Balancer
   service : String
+  clock : @clock.Clock
 }
 
 ///|
@@ -99,8 +132,16 @@ pub fn LoadBalancedChannel::new(
   cluster : RpcCluster,
   service : String,
   balancer~ : Balancer = Balancer::round_robin(),
+  clock~ : @clock.Clock = @clock.Clock::system(),
 ) -> LoadBalancedChannel {
-  { resolve, cluster, balancer, service, }
+  { resolve, cluster, balancer, service, clock, }
+}
+
+///|
+/// The balancer this channel chooses with, so a caller can read a load-aware
+/// picker's numbers.
+pub fn LoadBalancedChannel::balancer(self : LoadBalancedChannel) -> Balancer {
+  self.balancer
 }
 
 ///|
@@ -110,13 +151,13 @@ pub fn LoadBalancedChannel::new(
 /// no subchannel is ready.
 fn LoadBalancedChannel::pick_channel(
   self : LoadBalancedChannel,
-) -> Result[@zrpc.RpcChannel, @moonrpc.Status] {
+) -> Result[(@moonsd.Endpoint, @zrpc.RpcChannel), @moonrpc.Status] {
   let endpoints = (self.resolve)(self.service)
   match self.balancer.pick(endpoints) {
     None => Err(@moonrpc.Status::Unavailable)
     Some(endpoint) =>
       match self.cluster.dial(endpoint) {
-        Some(channel) => Ok(channel)
+        Some(channel) => Ok((endpoint, channel))
         None => Err(@moonrpc.Status::Unavailable)
       }
   }
@@ -129,8 +170,13 @@ pub fn LoadBalancedChannel::call(
   path : String,
   request : Bytes,
 ) -> Result[Bytes, @moonrpc.Status] raise {
+  let started = self.clock.now()
   match self.pick_channel() {
-    Ok(channel) => channel.call(path, request)
+    Ok((endpoint, channel)) => {
+      let outcome = channel.call(path, request)
+      self.balancer.report(endpoint, started, outcome is Ok(_))
+      outcome
+    }
     Err(status) => Err(status)
   }
 }
@@ -144,7 +190,7 @@ pub fn LoadBalancedChannel::call_server_streaming(
   request : Bytes,
 ) -> Result[Array[Bytes], @moonrpc.Status] raise {
   match self.pick_channel() {
-    Ok(channel) => channel.call_server_streaming(path, request)
+    Ok((_, channel)) => channel.call_server_streaming(path, request)
     Err(status) => Err(status)
   }
 }
@@ -158,7 +204,7 @@ pub fn LoadBalancedChannel::call_bidi_streaming(
   requests : Array[Bytes],
 ) -> Result[Array[Bytes], @moonrpc.Status] raise {
   match self.pick_channel() {
-    Ok(channel) => channel.call_bidi_streaming(path, requests)
+    Ok((_, channel)) => channel.call_bidi_streaming(path, requests)
     Err(status) => Err(status)
   }
 }

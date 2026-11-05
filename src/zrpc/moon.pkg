@@ -1,10 +1,24 @@
-// zRPC (go-zero's zrpc) on moonrpc: the server with its method table and the
-// client channel.
+// zRPC (go-zero's zrpc) on moonrpc: the server with its method table, the client
+// channel, the interceptor chain both halves run calls through, and the per-method
+// metrics.
 import {
   "moonbitstack/moonzero/proc",
   "moonbitstack/moonzero/conf",
+  "moonbitstack/moonzero/clock",
+  "moonbitstack/moonzero/logx",
+  "moonbitstack/moonzero/breaker",
+  "moonbitstack/moonzero/shedder",
+  "moonbitstack/moonzero/telemetry",
   "moonbitstack/moonhttp/http2",
   "moonbitstack/moonrpc",
   "moonbitstack/moonhttp/header",
   "moonbitstack/moonhttp/hpack",
+  "moonbitstack/moonp8s",
+  "moonbitstack/moonp8s/metric",
+  "moonbitstack/moontel/trace",
 }
+
+import {
+  "moonbitstack/moonlog",
+  "moonbitlang/core/encoding/utf8",
+} for "wbtest"

@@ -1,0 +1,22 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/moonzero/telemetry"
+
+import {
+  "moonbitstack/moonseed",
+  "moonbitstack/moontel/trace",
+}
+
+// Values
+pub fn trace_clock() -> () -> Int64
+
+pub fn trace_random(Int32) -> Bytes raise @moonseed.Unavailable
+
+pub fn tracer(sink? : &@trace.Sink, sampler? : &@trace.Sampler, limits? : @trace.Limits) -> @trace.Tracer
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits

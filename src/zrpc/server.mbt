@@ -50,6 +50,7 @@ pub struct RpcServer {
   server_streaming : Map[String, ServerStreamHandler]
   client_streaming : Map[String, ClientStreamHandler]
   bidi_streaming : Map[String, BidiStreamFactory]
+  interceptors : Array[Interceptor]
 }
 
 ///|
@@ -61,6 +62,69 @@ pub fn RpcServer::new(conf : @conf.RpcServerConf) -> RpcServer {
     server_streaming: Map([]),
     client_streaming: Map([]),
     bidi_streaming: Map([]),
+    interceptors: [],
+  }
+}
+
+///|
+/// A server whose unary calls run through `interceptors`, outermost first.
+pub fn RpcServer::with_interceptors(
+  self : RpcServer,
+  interceptors : Array[Interceptor],
+) -> RpcServer {
+  {
+    conf: self.conf,
+    handlers: self.handlers,
+    server_streaming: self.server_streaming,
+    client_streaming: self.client_streaming,
+    bidi_streaming: self.bidi_streaming,
+    interceptors,
+  }
+}
+
+///|
+/// A server with `interceptor` added at the front of the chain, so the layers are
+/// named from the outermost in.
+pub fn RpcServer::use_(
+  self : RpcServer,
+  interceptor : Interceptor,
+) -> RpcServer {
+  self.with_interceptors([interceptor, ..self.interceptors])
+}
+
+///|
+/// The interceptors this server's unary calls run through, outermost first.
+pub fn RpcServer::interceptors(self : RpcServer) -> Array[Interceptor] {
+  self.interceptors
+}
+
+///|
+/// Build a server from `conf` with the chain its `Middlewares` flags ask for.
+pub fn RpcServer::of(
+  conf : @conf.RpcServerConf,
+  deps~ : ServerDeps = ServerDeps::new() catch { _ => abort("server deps") },
+) -> RpcServer {
+  RpcServer::new(conf).with_interceptors(
+    server_interceptors(conf.middlewares, deps),
+  )
+}
+
+///|
+/// Dispatch one unary call through the interceptor chain, then the registered
+/// handler. An unregistered path answers `Unimplemented` from the innermost
+/// invoker, so the chain still sees and records it.
+pub fn RpcServer::invoke(
+  self : RpcServer,
+  call : Call,
+) -> Result[Bytes, @moonrpc.Status] {
+  let base : Invoker = c => {
+    match self.handlers.get(c.path) {
+      Some(handler) => Ok(handler(c.request))
+      None => Err(@moonrpc.Status::Unimplemented)
+    }
+  }
+  chain(self.interceptors, base)(call) catch {
+    _ => Err(@moonrpc.Status::Internal)
   }
 }
 

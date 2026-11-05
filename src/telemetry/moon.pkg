@@ -1,0 +1,11 @@
+// The tracer a moonzero service runs on when nobody configured one: ids from the
+// platform entropy source, spans to a sink the caller names. Both the REST
+// middlewares and the zRPC interceptors read their defaults from here, so a
+// service that instruments both sides uses one tracer, not two.
+import {
+  "moonbitstack/moonzero/clock",
+  "moonbitstack/moonseed",
+  "moonbitstack/moonseed/system",
+  "moonbitstack/moontel",
+  "moonbitstack/moontel/trace",
+}

@@ -11,7 +11,6 @@ import {
   "moonbitstack/mooncred/jwt",
   "moonbitstack/mooncrypt/rsa",
   "moonbitstack/moonp8s/metric",
-  "moonbitstack/moonseed",
   "moonbitstack/moontel/trace",
   "moonbitstack/moonzero/breaker",
   "moonbitstack/moonzero/clock",
@@ -113,13 +112,7 @@ pub let too_large : Refusal
 
 pub let too_many : Refusal
 
-pub fn trace_clock() -> () -> Int64
-
 pub fn trace_id_of(String) -> String?
-
-pub fn trace_random(Int32) -> Bytes raise @moonseed.Unavailable
-
-pub fn tracer(sink? : &@trace.Sink, sampler? : &@trace.Sampler, limits? : @trace.Limits) -> @trace.Tracer
 
 pub fn tracing(tracer? : @trace.Tracer, now? : () -> Int64, header? : String, ignore_paths? : Array[String]) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 

@@ -8,6 +8,7 @@ import {
   "moonbitstack/moonzero/shedder",
   "moonbitstack/moonzero/conf",
   "moonbitstack/moonzero/limit",
+  "moonbitstack/moonzero/telemetry",
   "moonbitstack/moonzero/rest/handler",
   "moonbitstack/moonapi",
   "moonbitstack/moonapi/route",

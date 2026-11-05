@@ -3,13 +3,61 @@ package "moonbitstack/moonzero/zrpc"
 
 import {
   "moonbitstack/moonhttp/hpack",
+  "moonbitstack/moonp8s/metric",
   "moonbitstack/moonrpc/server",
   "moonbitstack/moonrpc/wire",
+  "moonbitstack/moontel/trace",
+  "moonbitstack/moonzero/breaker",
+  "moonbitstack/moonzero/clock",
   "moonbitstack/moonzero/conf",
+  "moonbitstack/moonzero/logx",
   "moonbitstack/moonzero/proc",
+  "moonbitstack/moonzero/shedder",
 }
 
 // Values
+pub fn acceptable(@wire.Status) -> Bool
+
+pub fn chain(Array[((Call) -> Result[Bytes, @wire.Status] raise) -> (Call) -> Result[Bytes, @wire.Status] raise], (Call) -> Result[Bytes, @wire.Status] raise) -> (Call) -> Result[Bytes, @wire.Status] raise
+
+pub fn client_breaker(@breaker.Breaker) -> ((Call) -> Result[Bytes, @wire.Status] raise) -> (Call) -> Result[Bytes, @wire.Status] raise
+
+pub fn client_duration(@clock.Clock, logger? : @logx.Logger, slow_ms? : Int64, mute? : Array[String]) -> ((Call) -> Result[Bytes, @wire.Status] raise) -> (Call) -> Result[Bytes, @wire.Status] raise
+
+pub fn client_interceptors(@conf.RpcClientMiddlewaresConf, ClientDeps) -> Array[((Call) -> Result[Bytes, @wire.Status] raise) -> (Call) -> Result[Bytes, @wire.Status] raise]
+
+pub fn client_prometheus(RpcMetrics, @clock.Clock) -> ((Call) -> Result[Bytes, @wire.Status] raise) -> (Call) -> Result[Bytes, @wire.Status] raise
+
+pub fn client_timeout(Int64, @clock.Clock) -> ((Call) -> Result[Bytes, @wire.Status] raise) -> (Call) -> Result[Bytes, @wire.Status] raise
+
+pub fn client_tracing(@trace.Tracer, now? : () -> Int64) -> ((Call) -> Result[Bytes, @wire.Status] raise) -> (Call) -> Result[Bytes, @wire.Status] raise
+
+pub let default_latency_buckets : Array[Double]
+
+pub fn internal_status() -> @wire.Status
+
+pub fn server_auth(&Authenticator) -> ((Call) -> Result[Bytes, @wire.Status] raise) -> (Call) -> Result[Bytes, @wire.Status] raise
+
+pub fn server_breaker(@breaker.Breaker) -> ((Call) -> Result[Bytes, @wire.Status] raise) -> (Call) -> Result[Bytes, @wire.Status] raise
+
+pub fn server_interceptors(@conf.RpcServerMiddlewaresConf, ServerDeps) -> Array[((Call) -> Result[Bytes, @wire.Status] raise) -> (Call) -> Result[Bytes, @wire.Status] raise]
+
+pub fn server_prometheus(RpcMetrics, @clock.Clock) -> ((Call) -> Result[Bytes, @wire.Status] raise) -> (Call) -> Result[Bytes, @wire.Status] raise
+
+pub fn server_recover(logger? : @logx.Logger) -> ((Call) -> Result[Bytes, @wire.Status] raise) -> (Call) -> Result[Bytes, @wire.Status] raise
+
+pub fn server_shedding(@shedder.Shedder) -> ((Call) -> Result[Bytes, @wire.Status] raise) -> (Call) -> Result[Bytes, @wire.Status] raise
+
+pub fn server_stat(@clock.Clock, conf? : StatConf, logger? : @logx.Logger) -> ((Call) -> Result[Bytes, @wire.Status] raise) -> (Call) -> Result[Bytes, @wire.Status] raise
+
+pub fn server_timeout(Int64, @clock.Clock, methods? : Array[MethodTimeout]) -> ((Call) -> Result[Bytes, @wire.Status] raise) -> (Call) -> Result[Bytes, @wire.Status] raise
+
+pub fn server_tracing(@trace.Tracer, now? : () -> Int64) -> ((Call) -> Result[Bytes, @wire.Status] raise) -> (Call) -> Result[Bytes, @wire.Status] raise
+
+pub fn status_code(@wire.Status) -> Int32
+
+pub fn status_name(@wire.Status) -> String
+
 pub fn status_of_code(Int32) -> @wire.Status
 
 // Errors
@@ -30,19 +78,47 @@ pub(all) struct BidiStreamHandler {
   on_end : () -> Array[Bytes]
 }
 
+pub(all) struct Call {
+  path : String
+  request : Bytes
+  parent : @trace.TraceContext?
+}
+pub fn Call::name(Self) -> String
+
+pub(all) struct ClientDeps {
+  clock : @clock.Clock
+  tracer : @trace.Tracer
+  breaker : @breaker.Breaker
+  metrics : RpcMetrics
+  now : () -> Int64
+  timeout_ms : Int64
+  slow_ms : Int64
+  mute : Array[String]
+}
+pub fn ClientDeps::new(clock? : @clock.Clock, tracer? : @trace.Tracer, breaker? : @breaker.Breaker, metrics? : RpcMetrics, now? : () -> Int64, timeout_ms? : Int64, slow_ms? : Int64, mute? : Array[String]) -> Self raise @metric.Refused
+
+pub(all) struct MethodTimeout {
+  path : String
+  budget_ms : Int64
+}
+
 pub struct RpcChannel {
   engine : @server.H2Server
   encoder : @hpack.Encoder
   decoder : @hpack.Decoder
   authority : String
   mut next_stream_id : Int32
+  interceptors : Array[((Call) -> Result[Bytes, @wire.Status] raise) -> (Call) -> Result[Bytes, @wire.Status] raise]
 }
 pub fn RpcChannel::call(Self, String, Bytes) -> Result[Bytes, @wire.Status] raise
 pub fn RpcChannel::call_bidi_streaming(Self, String, Array[Bytes]) -> Result[Array[Bytes], @wire.Status] raise
 pub fn RpcChannel::call_client_streaming(Self, String, Array[Bytes]) -> Result[Bytes, @wire.Status] raise
 pub fn RpcChannel::call_server_streaming(Self, String, Bytes) -> Result[Array[Bytes], @wire.Status] raise
+pub fn RpcChannel::call_through(Self, String, Bytes, parent? : @trace.TraceContext) -> Result[Bytes, @wire.Status]
 pub fn RpcChannel::connect(RpcServer, authority? : String) -> Self
+pub fn RpcChannel::interceptors(Self) -> Array[((Call) -> Result[Bytes, @wire.Status] raise) -> (Call) -> Result[Bytes, @wire.Status] raise]
 pub fn RpcChannel::open_bidi(Self, String) -> BidiCall raise
+pub fn RpcChannel::with_interceptors(Self, Array[((Call) -> Result[Bytes, @wire.Status] raise) -> (Call) -> Result[Bytes, @wire.Status] raise]) -> Self
 
 pub struct RpcGroup {
   server : RpcServer
@@ -54,34 +130,80 @@ pub fn RpcGroup::register_client_streaming(Self, String, (Array[Bytes]) -> Bytes
 pub fn RpcGroup::register_server_streaming(Self, String, (Bytes) -> Array[Bytes]) -> Unit
 pub fn RpcGroup::service(Self) -> String
 
+pub struct RpcMetrics {
+  registry : @metric.Registry
+  requests : @metric.Family[@metric.Counter]
+  latency : @metric.Family[@metric.Histogram]
+  prefix : String
+  side : String
+}
+pub fn RpcMetrics::calls(Self, String, Int32) -> Double
+pub fn RpcMetrics::new(kind? : String) -> Self raise @metric.Refused
+pub fn RpcMetrics::observations(Self, String) -> Int64
+pub fn RpcMetrics::observe(Self, String, Int32, Double) -> Unit
+pub fn RpcMetrics::registry(Self) -> @metric.Registry
+pub fn RpcMetrics::to_exposition(Self) -> String
+
 pub struct RpcServer {
   conf : @conf.RpcServerConf
   handlers : Map[String, (Bytes) -> Bytes]
   server_streaming : Map[String, (Bytes) -> Array[Bytes]]
   client_streaming : Map[String, (Array[Bytes]) -> Bytes]
   bidi_streaming : Map[String, () -> BidiStreamHandler]
+  interceptors : Array[((Call) -> Result[Bytes, @wire.Status] raise) -> (Call) -> Result[Bytes, @wire.Status] raise]
 }
 pub fn RpcServer::conf(Self) -> @conf.RpcServerConf
 pub fn RpcServer::dispatch(Self, String, Bytes) -> Result[Bytes, @wire.Status]
 pub fn RpcServer::dispatch_graceful(Self, @proc.ShutdownCoordinator, String, Bytes) -> Result[Bytes, @wire.Status]
 pub fn RpcServer::group(Self, String) -> RpcGroup
 pub fn RpcServer::has_method(Self, String) -> Bool
+pub fn RpcServer::interceptors(Self) -> Array[((Call) -> Result[Bytes, @wire.Status] raise) -> (Call) -> Result[Bytes, @wire.Status] raise]
+pub fn RpcServer::invoke(Self, Call) -> Result[Bytes, @wire.Status]
 pub fn RpcServer::lookup(Self, String) -> ((Bytes) -> Bytes)?
 pub fn RpcServer::methods(Self) -> Array[String]
 pub fn RpcServer::new(@conf.RpcServerConf) -> Self
+pub fn RpcServer::of(@conf.RpcServerConf, deps? : ServerDeps) -> Self
 pub fn RpcServer::register(Self, @wire.Method, (Bytes) -> Bytes) -> Unit
 pub fn RpcServer::register_bidi_streaming(Self, @wire.Method, () -> BidiStreamHandler) -> Unit
 pub fn RpcServer::register_client_streaming(Self, @wire.Method, (Array[Bytes]) -> Bytes) -> Unit
 pub fn RpcServer::register_server_streaming(Self, @wire.Method, (Bytes) -> Array[Bytes]) -> Unit
 pub fn RpcServer::to_h2(Self) -> @server.H2Server
+pub fn RpcServer::use_(Self, ((Call) -> Result[Bytes, @wire.Status] raise) -> (Call) -> Result[Bytes, @wire.Status] raise) -> Self
+pub fn RpcServer::with_interceptors(Self, Array[((Call) -> Result[Bytes, @wire.Status] raise) -> (Call) -> Result[Bytes, @wire.Status] raise]) -> Self
+
+pub(all) struct ServerDeps {
+  clock : @clock.Clock
+  tracer : @trace.Tracer
+  breaker : @breaker.Breaker
+  shedder : @shedder.Shedder
+  metrics : RpcMetrics
+  authenticator : &Authenticator?
+  now : () -> Int64
+  timeout_ms : Int64
+  stat : StatConf
+}
+pub fn ServerDeps::new(clock? : @clock.Clock, tracer? : @trace.Tracer, breaker? : @breaker.Breaker, shedder? : @shedder.Shedder, metrics? : RpcMetrics, authenticator? : &Authenticator, now? : () -> Int64, timeout_ms? : Int64, stat? : StatConf) -> Self raise @metric.Refused
+
+pub(all) struct StatConf {
+  slow_ms : Int64
+  ignore_content_methods : Array[String]
+}
+pub fn StatConf::new(slow_ms? : Int64, ignore_content_methods? : Array[String]) -> Self
 
 // Type aliases
 pub type BidiStreamFactory = () -> BidiStreamHandler
 
 pub type ClientStreamHandler = (Array[Bytes]) -> Bytes
 
+pub type Interceptor = ((Call) -> Result[Bytes, @wire.Status] raise) -> (Call) -> Result[Bytes, @wire.Status] raise
+
+pub type Invoker = (Call) -> Result[Bytes, @wire.Status] raise
+
 pub type RpcHandler = (Bytes) -> Bytes
 
 pub type ServerStreamHandler = (Bytes) -> Array[Bytes]
 
 // Traits
+pub(open) trait Authenticator {
+  fn authenticate(Self, Call) -> Unit raise
+}

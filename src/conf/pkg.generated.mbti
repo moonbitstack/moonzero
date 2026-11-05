@@ -82,18 +82,69 @@ pub fn RestConf::timeout_ms(Self) -> Int32
 pub fn RestConf::tls(Self) -> Bool
 
 #derive(Eq, @debug.Debug, @json.FromJson)
+pub(all) struct RpcClientConf {
+  target : String
+  endpoints : Array[String]
+  timeout_ms : Int32
+  non_block : Bool
+  middlewares : RpcClientMiddlewaresConf
+}
+pub fn RpcClientConf::equal(Self, Self) -> Bool
+pub fn RpcClientConf::from_json(String) -> Self raise Refused
+pub fn RpcClientConf::from_yaml(String) -> Self raise Refused
+pub fn RpcClientConf::new(target? : String, endpoints? : Array[String], timeout_ms? : Int32, non_block? : Bool, middlewares? : RpcClientMiddlewaresConf) -> Self
+pub fn RpcClientConf::not_equal(Self, Self) -> Bool
+pub fn RpcClientConf::to_repr(Self) -> @debug.Repr
+
+#derive(Eq, @debug.Debug, @json.FromJson)
+pub(all) struct RpcClientMiddlewaresConf {
+  trace : Bool
+  log : Bool
+  prometheus : Bool
+  breaker : Bool
+  timeout : Bool
+}
+pub fn RpcClientMiddlewaresConf::equal(Self, Self) -> Bool
+pub fn RpcClientMiddlewaresConf::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn RpcClientMiddlewaresConf::new(trace? : Bool, log? : Bool, prometheus? : Bool, breaker? : Bool, timeout? : Bool) -> Self
+pub fn RpcClientMiddlewaresConf::not_equal(Self, Self) -> Bool
+pub fn RpcClientMiddlewaresConf::to_repr(Self) -> @debug.Repr
+
+#derive(Eq, @debug.Debug, @json.FromJson)
 pub(all) struct RpcServerConf {
   name : String
   host : String
   port : Int32
   timeout_ms : Int32
+  cpu_threshold : Int64
+  cpu_threshold_overload : Int64
+  auth : Bool
+  health : Bool
+  middlewares : RpcServerMiddlewaresConf
 }
 pub fn RpcServerConf::equal(Self, Self) -> Bool
 pub fn RpcServerConf::from_json(String) -> Self raise Refused
 pub fn RpcServerConf::from_yaml(String) -> Self raise Refused
-pub fn RpcServerConf::new(name? : String, host? : String, port? : Int32, timeout_ms? : Int32) -> Self
+pub fn RpcServerConf::new(name? : String, host? : String, port? : Int32, timeout_ms? : Int32, cpu_threshold? : Int64, cpu_threshold_overload? : Int64, auth? : Bool, health? : Bool, middlewares? : RpcServerMiddlewaresConf) -> Self
 pub fn RpcServerConf::not_equal(Self, Self) -> Bool
 pub fn RpcServerConf::to_repr(Self) -> @debug.Repr
+
+#derive(Eq, @debug.Debug, @json.FromJson)
+pub(all) struct RpcServerMiddlewaresConf {
+  trace : Bool
+  recover : Bool
+  stat : Bool
+  prometheus : Bool
+  breaker : Bool
+  shedding : Bool
+  timeout : Bool
+  auth : Bool
+}
+pub fn RpcServerMiddlewaresConf::equal(Self, Self) -> Bool
+pub fn RpcServerMiddlewaresConf::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn RpcServerMiddlewaresConf::new(trace? : Bool, recover? : Bool, stat? : Bool, prometheus? : Bool, breaker? : Bool, shedding? : Bool, timeout? : Bool, auth? : Bool) -> Self
+pub fn RpcServerMiddlewaresConf::not_equal(Self, Self) -> Bool
+pub fn RpcServerMiddlewaresConf::to_repr(Self) -> @debug.Repr
 
 #derive(Eq, @json.FromJson)
 pub(all) struct ServiceConf {
