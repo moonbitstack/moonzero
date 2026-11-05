@@ -68,6 +68,32 @@ jobs:
         run: |
           moon info --target all && git diff --exit-code
 
+  # Two directions over a real socket, with a peer that shares no code with this
+  # library: a gRPC client written against the Go implementation calls this
+  # library's server, and this library's client calls that peer's server. A green
+  # run means the frames on the wire are the ones a gRPC peer expects.
+  interop:
+    name: zRPC interoperability (native, go peer)
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: install moonbit
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> $GITHUB_PATH
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: scripts/interop/go.mod
+
+      - name: both directions
+        run: bash scripts/interop/check.sh
+
   # The path from registration to a load-balanced call against each real service, and the
   # shared limiters against redis, gated on MOON_REDIS_TEST and its siblings.
   discovery:
