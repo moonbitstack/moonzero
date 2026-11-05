@@ -598,7 +598,7 @@ def reference_page():
             for k in keys
         )
         blocks.append(
-            f'<section class="section" id="{lane.lower()}" style="padding-top:44px">'
+            f'<section class="section inset" id="{lane.lower()}">'
             f'<div class="section-head"><p class="eyebrow">{esc(lane)}</p>'
             f"<h2>{len(keys)} packages</h2></div>"
             f'<div class="api">{rows}</div></section>'
@@ -616,8 +616,8 @@ def reference_page():
         + style
         + "\n" + bar(0, crumbs=[("docs", None)])
         + f"""
-<main class="shell" style="grid-template-columns:minmax(0,1fr);padding-top:36px">
-  <div class="paper" style="padding:40px 44px">
+<main class="shell single">
+  <div class="paper">
     <p class="eyebrow">REFERENCE</p>
     <h1>Every package, one row each</h1>
     <p class="lead">{len(SECTIONS)} packages, grouped by where they sit in a request.
@@ -680,8 +680,8 @@ def guide_page():
         head(0, "Guide — moonzero", "From one config document to a service that answers, in eight steps.")
         + "\n" + bar(0, crumbs=[("guide", None)])
         + f"""
-<main class="shell" style="grid-template-columns:minmax(0,1fr);padding-top:32px">
-  <div class="paper" style="padding:44px 48px">
+<main class="shell single">
+  <div class="paper">
     <p class="eyebrow">GUIDE</p>
     <h1>Eight stops to a running service</h1>
     <p class="lead">Every block below is a program in this repository, copied at build
@@ -706,8 +706,8 @@ def lab_page():
         head(0, "Lab — moonzero", "Two of the framework's decisions, movable by hand.")
         + "\n" + bar(0, crumbs=[("lab", None)])
         + """
-<main class="shell" style="grid-template-columns:minmax(0,1fr);padding-top:32px">
-  <div class="paper" style="padding:40px 44px;margin-bottom:24px">
+<main class="shell single">
+  <div class="paper">
     <p class="eyebrow">LAB</p>
     <h1>Two decisions you can move</h1>
     <p class="lead">The picker and the bucket are the two places a service says no.
@@ -761,8 +761,23 @@ def md_to_html(text):
     out = []
     in_code = False
     in_list = False
+    para = []
+
+    def flush():
+        if para:
+            out.append(f"<p>{inline(' '.join(para))}</p>")
+            para.clear()
+
+    def close_list():
+        nonlocal in_list
+        if in_list:
+            out.append("</ul>")
+            in_list = False
+
     for line in text.splitlines():
         if line.startswith("```"):
+            flush()
+            close_list()
             if in_code:
                 out.append("</code></pre></div>")
                 in_code = False
@@ -774,25 +789,27 @@ def md_to_html(text):
             out.append(esc(line))
             continue
         if line.startswith("# "):
+            flush()
+            close_list()
             out.append(f"<h1>{esc(line[2:])}</h1>")
         elif line.startswith("## "):
-            if in_list:
-                out.append("</ul>")
-                in_list = False
+            flush()
+            close_list()
             out.append(f'<h2>{esc(line[3:])}</h2>')
         elif line.startswith("- "):
+            flush()
             if not in_list:
                 out.append("<ul>")
                 in_list = True
             out.append(f"<li>{inline(line[2:])}</li>")
         elif line.strip() == "":
-            if in_list:
-                out.append("</ul>")
-                in_list = False
+            flush()
+            close_list()
         else:
-            out.append(f"<p>{inline(line)}</p>")
-    if in_list:
-        out.append("</ul>")
+            close_list()
+            para.append(line.strip())
+    flush()
+    close_list()
     if in_code:
         out.append("</code></pre></div>")
     return "\n".join(out)
@@ -816,8 +833,8 @@ def skill_page():
         head(0, "Skill — moonzero", "The skill an agent reads to use this library.")
         + "\n" + bar(0, crumbs=[("skills", None)])
         + f"""
-<main class="shell" style="grid-template-columns:minmax(0,1fr);padding-top:32px">
-  <div class="paper" style="padding:44px 48px">
+<main class="shell single">
+  <div class="paper">
     <p class="eyebrow">SKILL</p>
     <p class="lead">The same instructions an agent gets from
       <code>docs/skills/moonzero/SKILL.md</code>, published with every release.</p>
@@ -846,8 +863,8 @@ def not_found():
         head(0, "Not here — moonzero", "That page is not part of the control plane.")
         + "\n" + bar(0, facts=False)
         + """
-<main class="shell" style="grid-template-columns:minmax(0,1fr);padding-top:80px">
-  <div class="paper" style="padding:48px">
+<main class="shell single error">
+  <div class="paper">
     <p class="eyebrow">404</p>
     <h1>Nothing listens at that path</h1>
     <p class="lead">No route matched. The map is the place to start.</p>

@@ -49,7 +49,7 @@
     var text = node.innerText;
     var done = function () {
       var old = btn.textContent;
-      btn.textContent = "copied";
+      btn.textContent = "COPIED";
       setTimeout(function () {
         btn.textContent = old;
       }, 1400);
@@ -355,7 +355,7 @@
           '<div class="barwrap"><div class="bar' +
           (i === 2 && share < 0.05 ? " hi" : "") +
           '" style="height:' +
-          Math.max(2, Math.round(share * 84)) +
+          Math.max(2, Math.round(share * 80)) +
           'px" title="' +
           Math.round(share * 100) +
           '%"></div><span>' +

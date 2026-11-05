@@ -7,16 +7,25 @@
   --shell: #0c1116;
   --shell-2: #131a21;
   --shell-3: #0f151c;
+  --shell-4: #1a2330;
+  --shell-dot: #3a4650;
   --shell-ink: #c9d3db;
   --shell-ink-2: #7c8b99;
   --shell-ink-3: #55636f;
+  --shell-ink-bright: #eef2f5;
   --shell-rule: #1c252e;
   --shell-rule-2: #2a3742;
   --accent: #6d5efc;
   --accent-ink: #d9d4ff;
+  --accent-deep: #1a1636;
   --ok: #3ddc97;
   --warn: #f5b759;
   --fail: #ff5c5c;
+  --egress-line: #2f5a4c;
+  --egress-deep: #0f1a18;
+  --egress-ink: #8fe3c0;
+  --warn-line: #6a5230;
+  --warn-deep: #1a1710;
   --code-bg: #0a0e13;
   --code-ink: #c9d3db;
   --code-dim: #6b7a87;
@@ -28,6 +37,11 @@
   --bar-h: 44px;
   --rail-h: 64px;
   --radius: 3px;
+  --radius-lg: 4px;
+  --radius-pill: 999px;
+  --ease: cubic-bezier(0.2, 0.7, 0.3, 1);
+  --fast: 0.15s;
+  --base: 0.22s;
 }
 
 :root[data-theme="day"] {
@@ -49,8 +63,8 @@
   --ink: #e7eaee;
   --ink-2: #aeb8c2;
   --ink-3: #7c8b99;
-  --rule: #1e2731;
-  --rule-2: #2a3742;
+  --rule: #202a35;
+  --rule-2: #2e3c49;
   --shadow: none;
   --accent: #8b7eff;
 }
@@ -78,6 +92,42 @@ body {
   background: var(--page);
   font-kerning: normal;
   text-rendering: optimizeLegibility;
+}
+
+/* A control is not text. Anything you click, drag or slide gives up selection so
+   a gesture never leaves a highlight behind, and so a drag on the rail scrolls
+   instead of painting a selection. Prose, code and signatures keep theirs. */
+
+.bar,
+.rail,
+.minimap,
+.screen,
+.bench .controls,
+.pager,
+.palette,
+.btn,
+.copy,
+.theme {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+a,
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 26%, transparent);
+  color: inherit;
+}
+
+.screen ::selection,
+.code ::selection,
+.bench .out ::selection {
+  background: color-mix(in srgb, var(--accent-ink) 28%, transparent);
+  color: #fff;
 }
 
 h1,
@@ -154,9 +204,10 @@ a:hover {
   display: flex;
   align-items: center;
   gap: 24px;
-  padding: 0 28px;
+  padding: 0 var(--gutter);
   font-family: var(--mono);
   font-size: 11px;
+  box-shadow: 0 1px 0 color-mix(in srgb, #ffffff 5%, transparent);
 }
 
 .bar a {
@@ -167,7 +218,7 @@ a:hover {
   font-weight: 700;
   font-size: 13px;
   letter-spacing: 0.02em;
-  color: #f2f5f7;
+  color: var(--shell-ink-bright);
 }
 
 .bar .mode {
@@ -201,16 +252,21 @@ a:hover {
 .theme {
   display: inline-flex;
   align-items: center;
-  height: 22px;
+  height: 24px;
   padding: 2px;
   border: 1px solid var(--shell-rule-2);
-  border-radius: 11px;
+  border-radius: var(--radius-pill);
   background: var(--shell-2);
   cursor: pointer;
   font-family: var(--mono);
   font-size: 10px;
   color: var(--shell-ink-2);
   flex: none;
+  transition: border-color var(--fast) var(--ease);
+}
+
+.theme:hover {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--shell-rule-2));
 }
 
 .theme span {
@@ -218,13 +274,13 @@ a:hover {
   z-index: 1;
   padding: 0 9px;
   line-height: 18px;
-  border-radius: 9px;
-  transition: color 0.18s ease;
+  border-radius: var(--radius-pill);
+  transition: color var(--fast) var(--ease);
 }
 
 .theme span[aria-current="true"] {
-  background: #e6eaee;
-  color: #0c1116;
+  background: var(--shell-ink-bright);
+  color: var(--shell);
   font-weight: 500;
 }
 
@@ -234,7 +290,7 @@ a:hover {
 
 .kbd {
   border: 1px solid var(--shell-rule-2);
-  border-radius: 3px;
+  border-radius: var(--radius);
   padding: 1px 5px;
   color: var(--shell-ink-2);
   font-size: 10px;
@@ -251,7 +307,7 @@ a:hover {
 }
 
 .bar button.plain:hover {
-  color: #fff;
+  color: var(--shell-ink-bright);
 }
 
 @media (width <= 860px) {
@@ -263,7 +319,7 @@ a:hover {
 
   .bar {
     gap: 10px;
-    padding: 0 16px;
+    padding: 0 var(--gutter);
   }
 
   .bar .mark {
@@ -283,6 +339,8 @@ a:hover {
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  box-shadow: 0 1px 0 color-mix(in srgb, #ffffff 4%, transparent);
 }
 
 .rail::-webkit-scrollbar {
@@ -292,22 +350,27 @@ a:hover {
 .rail ol {
   position: relative;
   display: flex;
-  gap: 84px;
+  justify-content: space-between;
+  gap: 40px;
   margin: 0;
   padding: 22px var(--gutter) 0;
   list-style: none;
   min-width: max-content;
-  width: max-content;
+  width: 100%;
 }
 
 .rail ol::before {
   content: "";
   position: absolute;
   left: calc(var(--gutter) + 4px);
-  right: calc(var(--gutter) + 60px);
+  right: var(--gutter);
   top: 31px;
   height: 1px;
-  background: var(--shell-rule-2);
+  background: linear-gradient(
+    90deg,
+    var(--shell-rule-2),
+    color-mix(in srgb, var(--shell-rule-2) 35%, transparent)
+  );
 }
 
 .rail li {
@@ -316,6 +379,7 @@ a:hover {
   font-size: 9px;
   color: var(--shell-ink-3);
   padding-top: 22px;
+  transition: color var(--fast) var(--ease);
 }
 
 .rail li::before {
@@ -326,7 +390,16 @@ a:hover {
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: #3a4650;
+  background: var(--shell-dot);
+  transition: background var(--fast) var(--ease);
+}
+
+.rail li:not(.here):hover {
+  color: var(--shell-ink);
+}
+
+.rail li:not(.here):hover::before {
+  background: var(--shell-ink-2);
 }
 
 .rail li.here {
@@ -368,6 +441,30 @@ a:hover {
   max-width: none;
 }
 
+/* one column, one measure: reference, guide, lab, skills, 404 */
+.shell.single {
+  grid-template-columns: minmax(0, 1fr);
+  padding-top: 32px;
+}
+
+.shell.single > .paper {
+  padding: 40px 44px;
+}
+
+.shell.single > .paper + * {
+  margin-top: 24px;
+}
+
+.shell.error {
+  padding-top: 72px;
+  padding-bottom: 96px;
+}
+
+.shell.error .paper {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
 /* ---------- minimap ---------- */
 
 .minimap {
@@ -375,7 +472,7 @@ a:hover {
   top: calc(var(--bar-h) + var(--rail-h) + 24px);
   background: var(--shell-3);
   border: 1px solid var(--shell-rule);
-  border-radius: 4px;
+  border-radius: var(--radius-lg);
   padding: 16px;
   color: var(--shell-ink-2);
   font-family: var(--mono);
@@ -403,11 +500,14 @@ a:hover {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  padding: 8px 0;
+  padding: 8px 8px;
+  margin: 0 -8px;
   border-top: 1px solid var(--shell-rule);
+  border-radius: 2px;
   color: var(--shell-ink-3);
   font-size: 8px;
   letter-spacing: 0.12em;
+  transition: color var(--fast) var(--ease), background var(--fast) var(--ease);
 }
 
 .minimap .lane.shut b {
@@ -418,6 +518,10 @@ a:hover {
 .minimap .lane.shut:hover,
 .minimap .lane.shut:hover b {
   color: var(--accent-ink);
+}
+
+.minimap .lane.shut:hover {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
 .minimap .lane.open .lane-name {
@@ -441,7 +545,7 @@ a:hover {
   height: 18px;
   border: 1px solid var(--shell-rule-2);
   border-radius: 2px;
-  background: #1a2330;
+  background: var(--shell-4);
   padding: 0 6px;
   line-height: 16px;
   font-size: 8px;
@@ -450,6 +554,8 @@ a:hover {
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
+  transition: border-color var(--fast) var(--ease), color var(--fast) var(--ease),
+    background var(--fast) var(--ease);
 }
 
 .minimap .node:hover {
@@ -458,7 +564,7 @@ a:hover {
 }
 
 .minimap .node.here {
-  background: #1a1636;
+  background: var(--accent-deep);
   border-color: var(--accent);
   color: var(--accent-ink);
 }
@@ -498,7 +604,7 @@ a:hover {
 .paper {
   background: var(--paper);
   border: 1px solid var(--rule);
-  border-radius: 4px;
+  border-radius: var(--radius-lg);
   padding: 40px;
   min-width: 0;
 }
@@ -663,6 +769,45 @@ a:hover {
     grid-template-columns: minmax(0, 1fr);
     gap: 4px;
   }
+
+  .bench .controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .bench .controls .control:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  .screen .head,
+  .screen .scene {
+    padding: 12px 16px;
+  }
+
+  .screen .lane {
+    grid-template-columns: minmax(0, 1fr);
+    height: auto;
+    gap: 8px;
+    padding: 14px 16px;
+  }
+
+  .screen .lane + .lane {
+    border-top: 1px solid var(--shell-rule);
+  }
+
+  .screen .chip {
+    height: 28px;
+    padding: 0 10px;
+    font-size: 9px;
+  }
+
+  .screen .readouts {
+    padding: 12px 16px 16px;
+  }
+
+  .screen .scene .hint {
+    margin-left: 0;
+    flex-basis: 100%;
+  }
 }
 
 /* code */
@@ -709,6 +854,9 @@ a:hover {
   letter-spacing: 0.08em;
   cursor: pointer;
   padding: 2px 0;
+  min-width: 8ch;
+  text-align: right;
+  transition: color var(--fast) var(--ease);
 }
 
 .code .copy:hover {
@@ -716,15 +864,15 @@ a:hover {
 }
 
 .code .k {
-  color: #a99dff;
+  color: color-mix(in srgb, var(--accent) 55%, #ffffff);
 }
 
 .code .s {
-  color: #9fe3c0;
+  color: color-mix(in srgb, var(--ok) 60%, #ffffff);
 }
 
 .code .c {
-  color: #55636f;
+  color: var(--code-dim);
 }
 
 /* pager */
@@ -743,6 +891,7 @@ a:hover {
 
 .pager a {
   color: var(--ink-2);
+  transition: color var(--fast) var(--ease);
 }
 
 .pager a:hover {
@@ -844,7 +993,7 @@ a:hover {
 }
 
 .foot a:hover {
-  color: #fff;
+  color: var(--shell-ink-bright);
 }
 
 /* ---------- home ---------- */
@@ -909,6 +1058,9 @@ a:hover {
   font-size: 10px;
   letter-spacing: 0.1em;
   flex: none;
+  min-width: 8ch;
+  text-align: right;
+  transition: color var(--fast) var(--ease);
 }
 
 .install .copy:hover {
@@ -924,6 +1076,7 @@ a:hover {
 .btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   height: 42px;
   padding: 0 20px;
   border-radius: var(--radius);
@@ -933,7 +1086,8 @@ a:hover {
   color: var(--ink);
   background: transparent;
   cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  transition: border-color var(--fast) var(--ease), background var(--fast) var(--ease),
+    color var(--fast) var(--ease);
 }
 
 .btn.primary {
@@ -952,9 +1106,19 @@ a:hover {
   color: var(--paper);
 }
 
+.btn:active {
+  transform: translateY(0.5px);
+}
+
 :root[data-theme="night"] .btn.primary {
   background: #e7eaee;
   border-color: #e7eaee;
+  color: #0a0e13;
+}
+
+:root[data-theme="night"] .btn.primary:hover {
+  background: #fff;
+  border-color: #fff;
   color: #0a0e13;
 }
 
@@ -970,10 +1134,16 @@ a:hover {
 .screen {
   background: var(--shell);
   border: 1px solid var(--shell-rule);
-  border-radius: 4px;
+  border-radius: var(--radius-lg);
   color: var(--shell-ink);
   font-family: var(--mono);
   overflow: hidden;
+}
+
+/* at night the page and the machine share a colour; the edge has to carry it */
+:root[data-theme="night"] .screen,
+:root[data-theme="night"] .install {
+  border-color: color-mix(in srgb, #ffffff 7%, var(--shell-rule));
 }
 
 .screen .head {
@@ -1025,7 +1195,8 @@ a:hover {
   color: var(--shell-ink);
   font-size: 10px;
   white-space: nowrap;
-  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+  transition: border-color var(--base) var(--ease), background var(--base) var(--ease),
+    color var(--base) var(--ease);
 }
 
 a.chip:hover {
@@ -1035,26 +1206,26 @@ a.chip:hover {
 
 .screen .chip.hot {
   border-color: var(--accent);
-  background: #1a1636;
+  background: var(--accent-deep);
   color: var(--accent-ink);
 }
 
 .screen .chip.egress {
-  border-color: #2f5a4c;
-  background: #0f1a18;
-  color: #8fe3c0;
+  border-color: var(--egress-line);
+  background: var(--egress-deep);
+  color: var(--egress-ink);
 }
 
 .screen .chip.warn {
-  border-color: #6a5230;
-  background: #1a1710;
+  border-color: var(--warn-line);
+  background: var(--warn-deep);
   color: var(--warn);
 }
 
 .screen .link {
   width: 6px;
   height: 1px;
-  background: #3a4650;
+  background: var(--shell-dot);
   flex: none;
 }
 
@@ -1086,7 +1257,7 @@ a.chip:hover {
 .screen .readout .v {
   font-size: 24px;
   font-weight: 300;
-  color: #e6eaee;
+  color: var(--shell-ink-bright);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1114,12 +1285,23 @@ a.chip:hover {
   gap: 8px;
   height: 26px;
   padding: 0 12px;
-  border-radius: 13px;
+  border-radius: var(--radius-pill);
   border: 1px solid var(--shell-rule);
   background: transparent;
   color: var(--shell-ink-2);
   font: inherit;
   cursor: pointer;
+  transition: color var(--fast) var(--ease), border-color var(--fast) var(--ease),
+    background var(--fast) var(--ease);
+}
+
+.screen .scene .pick:hover {
+  color: var(--shell-ink);
+  border-color: var(--shell-rule-2);
+}
+
+.screen .scene .pick:active {
+  background: var(--shell-2);
 }
 
 .screen .scene .pick::before {
@@ -1127,7 +1309,7 @@ a.chip:hover {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  border: 1px solid #3a4650;
+  border: 1px solid var(--shell-dot);
 }
 
 .screen .scene .pick[aria-pressed="true"] {
@@ -1164,7 +1346,7 @@ a.chip:hover {
   height: 40px;
   font-family: var(--mono);
   font-size: 11px;
-  color: #9fb0be;
+  color: var(--shell-ink);
   overflow: hidden;
   white-space: nowrap;
 }
@@ -1192,6 +1374,12 @@ a.chip:hover {
   max-width: var(--page-max);
   margin: 0 auto;
   padding: 64px var(--gutter) 0;
+}
+
+/* sections that follow a card share the card's inner edge, so one column has one baseline */
+.section.inset {
+  padding-left: calc(var(--gutter) + 44px);
+  padding-right: calc(var(--gutter) + 44px);
 }
 
 .section-head {
@@ -1482,9 +1670,9 @@ a.chip:hover {
 
 .bench {
   border: 1px solid var(--rule);
-  border-radius: 4px;
+  border-radius: var(--radius-lg);
   background: var(--paper);
-  padding: 28px 32px 32px;
+  padding: 36px 44px 32px;
 }
 
 .bench h2 {
@@ -1502,9 +1690,9 @@ a.chip:hover {
 }
 
 .bench .controls {
-  display: flex;
-  gap: 26px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 18px 26px;
   margin-bottom: 22px;
   font-family: var(--mono);
   font-size: 10px;
@@ -1525,10 +1713,18 @@ a.chip:hover {
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
+  display: block;
   width: 100%;
+  margin: 0;
   height: 2px;
   background: var(--rule-2);
   outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+input[type="range"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 6px;
 }
 
 input[type="range"]::-webkit-slider-thumb {
@@ -1541,6 +1737,7 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .bench .out {
+  margin-top: 18px;
   background: var(--shell);
   border: 1px solid var(--shell-rule);
   border-radius: var(--radius);
@@ -1566,26 +1763,39 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .bars {
+  position: relative;
   display: flex;
   align-items: flex-end;
   gap: 18px;
+  max-width: 520px;
   height: 108px;
-  margin: 22px 0 6px;
+  margin: 22px 0 0;
   font-family: var(--mono);
   font-size: 9px;
   color: var(--ink-3);
 }
 
+.bars::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 24px;
+  height: 1px;
+  background: var(--rule);
+}
+
 .bars .barwrap {
   display: flex;
+  flex: 1 1 0;
   flex-direction: column;
   align-items: center;
-  gap: 7px;
-  width: 64px;
+  gap: 10px;
 }
 
 .bars .bar {
-  width: 64px;
+  width: 100%;
+  max-width: 96px;
   border-radius: 1px 1px 0 0;
   min-height: 2px;
   background: color-mix(in srgb, var(--ink) 16%, transparent);
@@ -1597,8 +1807,9 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .lab-note {
-  max-width: 72ch;
-  margin: 8px 4px 0;
+  max-width: var(--page-max);
+  margin: 20px auto 48px;
+  padding: 0 calc(var(--gutter) + 44px);
   font-size: 13px;
   line-height: 1.6;
   color: var(--ink-3);
@@ -1625,7 +1836,7 @@ input[type="range"]::-webkit-slider-thumb {
   margin: 0 auto;
   background: var(--shell);
   border: 1px solid var(--shell-rule-2);
-  border-radius: 4px;
+  border-radius: var(--radius-lg);
   overflow: hidden;
   font-family: var(--mono);
 }
@@ -1640,6 +1851,13 @@ input[type="range"]::-webkit-slider-thumb {
   font-size: 13px;
   padding: 16px 18px;
   outline: none;
+  -webkit-user-select: text;
+  user-select: text;
+  transition: border-color var(--fast) var(--ease);
+}
+
+.palette input:focus {
+  border-bottom-color: var(--accent);
 }
 
 .palette input::placeholder {
@@ -1659,7 +1877,7 @@ input[type="range"]::-webkit-slider-thumb {
   gap: 14px;
   align-items: baseline;
   padding: 9px 10px;
-  border-radius: 3px;
+  border-radius: var(--radius);
   color: var(--shell-ink-2);
   font-size: 11px;
 }
@@ -1723,12 +1941,34 @@ input[type="range"]::-webkit-slider-thumb {
     padding-top: 16px;
   }
 
+  .shell.single,
+  .shell.error {
+    padding-top: 16px;
+  }
+
   .minimap {
     position: static;
     display: none;
   }
 
   .paper {
+    padding: 24px 20px 28px;
+  }
+
+  .shell.single > .paper {
+    padding: 24px 20px 28px;
+  }
+
+  .lab-note {
+    padding: 0 var(--gutter);
+  }
+
+  .section.inset {
+    padding-left: var(--gutter);
+    padding-right: var(--gutter);
+  }
+
+  .bench {
     padding: 24px 20px 28px;
   }
 
@@ -1743,6 +1983,10 @@ input[type="range"]::-webkit-slider-thumb {
 
   .path .stop {
     padding-top: 0;
+  }
+
+  .path .stop:last-child {
+    grid-column: 1 / -1;
   }
 
   .path .stop::before {

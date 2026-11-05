@@ -25,27 +25,19 @@
   </button>
   <a href="https://github.com/moonbitstack/moonzero" title="Source on GitHub">GitHub</a>
 </header>
-<main class="shell" style="grid-template-columns:minmax(0,1fr);padding-top:32px">
-  <div class="paper" style="padding:44px 48px">
+<main class="shell single">
+  <div class="paper">
     <p class="eyebrow">SKILL</p>
     <p class="lead">The same instructions an agent gets from
       <code>docs/skills/moonzero/SKILL.md</code>, published with every release.</p>
     <div class="skill-body" style="margin-top:32px"><h1>moonzero</h1>
-<p>A service is assembled, not written: a config document says which middlewares run,</p>
-<p>the engine builds the chain around an application, and the result is an ASGI</p>
-<p>application a host runs.</p>
+<p>A service is assembled, not written: a config document says which middlewares run, the engine builds the chain around an application, and the result is an ASGI application a host runs.</p>
 <div class="code"><pre><code>
 moon add moonbitstack/moonzero
 </code></pre></div>
-<p>One package per job: <code>rest</code> (engine, server, groups, route options), <code>rest/handler</code></p>
-<p>(the middlewares), <code>zrpc</code> (server, channel, interceptor chains), <code>balance</code>,</p>
-<p><code>conf</code>, <code>breaker</code>, <code>shedder</code>, <code>limit</code>, <code>stores/*</code>, and the utilities <code>syncx</code>,</p>
-<p><code>collection</code>, <code>mr</code>, <code>fx</code>, <code>threading</code>, <code>service</code>. <code>moonbitstack/moonzero</code></p>
-<p>re-exports the common surface, so one import reaches most of it.</p>
+<p>One package per job: <code>rest</code> (engine, server, groups, route options), <code>rest/handler</code> (the middlewares), <code>zrpc</code> (server, channel, interceptor chains), <code>balance</code>, <code>conf</code>, <code>breaker</code>, <code>shedder</code>, <code>limit</code>, <code>stores/*</code>, and the utilities <code>syncx</code>, <code>collection</code>, <code>mr</code>, <code>fx</code>, <code>threading</code>, <code>service</code>. <code>moonbitstack/moonzero</code> re-exports the common surface, so one import reaches most of it.</p>
 <h2>Assemble a service</h2>
-<p>The engine reads <code>RestConf</code> and returns a <code>Server</code>; <code>to_asgi</code> hands the application</p>
-<p>to whatever serves it. Middleware flags default to on, so a document that says</p>
-<p>nothing about them still gets the whole chain.</p>
+<p>The engine reads <code>RestConf</code> and returns a <code>Server</code>; <code>to_asgi</code> hands the application to whatever serves it. Middleware flags default to on, so a document that says nothing about them still gets the whole chain.</p>
 <div class="code"><pre><code>
 import {
   &quot;moonbitstack/moonzero&quot;,
@@ -60,13 +52,9 @@ fn assemble(conf : @moonzero.RestConf) -&gt; @moonzero.Server raise @moonzero.Re
   @moonzero.RestEngine::new(conf).build(app)
 }
 </code></pre></div>
-<p><code>RestConf::from_yaml(text)</code> loads an <code>etc/*.yaml</code>; <code>RestEngine::names()</code> answers the</p>
-<p>layers the document installed, outermost first, which is the fastest way to check a</p>
-<p>config before deploying it.</p>
+<p><code>RestConf::from_yaml(text)</code> loads an <code>etc/*.yaml</code>; <code>RestEngine::names()</code> answers the layers the document installed, outermost first, which is the fastest way to check a config before deploying it.</p>
 <h2>Checks that belong to a route</h2>
-<p>A route carries its own options: a JWT with a rotation window, a deadline, a body</p>
-<p>cap, a signature verifier, a priority shedder, an event-stream stamp. Each becomes a</p>
-<p>check that runs before the handler and refuses with the status the option promises.</p>
+<p>A route carries its own options: a JWT with a rotation window, a deadline, a body cap, a signature verifier, a priority shedder, an event-stream stamp. Each becomes a check that runs before the handler and refuses with the status the option promises.</p>
 <div class="code"><pre><code>
 fn guarded(api : @moonzero.Group, clock : @moonzero.Clock) -&gt; Unit {
   let checks = @moonzero.RouteOptions::new(clock~)
@@ -76,14 +64,9 @@ fn guarded(api : @moonzero.Group, clock : @moonzero.Clock) -&gt; Unit {
   api.options_(checks).post(&quot;/orders&quot;, _ctx =&gt; @moonapi.text(201, &quot;created&quot;))
 }
 </code></pre></div>
-<p><code>prev_secret</code> is the secret a rotation is retiring: a token signed with it keeps</p>
-<p>working while clients pick the new one up, and stops when the window closes. A JWT</p>
-<p>route answers <code>401</code> with the <code>WWW-Authenticate</code> challenge; a body past the cap</p>
-<p>answers <code>413</code>; a handler past its deadline is abandoned and answered <code>503</code>.</p>
+<p><code>prev_secret</code> is the secret a rotation is retiring: a token signed with it keeps working while clients pick the new one up, and stops when the window closes. A JWT route answers <code>401</code> with the <code>WWW-Authenticate</code> challenge; a body past the cap answers <code>413</code>; a handler past its deadline is abandoned and answered <code>503</code>.</p>
 <h2>One chain shape on both halves of zRPC</h2>
-<p>An invoker turns a call into a result, an interceptor wraps an invoker, and the</p>
-<p>transport is the innermost invoker. The presets build the chain a config document</p>
-<p>asks for: five client layers, eight server layers.</p>
+<p>An invoker turns a call into a result, an interceptor wraps an invoker, and the transport is the innermost invoker. The presets build the chain a config document asks for: five client layers, eight server layers.</p>
 <div class="code"><pre><code>
 import {
   &quot;moonbitstack/moonzero&quot;,
@@ -105,13 +88,9 @@ fn call_with_chain(
   call({ path: &quot;/greeter.Greeter/Say&quot;, request: b&quot;hi&quot;, parent: None })
 }
 </code></pre></div>
-<p>The server side is the mirror: <code>RpcServer::of(conf)</code> builds the eight layers from</p>
-<p><code>RpcServerConf</code>, and <code>invoke</code> runs a call through them to the handler registered for</p>
-<p>its path. Both sides take their clock, randomness and metrics from the caller, so a</p>
-<p>test drives time instead of waiting for it.</p>
+<p>The server side is the mirror: <code>RpcServer::of(conf)</code> builds the eight layers from <code>RpcServerConf</code>, and <code>invoke</code> runs a call through them to the handler registered for its path. Both sides take their clock, randomness and metrics from the caller, so a test drives time instead of waiting for it.</p>
 <h2>Resilience primitives</h2>
-<p>Each decision is a pure function of an injected clock, which is what makes it</p>
-<p>testable and replayable.</p>
+<p>Each decision is a pure function of an injected clock, which is what makes it testable and replayable.</p>
 <div class="code"><pre><code>
 fn guarded_call(
   breaker : @moonzero.Breaker,
@@ -120,31 +99,32 @@ fn guarded_call(
   breaker.run(() =&gt; backend())
 }
 </code></pre></div>
-<p>The breaker counts the last ten seconds in forty buckets and sheds a *fraction* of</p>
-<p>calls once the failure ratio passes its budget, so a struggling backend keeps the</p>
-<p>load it can still serve. <code>Shedder</code> refuses only when the machine is both hot and</p>
-<p>full. <code>TokenBucket</code>, <code>PeriodLimit</code> and <code>MaxConns</code> live in <code>limit</code>, in memory or on</p>
-<p>Redis; the Redis token limiter keeps limiting from a local bucket while it cannot</p>
-<p>reach the server, and returns to the shared one when a probe finds it again.</p>
+<p>The breaker counts the last ten seconds in forty buckets and sheds a *fraction* of calls once the failure ratio passes its budget, so a struggling backend keeps the load it can still serve. <code>Shedder</code> refuses only when the machine is both hot and full. <code>TokenBucket</code>, <code>PeriodLimit</code> and <code>MaxConns</code> live in <code>limit</code>, in memory or on Redis; the Redis token limiter keeps limiting from a local bucket while it cannot reach the server, and returns to the shared one when a probe finds it again.</p>
 <h2>Rules that bite</h2>
 <ul>
 <li><strong><code>Refused</code> is the config error.</strong> Every loader raises it; a document that names</li>
-<p>  one TLS file without the other, or a strict signature policy with no keys, is</p>
-<p>  refused at load rather than at the first request.</p>
+</ul>
+<p>one TLS file without the other, or a strict signature policy with no keys, is refused at load rather than at the first request.</p>
+<ul>
 <li><strong>Middleware flags default to on.</strong> Turning one off is explicit:</li>
-<p>  <code>MiddlewaresConf::new(breaker=false)</code>. <code>RestEngine::names()</code> tells you what you</p>
-<p>  actually got.</p>
+</ul>
+<p><code>MiddlewaresConf::new(breaker=false)</code>. <code>RestEngine::names()</code> tells you what you actually got.</p>
+<ul>
 <li><strong>TLS is the host&#x27;s.</strong> The certificate pair is carried and validated as a pair, but</li>
-<p>  the object built here is an application, not a socket.</p>
+</ul>
+<p>the object built here is an application, not a socket.</p>
+<ul>
 <li><strong>Metrics and spans come from elsewhere.</strong> Families are moonp8s&#x27;s, spans moontel&#x27;s;</li>
-<p>  the request counter keeps path, method and code as three labels, not one string.</p>
+</ul>
+<p>the request counter keeps path, method and code as three labels, not one string.</p>
+<ul>
 <li><strong>The p2c lag is milliseconds.</strong> The picker&#x27;s load is the truncated square root of</li>
-<p>  the lag times in-flight plus one, and the comparison is what decides between two</p>
-<p>  instances; <code>Balancer::report</code> is how a finished call moves those numbers.</p>
+</ul>
+<p>the lag times in-flight plus one, and the comparison is what decides between two instances; <code>Balancer::report</code> is how a finished call moves those numbers.</p>
+<ul>
 <li><strong>A file set is data, not a directory.</strong> <code>Files::add</code> puts bytes in a value and</li>
-<p>  <code>file_server</code> serves them under a prefix; <code>rest/files</code> loads a directory at start-up</p>
-<p>  and needs a file system, so it is native only.</p>
-</ul></div>
+</ul>
+<p><code>file_server</code> serves them under a prefix; <code>rest/files</code> loads a directory at start-up and needs a file system, so it is native only.</p></div>
   </div>
 </main>
 <style>
