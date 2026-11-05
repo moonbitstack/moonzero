@@ -93,6 +93,11 @@ ordinary parameters over public presets (`@moonzero.port`, `@moonzero.rpc_port`)
 so a service that wants 8080 writes `ServiceConf::new(port=8080)`. A process that
 runs both binds them separately — two listeners cannot hold one port.
 
+`CertFile` and `KeyFile` live in the same document and are validated as a pair: a
+document that names one without the other is refused at load, so a service cannot
+quietly listen in the clear while its operator believes otherwise. Terminating TLS
+is the host's job, since the object this library builds is an application.
+
 ## Configuration
 
 `RestConf` loads the `etc/*.yaml` a scaffolder writes: PascalCase keys, nested

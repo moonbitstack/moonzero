@@ -151,7 +151,14 @@ pub fn RestConf::timeout_ms(self : RestConf) -> Int32 {
 }
 
 ///|
-/// Whether TLS is configured — go-zero serves HTTPS once both files are named.
+/// Whether a certificate and its key are both named.
+///
+/// This library assembles an application, not a socket: the object it builds is
+/// handed to a host, and the host is what terminates TLS. These two paths are
+/// carried here so that host reads them from the same document as everything
+/// else — and a document that names only one of them is refused at load rather
+/// than leaving the service listening in the clear while its operator believes
+/// otherwise.
 pub fn RestConf::tls(self : RestConf) -> Bool {
   self.cert_file.length() > 0 && self.key_file.length() > 0
 }
