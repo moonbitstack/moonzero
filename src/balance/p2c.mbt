@@ -18,7 +18,6 @@ pub(all) struct P2cConf {
   decay_ms : Int64
   force_pick_ms : Int64
   init_success : Double
-  penalty : Double
   pick_times : Int32
 }
 
@@ -28,9 +27,14 @@ pub let p2c_default : P2cConf = {
   decay_ms: 10_000L,
   force_pick_ms: 1_000L,
   init_success: 1000.0,
-  penalty: 2147483647.0,
   pick_times: 3,
 }
+
+///|
+/// The load a node reports when its computed one is zero: the largest 32-bit value,
+/// so it loses every comparison. Named rather than written where it is used because
+/// it is a decision, not an arithmetic detail.
+pub let p2c_penalty : Int64 = 2147483647L
 
 ///|
 /// One instance's numbers.
@@ -123,11 +127,26 @@ fn P2cNode::healthy(self : P2cNode, conf : P2cConf) -> Bool {
 }
 
 ///|
-/// The node's load: the square root of its lag plus one, times its in-flight count
-/// plus one. A node with no lag and no calls still has a load of one, so the
-/// comparison never divides by zero.
-fn P2cNode::load(self : P2cNode) -> Double {
-  sqrt(self.lag + 1.0) * (self.inflight + 1).to_double()
+/// The node's load: the square root of its lag, truncated to a whole number, times
+/// its in-flight count plus one.
+///
+/// The truncation is part of the algorithm, not a shortcut: two nodes whose
+/// square roots differ by less than one are a tie, and the first of the pair wins.
+/// The lag is kept in milliseconds here and in nanoseconds in the reference
+/// implementation, so the scale is applied inside the square root — with the `+ 1`
+/// under it, a one-millisecond lag is a thousand-fold difference in nanoseconds and
+/// one-and-a-half-fold in milliseconds, and the two units would choose different
+/// nodes for the same pair.
+fn P2cNode::load(self : P2cNode) -> Int64 {
+  let lag = sqrt(self.lag * 1_000_000.0 + 1.0).to_int64()
+  let load = lag * (self.inflight + 1)
+  if load == 0 {
+    // Never reached with a non-negative in-flight count; kept because the
+    // reference keeps it, and a zero load would otherwise win every comparison.
+    p2c_penalty
+  } else {
+    load
+  }
 }
 
 ///|
@@ -273,9 +292,9 @@ pub fn P2c::done(
 pub fn P2c::stats(
   self : P2c,
   endpoint : @moonsd.Endpoint,
-) -> (Double, Int64, Int64) {
+) -> (Int64, Int64, Int64) {
   match self.nodes.get(endpoint.id) {
     Some(node) => (node.load(), node.inflight, node.requests)
-    None => (0.0, 0L, 0L)
+    None => (0L, 0L, 0L)
   }
 }

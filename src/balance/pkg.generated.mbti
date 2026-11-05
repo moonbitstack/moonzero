@@ -12,6 +12,8 @@ import {
 // Values
 pub let p2c_default : P2cConf
 
+pub let p2c_penalty : Int64
+
 pub fn sqrt(Double) -> Double
 
 // Errors
@@ -51,13 +53,12 @@ pub struct P2c {
 pub fn P2c::done(Self, @moonsd.Endpoint, Int64, Bool) -> Unit
 pub fn P2c::new(clock? : @clock.Clock, conf? : P2cConf, random? : (Int32) -> Int32) -> Self
 pub fn P2c::pick(Self, Array[@moonsd.Endpoint]) -> @moonsd.Endpoint?
-pub fn P2c::stats(Self, @moonsd.Endpoint) -> (Double, Int64, Int64)
+pub fn P2c::stats(Self, @moonsd.Endpoint) -> (Int64, Int64, Int64)
 
 pub(all) struct P2cConf {
   decay_ms : Int64
   force_pick_ms : Int64
   init_success : Double
-  penalty : Double
   pick_times : Int32
 }
 

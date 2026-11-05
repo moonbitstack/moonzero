@@ -183,7 +183,7 @@ test "p2c keeps a slow instance out of the rotation" {
   assert_eq(counts.get("b").unwrap_or(0) >= 100, true)
   let (slow_load, _, _) = picker.stats(endpoints[2])
   let (fast_load, _, _) = picker.stats(endpoints[0])
-  assert_eq(slow_load > fast_load * 4.0, true)
+  assert_eq(slow_load > fast_load * 4L, true)
 }
 
 ///|
