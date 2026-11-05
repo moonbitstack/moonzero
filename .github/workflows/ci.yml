@@ -58,6 +58,12 @@ jobs:
         run: |
           moon fmt && git diff --exit-code
 
+      # The code in docs/skills is pasted by an agent into a project, so it has to
+      # compile as written, with the same settings the library is checked under.
+      - name: skill snippets compile
+        if: runner.os == 'Linux'
+        run: python3 scripts/check_skill.py
+
       - name: interfaces are up to date
         run: |
           moon info --target all && git diff --exit-code
