@@ -14,6 +14,9 @@ ROOT = Path(__file__).resolve().parent.parent
 SOURCE = ROOT / "scripts" / "reference" / "p2c_vectors.txt"
 TARGET = ROOT / "src" / "balance" / "p2c_vectors_wbtest.mbt"
 
+LIMIT_SOURCE = ROOT / "scripts" / "reference" / "limit_vectors.txt"
+LIMIT_TARGET = ROOT / "src" / "limit" / "limit_vectors_wbtest.mbt"
+
 # A few hundred rows per function: one array literal of thousands of records makes
 # a wasm data segment large enough to be worth splitting.
 PER_CHUNK = 150
@@ -102,5 +105,48 @@ def main():
     print(f"wrote {TARGET} ({len(data)} rows in {len(chunks)} chunks)")
 
 
+def limit_rows():
+    out = []
+    for line in LIMIT_SOURCE.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line:
+            out.append(_parse(line))
+    return out
+
+
+def limit_table():
+    """The token-bucket table: one row per ask, in the reference's order."""
+    data = limit_rows()
+    lines = [
+        "// Generated from scripts/reference/limit_vectors.txt by",
+        "// scripts/gen_reference_vectors.py. Do not edit.",
+        "",
+        "///|",
+        "/// One ask of the reference limiter: a cost, the time it was asked at, and",
+        "/// whether it was admitted.",
+        "struct LimitVector {",
+        "  at_ms : Int64",
+        "  n : Int32",
+        "  allowed : Bool",
+        "}",
+        "",
+        "///|",
+        "fn limit_vectors() -> Array[LimitVector] {",
+        "  [",
+    ]
+    for row in data:
+        lines.append(
+            '    {{ at_ms: {at}L, n: {n}, allowed: {ok} }},'.format(
+                at=row["at_ms"], n=row["n"], ok=row["allowed"]
+            ).replace("{{", "{").replace("}}", "}")
+        )
+    lines.append("  ]")
+    lines.append("}")
+    lines.append("")
+    LIMIT_TARGET.write_text("\n".join(lines), encoding="utf-8", newline="\n")
+    print(f"wrote {LIMIT_TARGET} ({len(data)} rows)")
+
+
 if __name__ == "__main__":
     main()
+    limit_table()
