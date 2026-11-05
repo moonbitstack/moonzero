@@ -43,7 +43,7 @@ fn main {
     shedding.drop_ratio().to_string(),
   )
 
-  // Shedder: go-zero's adaptive load shedding. A hot CPU alone sheds nothing;
+  // Shedder: adaptive load shedding. A hot CPU alone sheds nothing;
   // ten calls stuck in flight, on a server that has shown it finishes calls at
   // once, does.
   let cpu : Ref[Int64] = { val: 900L, }

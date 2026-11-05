@@ -8,7 +8,7 @@
 #coverage.skip
 fn main {
   try {
-    // Config loads from the same YAML go-zero's zrpc.RpcServerConf reads.
+    // Config loads from the same YAML zrpc.RpcServerConf reads.
     let conf = @moonzero.RpcServerConf::from_yaml("name: greeter\nport: 9090\n")
     let rpc = @moonzero.RpcServer::new(conf)
     let g = rpc.group("hello.Greeter")

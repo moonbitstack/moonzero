@@ -1,6 +1,6 @@
 ///|
 /// Load a `ServiceConf` three ways — the `new()` defaults, a partial JSON config
-/// filled from those defaults, and the YAML `etc/*.yaml` format go-zero ships —
+/// filled from those defaults, and the YAML `etc/*.yaml` format a service ships —
 /// then read the `LogLevel` ordering and a YAML document as a `Json` tree.
 ///
 ///     moon run src/examples/01-config
@@ -11,13 +11,13 @@ fn main {
     println("defaults: " + describe(def))
 
     // A partial JSON config: only the fields present override; the rest fall back
-    // to the same defaults `new()` uses (go-zero's `,optional`/`,default=`).
+    // to the same defaults `new()` uses (the `,optional` / `,default=` tags).
     let json_src =
       #|{ "name": "greet", "port": 9000, "log_level": "error" }
     let from_json = @moonzero.ServiceConf::from_json(json_src)
     println("from_json: " + describe(from_json))
 
-    // The YAML config format go-zero actually writes, decoded through the same
+    // The YAML config format a service actually writes, decoded through the same
     // lenient field reader so it agrees with JSON field-for-field.
     let yaml_src = "name: greet\nhost: 127.0.0.1\nport: 9000\ntimeout_ms: 1500\nlog_level: debug\n"
     let from_yaml = @moonzero.ServiceConf::from_yaml(yaml_src)
@@ -42,7 +42,7 @@ fn main {
     Refused(msg) => println("config error: " + msg)
   }
 
-  // The YAML go-zero's etc/*.yaml is written in, read by moonjson into the same
+  // The YAML etc/*.yaml is written in, read by moonjson into the same
   // Json tree the JSON loader produces. It reports its own error, with a
   // position, so it is caught where it is raised.
   try {
