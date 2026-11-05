@@ -1,8 +1,7 @@
 ///|
 /// A structured access-log record (← go-zero's `logx` HTTP access fields). Rather
 /// than a free-form line, each request is captured as typed fields and rendered
-/// as one JSON object per line — the format go-zero emits under `logx` and the
-/// shape log collectors (ELK, Loki) expect.
+/// as one JSON object per line — the format a log collector (ELK, Loki) expects.
 pub(all) struct RequestLog {
   http_method : String
   path : String
@@ -14,9 +13,9 @@ pub(all) struct RequestLog {
 }
 
 ///|
-/// The record as a JSON value with a stable field order, `duration_ms` rendered
-/// as a number of milliseconds.
-pub fn RequestLog::to_json(self : RequestLog) -> Json {
+/// The record as a JSON object with a stable field order, `duration_ms` a number
+/// of milliseconds.
+pub impl ToJson for RequestLog with fn to_json(self) {
   Json::object(
     Map([
       ("method", Json::string(self.http_method)),
@@ -31,6 +30,46 @@ pub fn RequestLog::to_json(self : RequestLog) -> Json {
 }
 
 ///|
+pub extend RequestLog with ToJson::{to_json}
+
+///|
+/// Read a record back from the JSON `to_json` writes. Every field is required;
+/// a log line is written by this library, so a missing one means the document was
+/// not one of ours.
+pub impl FromJson for RequestLog with fn from_json(json, path) {
+  let object = match json {
+    Object(fields) => fields
+    _ => raise @json.JsonDecodeError((path, "access log must be a JSON object"))
+  }
+  let text = fn(key : String) -> String raise @json.JsonDecodeError {
+    match object.get(key) {
+      Some(String(value)) => value
+      Some(_) => raise @json.JsonDecodeError((path, key + " must be a string"))
+      None => raise @json.JsonDecodeError((path, key + " is missing"))
+    }
+  }
+  let number = fn(key : String) -> Double raise @json.JsonDecodeError {
+    match object.get(key) {
+      Some(Number(value, ..)) => value
+      Some(_) => raise @json.JsonDecodeError((path, key + " must be a number"))
+      None => raise @json.JsonDecodeError((path, key + " is missing"))
+    }
+  }
+  {
+    http_method: text("method"),
+    path: text("path"),
+    status: number("status").to_int(),
+    duration_ms: number("duration_ms").to_int64(),
+    request_id: text("request_id"),
+    client_ip: text("client_ip"),
+    user_agent: text("user_agent"),
+  }
+}
+
+///|
+pub extend RequestLog with FromJson::{from_json}
+
+///|
 /// The record rendered as a single-line JSON string, ready to write to a log
 /// sink.
 pub fn RequestLog::render(self : RequestLog) -> String {
@@ -38,8 +77,8 @@ pub fn RequestLog::render(self : RequestLog) -> String {
 }
 
 ///|
-/// The record as `logx` fields, for logging it through a `@logx.Logger` — the method
-/// and path make the entry's message, so they are not repeated here.
+/// The record as `logx` fields, for logging it through a `@logx.Logger` — the
+/// method and path make the entry's message, so they are not repeated here.
 pub fn RequestLog::fields(self : RequestLog) -> Array[(String, Json)] {
   [
     ("status", Json::number(self.status.to_double())),
@@ -52,8 +91,7 @@ pub fn RequestLog::fields(self : RequestLog) -> Array[(String, Json)] {
 
 ///|
 /// The client IP from an HTTP scope: the `X-Forwarded-For` first hop if present
-/// (proxy-aware, as go-zero's `httpx.GetRemoteAddr`), else the transport peer
-/// from the scope's `client`, else `"-"`.
+/// (proxy-aware), else the transport peer from the scope's `client`, else `"-"`.
 fn client_ip_of(scope : @moonasgi.Scope) -> String {
   match scope {
     Http(hs) => {
@@ -98,15 +136,26 @@ fn header_ci(
 }
 
 ///|
-/// Structured-logging middleware (← go-zero's `LogHandler`): time each HTTP
-/// request on the shared clock, capture its method/path/client-ip/user-agent and
-/// the response status observed on `HttpResponseStart`, and write one access
-/// entry through `logger` (the process `logx` by default) when the response
-/// starts. Access logs are `info`, so a service configured at `error` or above
-/// emits none of them. Non-HTTP scopes pass through without logging.
+/// A header list as a JSON object, so a verbose log line carries the whole
+/// exchange and not just the fields the record names.
+pub fn headers_json(headers : Array[(String, String)]) -> Json {
+  Json::object(Map(headers.map(pair => (pair.0, Json::string(pair.1)))))
+}
+
+///|
+/// Structured-logging middleware: time each HTTP request on the shared clock,
+/// capture its method/path/client-ip/user-agent and the response status observed
+/// on `HttpResponseStart`, and write one access entry through `logger` (the
+/// process `logx` by default) when the response starts. Access logs are `info`, so
+/// a service configured at `error` or above emits none of them.
+///
+/// `verbose` adds both header sets to the entry — what a debugging deployment
+/// switches on and an ordinary one leaves off. Non-HTTP scopes pass through
+/// without logging.
 pub fn structured_logging(
   clock : @clock.Clock,
   logger? : @logx.Logger,
+  verbose~ : Bool = false,
 ) -> Middleware {
   let lg = logger.unwrap_or(@logx.logx)
   inner => {
@@ -119,6 +168,7 @@ pub fn structured_logging(
           let ip = client_ip_of(scope)
           let ua = header_ci(scope, "user-agent", "-")
           let rid = header_ci(scope, "x-request-id", "-")
+          let request_headers = headers_json(hs.headers)
           let logged : Ref[Bool] = { val: false, }
           let observed : @moonasgi.Send = event => {
             match event {
@@ -134,9 +184,14 @@ pub fn structured_logging(
                     client_ip: ip,
                     user_agent: ua,
                   }
+                  let fields = entry.fields()
+                  if verbose {
+                    fields.push(("request_headers", request_headers))
+                    fields.push(("response_headers", headers_json(headers)))
+                  }
                   lg
                   .with_duration(entry.duration_ms)
-                  .info(verb + " " + path, fields=entry.fields())
+                  .info(verb + " " + path, fields~)
                 }
                 send(
                   @moonasgi.Event::HttpResponseStart(

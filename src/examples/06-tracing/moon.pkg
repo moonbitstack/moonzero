@@ -1,5 +1,14 @@
+// Drives the tracing layer in-process and reads the spans it recorded, so it
+// needs the async runtime: native-only, like moonzero's other async edges.
+supported_targets = "native"
+
 import {
   "moonbitstack/moonzero",
+  "moonbitstack/moonapi",
+  "moonbitstack/moonasgi",
+  "moonbitstack/moonbase/base16",
+  "moonbitstack/moontel",
+  "moonbitlang/async",
 }
 
 pkgtype(kind: "executable")

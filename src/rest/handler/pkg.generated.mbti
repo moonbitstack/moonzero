@@ -6,13 +6,17 @@ import {
   "moonbitstack/moonapi",
   "moonbitstack/moonapi/ctx",
   "moonbitstack/moonasgi/http",
+  "moonbitstack/moonasgi/mid",
   "moonbitstack/moonasgi/spec",
   "moonbitstack/mooncred/jwt",
+  "moonbitstack/mooncrypt/rsa",
+  "moonbitstack/moonp8s/metric",
+  "moonbitstack/moonseed",
+  "moonbitstack/moontel/trace",
   "moonbitstack/moonzero/breaker",
   "moonbitstack/moonzero/clock",
   "moonbitstack/moonzero/limit",
   "moonbitstack/moonzero/logx",
-  "moonbitstack/moonzero/metric",
   "moonbitstack/moonzero/shedder",
 }
 
@@ -21,7 +25,33 @@ pub fn auth(String, @clock.Clock) -> (async (@spec.Scope, async () -> @spec.Even
 
 pub fn breaker(@breaker.Breaker, refusal? : Refusal) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
+pub fn buffered_body(Bytes) -> async () -> @spec.Event
+
+pub fn constant_time_eq(BytesView, BytesView) -> Bool
+
+pub fn content_security(SignatureVerifier, @clock.Clock, header? : String) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+
 pub fn cors(CorsConf) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+
+pub fn cors_allows(Array[String], String) -> Bool
+
+pub let cors_expose : String
+
+pub let cors_headers : String
+
+pub let cors_methods : String
+
+pub let default_latency_buckets : Array[Double]
+
+pub let exposition_content_type : String
+
+pub fn file_server(Files, String) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+
+pub fn gunzip(limit? : Int32) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+
+pub fn headers_json(Array[(String, String)]) -> @json.Json
+
+pub fn is_gzip_encoding(String) -> Bool
 
 pub fn jwt_authorized(String?, String, Int64) -> Bool
 
@@ -29,23 +59,33 @@ pub fn jwt_sign(Map[String, @json.Json], String, typ? : String?, extra? : Map[St
 
 pub fn jwt_verify(String, String, Int64, policy? : @jwt.Policy) -> Map[String, @json.Json] raise @jwt.Refused
 
+pub fn layer(&@mid.Layer) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+
 pub fn logging(async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
 pub fn max_conns(@limit.MaxConns, refusal? : Refusal) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
 pub fn maxbytes(Int32, refusal? : Refusal) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
-pub fn metrics(@metric.ServerMetrics, @clock.Clock) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+pub fn media_type_of(String) -> String
 
-pub fn metrics_handler(@metric.ServerMetrics) -> async (@ctx.Context) -> @http.Response
+pub fn metrics(ServerMetrics, @clock.Clock) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
-pub fn mount_metrics(@moonapi.App, @metric.ServerMetrics) -> Unit
+pub fn metrics_handler(ServerMetrics) -> async (@ctx.Context) -> @http.Response
+
+pub fn mount_metrics(@moonapi.App, ServerMetrics) -> Unit
+
+pub fn parse_i64(String) -> Int64?
+
+pub fn parse_pairs(String) -> Map[String, String]
 
 pub fn period_limit(@limit.PeriodLimit, @clock.Clock, key? : String, refusal? : Refusal) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
 pub let plain_text : Array[(String, String)]
 
 pub fn rate_limit(@limit.TokenBucket, @clock.Clock, refusal? : Refusal) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+
+pub async fn read_body(async () -> @spec.Event) -> Bytes
 
 pub fn recovery(async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
@@ -57,9 +97,13 @@ pub let refusal : Refusal
 
 pub fn request_id(header? : String) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
+pub fn scope_header(@spec.Scope, String) -> String?
+
 pub fn shedding(@shedder.Shedder, refusal? : Refusal) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
-pub fn structured_logging(@clock.Clock, logger? : @logx.Logger) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+pub fn sign_content(String, String, String, String, Bytes) -> Bytes
+
+pub fn structured_logging(@clock.Clock, logger? : @logx.Logger, verbose? : Bool) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
 pub let timed_out : Refusal
 
@@ -69,21 +113,58 @@ pub let too_large : Refusal
 
 pub let too_many : Refusal
 
-pub fn tracing(header? : String, ignore_paths? : Array[String]) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+pub fn trace_clock() -> () -> Int64
+
+pub fn trace_id_of(String) -> String?
+
+pub fn trace_random(Int32) -> Bytes raise @moonseed.Unavailable
+
+pub fn tracer(sink? : &@trace.Sink, sampler? : &@trace.Sampler, limits? : @trace.Limits) -> @trace.Tracer
+
+pub fn tracing(tracer? : @trace.Tracer, now? : () -> Int64, header? : String, ignore_paths? : Array[String]) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
 pub let unavailable : Refusal
 
+pub fn verify_signature(SignatureVerifier, SignatureInput, Int64) -> VerifiedContent raise Refused
+
 // Errors
+pub(all) suberror Failure {
+  Failure(String)
+}
+
+pub(all) suberror Refused {
+  MissingHeader
+  MalformedHeader
+  UnknownKey
+  BadSecret
+  StaleTimestamp
+  BadCiphertext
+  BadSignature
+}
 
 // Types and methods
 pub(all) struct CorsConf {
-  allow_origin : String
-  allow_methods : String
-  allow_headers : String
-  allow_credentials : Bool
+  origins : Array[String]
+  methods : String
+  headers : String
+  expose : String
   max_age : Int32
 }
-pub fn CorsConf::new(allow_origin? : String, allow_methods? : String, allow_headers? : String, allow_credentials? : Bool, max_age? : Int32) -> Self
+pub fn CorsConf::new(origins? : Array[String], methods? : String, headers? : String, expose? : String, max_age? : Int32) -> Self
+
+pub(all) struct FileEntry {
+  body : Bytes
+  media_type : String
+}
+pub fn FileEntry::etag(Self) -> String
+
+pub(all) struct Files {
+  entries : Map[String, FileEntry]
+}
+pub fn Files::add(Self, String, Bytes, media_type? : String) -> Unit
+pub fn Files::get(Self, String) -> FileEntry?
+pub fn Files::new() -> Self
+pub fn Files::paths(Self) -> Array[String]
 
 pub(all) struct Refusal {
   status : Int32
@@ -103,10 +184,66 @@ pub(all) struct RequestLog {
   user_agent : String
 }
 pub fn RequestLog::fields(Self) -> Array[(String, @json.Json)]
+pub fn RequestLog::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn RequestLog::render(Self) -> String
 pub fn RequestLog::to_json(Self) -> @json.Json
+pub impl @json.FromJson for RequestLog
+pub impl @json.ToJson for RequestLog
+
+pub(all) struct RsaDecrypter {
+  key : @rsa.PrivateKey
+}
+pub fn RsaDecrypter::decrypt(Self, Bytes) -> Bytes raise
+pub fn RsaDecrypter::from_der(BytesView) -> Self raise
+pub fn RsaDecrypter::from_pem(StringView) -> Self raise
+pub fn RsaDecrypter::new(@rsa.PrivateKey) -> Self
+
+pub struct ServerMetrics {
+  registry : @metric.Registry
+  requests : @metric.Family[@metric.Counter]
+  latency : @metric.Family[@metric.Histogram]
+}
+pub fn ServerMetrics::latency(Self) -> @metric.Family[@metric.Histogram]
+pub fn ServerMetrics::latency_total(Self, String, String, Int32) -> Int64
+pub fn ServerMetrics::new() -> Self raise @metric.Refused
+pub fn ServerMetrics::observe(Self, String, String, Int32, Double) -> Unit
+pub fn ServerMetrics::registry(Self) -> @metric.Registry
+pub fn ServerMetrics::request_count(Self, String, String, Int32) -> Double
+pub fn ServerMetrics::requests(Self) -> @metric.Family[@metric.Counter]
+pub fn ServerMetrics::to_exposition(Self) -> String
+
+pub(all) struct SignatureInput {
+  verb : String
+  path : String
+  query : String
+  header : String?
+  body : Bytes
+  signed_uri : String?
+}
+
+pub(all) struct SignatureKey {
+  fingerprint : String
+  decrypter : &Decrypter
+}
+
+pub(all) struct SignatureVerifier {
+  keys : Array[SignatureKey]
+  tolerance_ms : Int64
+  strict : Bool
+}
+pub fn SignatureVerifier::new(keys~ : Array[SignatureKey], tolerance_ms? : Int64, strict? : Bool) -> Self
+pub fn SignatureVerifier::strict(Self) -> Bool
+
+pub(all) struct VerifiedContent {
+  key : Bytes
+  encrypted : Bool
+  body : Bytes
+}
 
 // Type aliases
 pub type Middleware = (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
 // Traits
+pub(open) trait Decrypter {
+  fn decrypt(Self, Bytes) -> Bytes raise
+}

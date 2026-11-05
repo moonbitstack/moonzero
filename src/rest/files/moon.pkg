@@ -1,0 +1,8 @@
+// Reading a directory into the static file set. The only part of the static-file
+// path that needs a file system, so it is the only part that is native.
+supported_targets = "native"
+
+import {
+  "moonbitstack/moonzero/rest/handler",
+  "moonbitlang/async/fs",
+}

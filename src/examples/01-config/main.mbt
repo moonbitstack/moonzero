@@ -39,7 +39,7 @@ fn main {
       @moonzero.LogLevel::parse("verbose").to_string(),
     )
   } catch {
-    ConfigError(msg) => println("config error: " + msg)
+    Refused(msg) => println("config error: " + msg)
   }
 
   // The YAML go-zero's etc/*.yaml is written in, read by moonjson into the same

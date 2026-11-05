@@ -54,7 +54,7 @@ fn header_of(events : Array[@moonasgi.Event], name : String) -> String {
 fn assemble(
   conf : @moonzero.RestConf,
   lines : Array[String],
-) -> @moonasgi.AsgiApp raise @moonzero.ConfigError {
+) -> @moonasgi.AsgiApp raise @moonzero.Refused {
   let clock = @moonzero.ManualClock::new().as_clock()
   let logger = @moonzero.Logger::new(
     clock,
@@ -165,10 +165,9 @@ async test "the prometheus layer records into the engine's own metric set" {
   let app = @moonapi.App::new()
   app.get("/ping", _ctx => @moonapi.text(200, "pong"))
   let asgi = engine.build(app).to_asgi()
-  assert_eq(engine.metrics().requests().total(), 0L)
+  assert_eq(engine.metrics().request_count("/ping", "GET", 200), 0.0)
   let _ = run(asgi, scope_at("/ping", []))
-  assert_eq(engine.metrics().requests().total(), 1L)
-  assert_eq(engine.metrics().requests().value("GET /ping 200"), 1L)
+  assert_eq(engine.metrics().request_count("/ping", "GET", 200), 1.0)
 }
 
 ///|

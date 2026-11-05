@@ -1,35 +1,17 @@
 ///|
-/// Join a group prefix with a route path into a single, normalised path: at most
-/// one slash between the two, a guaranteed leading slash, and `"/"` for the empty
-/// result.
-fn join_path(prefix : String, path : String) -> String {
-  let mut end = prefix.length()
-  while end > 0 && prefix[end - 1] == '/' {
-    end = end - 1
-  }
-  let base = prefix[0:end].to_owned()
-  let tail = if path.length() > 0 && path[0] != '/' { "/" + path } else { path }
-  let joined = base + tail
-  if joined.length() == 0 {
-    "/"
-  } else {
-    joined
-  }
-}
-
-///|
-/// A route group (← go-zero's `RouteGroup`): registers a set of routes on an
-/// underlying `moonapi.App` under a shared path prefix, so related endpoints
-/// (e.g. everything under `/api/v1`) are declared without repeating the prefix.
+/// A route group: registers a set of routes on an underlying `moonapi.App` under
+/// a shared path prefix and a shared set of route options, so related endpoints
+/// (everything under `/api/v1`, say) are declared without repeating either.
 pub struct Group {
   app : @moonapi.App
   prefix : String
+  options : RouteOptions
 }
 
 ///|
 /// Open a group that prefixes every route it registers with `prefix` on `app`.
 pub fn Group::new(app : @moonapi.App, prefix : String) -> Group {
-  { app, prefix, }
+  { app, prefix, options: RouteOptions::new(), }
 }
 
 ///|
@@ -39,7 +21,32 @@ pub fn Group::prefix(self : Group) -> String {
 }
 
 ///|
-/// Register a route for an explicit method under the group's prefix.
+/// The options every route in this group inherits.
+pub fn Group::options(self : Group) -> RouteOptions {
+  self.options
+}
+
+///|
+/// A group that keeps this one's prefix and app with `options` in place of the
+/// inherited set. The prefixes still join, so
+/// `Group::new(app, "/api").options_(RouteOptions::new().under("/v1"))` serves
+/// `/api/v1/...`.
+pub fn Group::options_(self : Group, options : RouteOptions) -> Group {
+  { app: self.app, prefix: self.prefix, options, }
+}
+
+///|
+/// A sub-group under `prefix`, inheriting every option.
+pub fn Group::sub(self : Group, prefix : String) -> Group {
+  {
+    app: self.app,
+    prefix: join_prefix(self.prefix, prefix),
+    options: self.options,
+  }
+}
+
+///|
+/// Register a route for an explicit method under the group's prefix and options.
 pub fn Group::route(
   self : Group,
   verb : @moonapi.Method,
@@ -47,12 +54,10 @@ pub fn Group::route(
   handler : @moonapi.ApiHandler,
   summary~ : String = "",
 ) -> Unit {
-  self.app.route(
-    verb,
-    template(join_path(self.prefix, path)),
-    handler,
-    summary~,
+  let full = template(
+    join_prefix(join_prefix(self.prefix, self.options.prefix), path),
   )
+  self.app.route(verb, full, handler, summary~, hoops=hoops_of(self.options))
 }
 
 ///|
@@ -108,6 +113,18 @@ pub fn Group::delete(
   summary~ : String = "",
 ) -> Unit {
   self.route(Delete, path, handler, summary~)
+}
+
+///|
+/// Register a server-sent-events route: a `GET` that answers with
+/// `text/event-stream` and is not cached.
+pub fn Group::sse(
+  self : Group,
+  path : String,
+  handler : @moonapi.ApiHandler,
+  summary~ : String = "",
+) -> Unit {
+  self.options_(self.options.sse()).get(path, handler, summary~)
 }
 
 ///|

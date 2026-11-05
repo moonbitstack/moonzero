@@ -23,21 +23,13 @@ pub using @logx {
 }
 
 ///|
-pub using @trace {
-  type TraceContext,
-  generate_span_id,
-  generate_trace_id,
-  next_trace_context,
-  parse_traceparent,
-}
-
-///|
-pub using @metric {
-  type CounterVec,
-  type Histogram,
+pub using @handler {
   type ServerMetrics,
   default_latency_buckets,
   exposition_content_type,
+  trace_id_of,
+  trace_clock,
+  tracer,
 }
 
 ///|
@@ -49,7 +41,7 @@ pub using @shedder {type Shedder, type Ticket}
 ///|
 pub using @conf {
   type Conf,
-  type ConfigError,
+  type Refused,
   type MiddlewaresConf,
   type PrivateKeyConf,
   type RestConf,
@@ -110,18 +102,28 @@ pub using @limit {
 ///|
 pub using @handler {
   type CorsConf,
+  type FileEntry,
+  type Files,
   type Middleware,
   type Refusal,
   type RequestLog,
+  type SignatureInput,
+  type SignatureKey,
+  type SignatureVerifier,
+  type VerifiedContent,
   auth,
   breaker,
+  content_security,
   cors,
+  file_server,
   jwt_authorized,
   jwt_sign,
   jwt_verify,
+  layer,
   logging,
   max_conns,
   maxbytes,
+  media_type_of,
   metrics,
   metrics_handler,
   mount_metrics,
@@ -135,6 +137,7 @@ pub using @handler {
   request_id,
   shedding,
   structured_logging,
+  verify_signature,
   timed_out,
   timeout,
   too_large,
@@ -144,4 +147,13 @@ pub using @handler {
 }
 
 ///|
-pub using @rest {type Group, type Layer, type RestEngine, type Server}
+pub using @rest {
+  type Group,
+  type JwtRoute,
+  type Layer,
+  type RestEngine,
+  type RouteOptions,
+  type Server,
+  not_allowed,
+  not_found,
+}

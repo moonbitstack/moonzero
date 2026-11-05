@@ -1,4 +1,0 @@
-// Counters and histograms in the Prometheus exposition format (go-zero's
-// core/metric).
-import {
-}

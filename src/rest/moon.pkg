@@ -1,16 +1,21 @@
 // The REST service: the engine that builds the middleware chain from
-// configuration, the server it runs on moonasgi, and route groups.
+// configuration, the route options a registration carries, the static file
+// layer, the server it runs on moonasgi, and route groups.
 import {
   "moonbitstack/moonzero/clock",
   "moonbitstack/moonzero/logx",
-  "moonbitstack/moonzero/metric",
   "moonbitstack/moonzero/breaker",
   "moonbitstack/moonzero/shedder",
   "moonbitstack/moonzero/conf",
   "moonbitstack/moonzero/limit",
   "moonbitstack/moonzero/rest/handler",
   "moonbitstack/moonapi",
+  "moonbitstack/moonapi/route",
   "moonbitstack/moonasgi",
+  "moonbitstack/moonasgi/http",
+  "moonbitstack/moontel/trace",
+  "moonbitlang/async",
+  "moonbitlang/core/encoding/utf8",
 }
 
 import {

@@ -1,26 +1,40 @@
 // The HTTP middlewares (go-zero's rest/handler): recovery, CORS, request ids,
-// timeouts, body limits, JWT, signatures, breaker, shedding, rate limits,
-// tracing, metrics and access logs, each an ASGI app wrapping an ASGI app.
+// timeouts, body limits, gzip, JWT, content signatures, breaker, shedding, rate
+// limits, tracing, metrics and access logs, each an ASGI app wrapping an ASGI
+// app. Layers moonasgi already owns are adapted through `mid.Layer`.
 import {
   "moonbitstack/moonzero/clock",
   "moonbitstack/moonzero/logx",
-  "moonbitstack/moonzero/trace",
-  "moonbitstack/moonzero/metric",
   "moonbitstack/moonzero/breaker",
   "moonbitstack/moonzero/shedder",
   "moonbitstack/moonzero/limit",
   "moonbitstack/moondate",
+  "moonbitstack/moonseed",
+  "moonbitstack/moonseed/system",
+  "moonbitstack/moonp8s",
+  "moonbitstack/moonp8s/metric",
+  "moonbitstack/moontel",
+  "moonbitstack/moontel/trace",
   "moonbitstack/moonward",
   "moonbitstack/moonapi",
   "moonbitstack/moonasgi",
+  "moonbitstack/moonasgi/mid",
+  "moonbitstack/moonbase/base16",
+  "moonbitstack/moonbase/base64",
+  "moonbitstack/mooncrypt/cipher/aes",
+  "moonbitstack/mooncrypt/cipher/mode",
   "moonbitstack/mooncrypt/hash/sha2",
+  "moonbitstack/mooncrypt/key",
   "moonbitstack/mooncrypt/mac/hmac",
+  "moonbitstack/mooncrypt/rsa",
   "moonbitstack/mooncred/jwt",
+  "moonbitstack/moonzip",
+  "moonbitstack/moonzip/gzip",
   "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/json",
 }
 
 import {
-  "moonbitlang/core/json",
   "moonbitstack/moonlog",
   "moonbitlang/async",
 } for "wbtest"

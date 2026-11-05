@@ -53,8 +53,12 @@ import {
   "moonbitstack/moonsd@0.1.1",
   "moonbitstack/moonpool@0.3.3",
   "moonbitstack/moonredis@0.1.3",
+  "moonbitstack/moonzip@0.3.6",
   "moonbitstack/moonetcd@0.1.2",
   "moonbitstack/moonconsul@0.1.2",
+  "moonbitstack/moonseed@0.1.1",
+  "moonbitstack/moonp8s@0.1.0",
+  "moonbitstack/moontel@0.1.0",
 }
 
 source = "src"

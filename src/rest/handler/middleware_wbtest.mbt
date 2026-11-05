@@ -10,12 +10,9 @@ fn header_of(headers : Array[(String, String)], name : String) -> String? {
 }
 
 ///|
-test "cors_headers advertises the configured policy" {
-  let conf = CorsConf::new(
-    allow_origin="https://example.com",
-    allow_credentials=true,
-  )
-  let headers = cors_headers(conf)
+test "an allowed origin is echoed back with credentials" {
+  let conf = CorsConf::new(origins=["https://example.com"])
+  let headers = cors_response_headers(conf, Some("https://example.com"))
   assert_eq(
     header_of(headers, "access-control-allow-origin"),
     Some("https://example.com"),
@@ -27,15 +24,34 @@ test "cors_headers advertises the configured policy" {
   assert_eq(header_of(headers, "access-control-max-age"), Some("86400"))
   assert_eq(
     header_of(headers, "access-control-allow-methods"),
-    Some("GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS"),
+    Some(cors_methods),
   )
 }
 
 ///|
-test "cors_headers omits credentials when disabled" {
-  let headers = cors_headers(CorsConf::new())
+test "the wildcard origin never advertises credentials" {
+  let headers = cors_response_headers(
+    CorsConf::new(),
+    Some("https://any.example"),
+  )
   assert_eq(header_of(headers, "access-control-allow-credentials"), None)
   assert_eq(header_of(headers, "access-control-allow-origin"), Some("*"))
+}
+
+///|
+test "an origin outside the policy gets no CORS headers" {
+  let conf = CorsConf::new(origins=["https://example.com"])
+  let headers = cors_response_headers(conf, Some("https://evil.example"))
+  assert_eq(headers.length(), 0)
+}
+
+///|
+test "an allowed origin covers its own subdomains" {
+  assert_eq(cors_allows(["example.com"], "https://api.example.com"), true)
+  assert_eq(cors_allows(["https://example.com"], "https://example.com"), true)
+  assert_eq(cors_allows(["exam00.com"], "https://sub.exam00.com"), true)
+  assert_eq(cors_allows(["example.com"], "https://notexample.com"), false)
+  assert_eq(cors_allows(["*"], "https://anything.example"), true)
 }
 
 ///|
@@ -79,4 +95,39 @@ test "recovery emits a 500 with a body" {
   }
   assert_eq(status, 500)
   assert_eq(body_len > 0, true)
+}
+
+///|
+async test "recovery answers 500 only while the response has not started" {
+  let raising : @moonasgi.AsgiApp = (_scope, _receive, _send) => {
+    raise Failure("handler blew up")
+  }
+  let events = run_app(
+    recovery(raising),
+    @moonasgi.Scope::Http(
+      @moonasgi.HttpScope::new(http_method="GET", path="/x"),
+    ),
+  )
+  assert_eq(events[0] is HttpResponseStart(status=500, ..), true)
+
+  // Once the response has started, the error is re-raised instead of appending a
+  // second status line to a response the client is already reading.
+  let half : @moonasgi.AsgiApp = (_scope, _receive, send) => {
+    send(
+      @moonasgi.Event::HttpResponseStart(status=200, headers=[], trailers=false),
+    )
+    raise Failure("late failure")
+  }
+  let outcome = try {
+    let events = run_app(
+      recovery(half),
+      @moonasgi.Scope::Http(
+        @moonasgi.HttpScope::new(http_method="GET", path="/x"),
+      ),
+    )
+    Ok(events.length())
+  } catch {
+    error => Err(error)
+  }
+  assert_eq(outcome is Err(_), true)
 }

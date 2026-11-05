@@ -4,19 +4,46 @@ package "moonbitstack/moonzero/rest"
 import {
   "moonbitstack/moonapi",
   "moonbitstack/moonapi/ctx",
+  "moonbitstack/moonapi/route",
   "moonbitstack/moonasgi/http",
   "moonbitstack/moonasgi/spec",
   "moonbitstack/moonhttp/method",
+  "moonbitstack/moontel/trace",
   "moonbitstack/moonzero/breaker",
   "moonbitstack/moonzero/clock",
   "moonbitstack/moonzero/conf",
   "moonbitstack/moonzero/limit",
   "moonbitstack/moonzero/logx",
-  "moonbitstack/moonzero/metric",
+  "moonbitstack/moonzero/rest/handler",
   "moonbitstack/moonzero/shedder",
 }
 
 // Values
+pub fn hoops_of(RouteOptions) -> Array[async (@ctx.Context, async (@ctx.Context) -> @route.Reply) -> @route.Reply]
+
+pub fn join_path(String, String) -> String
+
+pub fn join_prefix(String, String) -> String
+
+pub fn jwt_accepts(JwtRoute, String?, Int64) -> Bool
+
+pub fn jwt_hoop(JwtRoute, @clock.Clock) -> async (@ctx.Context, async (@ctx.Context) -> @route.Reply) -> @route.Reply
+
+pub fn max_bytes_hoop(Int32) -> async (@ctx.Context, async (@ctx.Context) -> @route.Reply) -> @route.Reply
+
+pub let no_jwt : JwtRoute
+
+pub fn not_allowed(@moonapi.App, (@ctx.Context) -> @http.Response) -> Unit
+
+pub fn not_found(@moonapi.App, (@ctx.Context) -> @http.Response) -> Unit
+
+pub fn priority_hoop(@shedder.Shedder) -> async (@ctx.Context, async (@ctx.Context) -> @route.Reply) -> @route.Reply
+
+pub fn signature_hoop(@handler.SignatureVerifier, @clock.Clock) -> async (@ctx.Context, async (@ctx.Context) -> @route.Reply) -> @route.Reply
+
+pub fn sse_hoop() -> async (@ctx.Context, async (@ctx.Context) -> @route.Reply) -> @route.Reply
+
+pub fn timeout_hoop(Int64) -> async (@ctx.Context, async (@ctx.Context) -> @route.Reply) -> @route.Reply
 
 // Errors
 
@@ -24,15 +51,26 @@ import {
 pub struct Group {
   app : @moonapi.App
   prefix : String
+  options : RouteOptions
 }
 pub fn Group::delete(Self, String, async (@ctx.Context) -> @http.Response, summary? : String) -> Unit
 pub fn Group::get(Self, String, async (@ctx.Context) -> @http.Response, summary? : String) -> Unit
 pub fn Group::new(@moonapi.App, String) -> Self
+pub fn Group::options(Self) -> RouteOptions
+pub fn Group::options_(Self, RouteOptions) -> Self
 pub fn Group::patch(Self, String, async (@ctx.Context) -> @http.Response, summary? : String) -> Unit
 pub fn Group::post(Self, String, async (@ctx.Context) -> @http.Response, summary? : String) -> Unit
 pub fn Group::prefix(Self) -> String
 pub fn Group::put(Self, String, async (@ctx.Context) -> @http.Response, summary? : String) -> Unit
 pub fn Group::route(Self, @method.Method, String, async (@ctx.Context) -> @http.Response, summary? : String) -> Unit
+pub fn Group::sse(Self, String, async (@ctx.Context) -> @http.Response, summary? : String) -> Unit
+pub fn Group::sub(Self, String) -> Self
+
+pub(all) struct JwtRoute {
+  enabled : Bool
+  secret : String
+  prev_secret : String?
+}
 
 pub(all) struct Layer {
   name : String
@@ -43,23 +81,53 @@ pub struct RestEngine {
   conf : @conf.RestConf
   clock : @clock.Clock
   logger : @logx.Logger
-  metrics : @metric.ServerMetrics
+  metrics : @handler.ServerMetrics
   conns : @limit.MaxConns
   circuit : @breaker.Breaker
   shedder : @shedder.Shedder
+  priority_shedder : @shedder.Shedder
+  tracer : @trace.Tracer
+  recorder : @trace.Recorder
+  signature : @handler.SignatureVerifier?
 }
 pub fn RestEngine::build(Self, @moonapi.App) -> Server
 pub fn RestEngine::conf(Self) -> @conf.RestConf
 pub fn RestEngine::layers(Self) -> Array[Layer]
-pub fn RestEngine::metrics(Self) -> @metric.ServerMetrics
+pub fn RestEngine::metrics(Self) -> @handler.ServerMetrics
 pub fn RestEngine::names(Self) -> Array[String]
-pub fn RestEngine::new(@conf.RestConf, clock? : @clock.Clock, logger? : @logx.Logger, metrics? : @metric.ServerMetrics, usage? : () -> Int64) -> Self raise @conf.ConfigError
+pub fn RestEngine::new(@conf.RestConf, clock? : @clock.Clock, logger? : @logx.Logger, metrics? : @handler.ServerMetrics, usage? : () -> Int64, tracer? : @trace.Tracer, signature? : @handler.SignatureVerifier) -> Self raise @conf.Refused
+pub fn RestEngine::priority_shedder(Self) -> @shedder.Shedder
+pub fn RestEngine::shedder(Self) -> @shedder.Shedder
+pub fn RestEngine::spans(Self) -> Array[@trace.SpanData]
+pub fn RestEngine::tracer(Self) -> @trace.Tracer
+
+pub(all) struct RouteOptions {
+  prefix : String
+  jwt : JwtRoute
+  signature : @handler.SignatureVerifier?
+  timeout_ms : Int64
+  max_bytes : Int32
+  priority_shedder : @shedder.Shedder?
+  sse : Bool
+  clock : @clock.Clock
+}
+pub fn RouteOptions::jwt(Self, secret~ : String, prev_secret? : String) -> Self
+pub fn RouteOptions::max_bytes(Self, Int32) -> Self
+pub fn RouteOptions::new(clock? : @clock.Clock) -> Self
+pub fn RouteOptions::priority(Self, @shedder.Shedder) -> Self
+pub fn RouteOptions::signature(Self, @handler.SignatureVerifier) -> Self
+pub fn RouteOptions::sse(Self) -> Self
+pub fn RouteOptions::timeout(Self, Int64) -> Self
+pub fn RouteOptions::under(Self, String) -> Self
 
 pub struct Server {
   conf : @conf.ServiceConf
   handler : async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+  mounted : Array[String]
 }
 pub fn Server::describe(Self) -> String
+pub fn Server::files(Self, String, @handler.Files) -> Self
+pub fn Server::mounted(Self) -> Array[String]
 pub fn Server::new(@conf.ServiceConf, @moonapi.App) -> Self
 pub fn Server::to_asgi(Self) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 pub fn Server::use_(Self, (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> Self

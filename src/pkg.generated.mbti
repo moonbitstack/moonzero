@@ -6,23 +6,23 @@ import {
   "moonbitstack/moonapi",
   "moonbitstack/moonapi/ctx",
   "moonbitstack/moonasgi/http",
+  "moonbitstack/moonasgi/mid",
   "moonbitstack/moonasgi/spec",
   "moonbitstack/mooncred/jwt",
   "moonbitstack/moonlog",
   "moonbitstack/moonrpc/wire",
   "moonbitstack/moonsd",
+  "moonbitstack/moontel/trace",
   "moonbitstack/moonzero/balance",
   "moonbitstack/moonzero/breaker",
   "moonbitstack/moonzero/clock",
   "moonbitstack/moonzero/conf",
   "moonbitstack/moonzero/limit",
   "moonbitstack/moonzero/logx",
-  "moonbitstack/moonzero/metric",
   "moonbitstack/moonzero/proc",
   "moonbitstack/moonzero/rest",
   "moonbitstack/moonzero/rest/handler",
   "moonbitstack/moonzero/shedder",
-  "moonbitstack/moonzero/trace",
   "moonbitstack/moonzero/zrpc",
 }
 
@@ -32,6 +32,8 @@ pub fn auth(String, @clock.Clock) -> (async (@spec.Scope, async () -> @spec.Even
 pub fn breaker(@breaker.Breaker, refusal? : @handler.Refusal) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
 pub fn canonical_key(String) -> String
+
+pub fn content_security(@handler.SignatureVerifier, @clock.Clock, header? : String) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
 pub fn cors(@handler.CorsConf) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
@@ -43,9 +45,7 @@ pub fn entry(@moonlog.Record) -> String
 
 pub let exposition_content_type : String
 
-pub fn generate_span_id(Int64) -> String
-
-pub fn generate_trace_id(Int64) -> String
+pub fn file_server(@handler.Files, String) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
 pub async fn hold(&@moonsd.Registrar, String, @moonsd.Endpoint, ttl? : Int32, report? : (Error) -> Unit) -> Unit
 
@@ -54,6 +54,8 @@ pub fn jwt_authorized(String?, String, Int64) -> Bool
 pub fn jwt_sign(Map[String, @json.Json], String, typ? : String?, extra? : Map[String, @json.Json], wins? : @jwt.Wins, clash? : @jwt.OnClash[Map[String, @json.Json]]) -> String
 
 pub fn jwt_verify(String, String, Int64, policy? : @jwt.Policy) -> Map[String, @json.Json] raise @jwt.Refused
+
+pub fn layer(&@mid.Layer) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
 pub fn level_name(@moonlog.Level) -> String
 
@@ -65,17 +67,19 @@ pub fn max_conns(@limit.MaxConns, refusal? : @handler.Refusal) -> (async (@spec.
 
 pub fn maxbytes(Int32, refusal? : @handler.Refusal) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
+pub fn media_type_of(String) -> String
+
 pub let message_key : String
 
-pub fn metrics(@metric.ServerMetrics, @clock.Clock) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+pub fn metrics(@handler.ServerMetrics, @clock.Clock) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
-pub fn metrics_handler(@metric.ServerMetrics) -> async (@ctx.Context) -> @http.Response
+pub fn metrics_handler(@handler.ServerMetrics) -> async (@ctx.Context) -> @http.Response
 
-pub fn mount_metrics(@moonapi.App, @metric.ServerMetrics) -> Unit
+pub fn mount_metrics(@moonapi.App, @handler.ServerMetrics) -> Unit
 
-pub fn next_trace_context(String?, Int64) -> @trace.TraceContext
+pub fn not_allowed(@moonapi.App, (@ctx.Context) -> @http.Response) -> Unit
 
-pub fn parse_traceparent(String) -> @trace.TraceContext?
+pub fn not_found(@moonapi.App, (@ctx.Context) -> @http.Response) -> Unit
 
 pub fn period_limit(@limit.PeriodLimit, @clock.Clock, key? : String, refusal? : @handler.Refusal) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
@@ -111,7 +115,7 @@ pub let stamp_key : String
 
 pub fn status_of_code(Int32) -> @wire.Status
 
-pub fn structured_logging(@clock.Clock, logger? : @logx.Logger) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+pub fn structured_logging(@clock.Clock, logger? : @logx.Logger, verbose? : Bool) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
 pub let timed_out : @handler.Refusal
 
@@ -123,9 +127,17 @@ pub let too_large : @handler.Refusal
 
 pub let too_many : @handler.Refusal
 
-pub fn tracing(header? : String, ignore_paths? : Array[String]) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+pub fn trace_clock() -> () -> Int64
+
+pub fn trace_id_of(String) -> String?
+
+pub fn tracer(sink? : &@trace.Sink, sampler? : &@trace.Sampler, limits? : @trace.Limits) -> @trace.Tracer
+
+pub fn tracing(tracer? : @trace.Tracer, now? : () -> Int64, header? : String, ignore_paths? : Array[String]) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
 pub let unavailable : @handler.Refusal
+
+pub fn verify_signature(@handler.SignatureVerifier, @handler.SignatureInput, Int64) -> @handler.VerifiedContent raise @handler.Refused
 
 // Errors
 
@@ -148,17 +160,17 @@ pub using @clock {type Clock}
 
 pub using @conf {type Conf}
 
-pub using @conf {type ConfigError}
-
 pub using @handler {type CorsConf}
-
-pub using @metric {type CounterVec}
 
 pub using @moonsd {type Endpoint}
 
+pub using @handler {type FileEntry}
+
+pub using @handler {type Files}
+
 pub using @rest {type Group}
 
-pub using @metric {type Histogram}
+pub using @rest {type JwtRoute}
 
 pub using @rest {type Layer}
 
@@ -192,6 +204,8 @@ pub using @limit {type RedisTokenLimit}
 
 pub using @handler {type Refusal}
 
+pub using @conf {type Refused}
+
 pub using @handler {type RequestLog}
 
 pub type Resolve = (String) -> Array[@moonsd.Endpoint]
@@ -199,6 +213,8 @@ pub type Resolve = (String) -> Array[@moonsd.Endpoint]
 pub using @conf {type RestConf}
 
 pub using @rest {type RestEngine}
+
+pub using @rest {type RouteOptions}
 
 pub using @zrpc {type RpcChannel}
 
@@ -214,7 +230,7 @@ pub using @conf {type RpcServerConf}
 
 pub using @rest {type Server}
 
-pub using @metric {type ServerMetrics}
+pub using @handler {type ServerMetrics}
 
 pub type ServerStreamHandler = (Bytes) -> Array[Bytes]
 
@@ -226,15 +242,21 @@ pub using @proc {type ShutdownCoordinator}
 
 pub using @conf {type SignatureConf}
 
+pub using @handler {type SignatureInput}
+
+pub using @handler {type SignatureKey}
+
+pub using @handler {type SignatureVerifier}
+
 pub using @shedder {type Ticket}
 
 pub using @limit {type TokenBucket}
 
-pub using @trace {type TraceContext}
-
 pub using @breaker {type Unavailable}
 
 pub using @moonsd {type Update}
+
+pub using @handler {type VerifiedContent}
 
 pub using @moonsd {type View}
 

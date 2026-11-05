@@ -34,7 +34,7 @@ fn gozero_yaml() -> String {
 ///|
 /// An engine over `conf`, on a manual clock and a logger nobody reads, so a test
 /// never touches the process logger.
-fn test_engine(conf : @conf.RestConf) -> RestEngine raise @conf.ConfigError {
+fn test_engine(conf : @conf.RestConf) -> RestEngine raise @conf.Refused {
   let clock = @clock.ManualClock::new().as_clock()
   RestEngine::new(
     conf,
@@ -48,7 +48,7 @@ fn test_engine(conf : @conf.RestConf) -> RestEngine raise @conf.ConfigError {
 fn full_chain() -> Array[String] {
   [
     "trace", "log", "prometheus", "maxConns", "breaker", "shedding", "timeout", "recover",
-    "maxBytes",
+    "maxBytes", "gunzip",
   ]
 }
 
@@ -68,6 +68,7 @@ test "the chain installs exactly what the flags ask for" {
     (@conf.MiddlewaresConf::new(timeout=false), "timeout"),
     (@conf.MiddlewaresConf::new(recover=false), "recover"),
     (@conf.MiddlewaresConf::new(max_bytes=false), "maxBytes"),
+    (@conf.MiddlewaresConf::new(gunzip=false), "gunzip"),
   ]
   for pair in off {
     let names = test_engine(@conf.RestConf::new(middlewares=pair.0)).names()
@@ -77,14 +78,13 @@ test "the chain installs exactly what the flags ask for" {
 }
 
 ///|
-test "the two flags with nothing behind them install nothing either way" {
-  // Metrics is go-zero's internal stat sink and Gunzip needs a DEFLATE decoder;
-  // moonzero has neither, so both flags load and change no layer
+test "the one flag with nothing behind it installs nothing either way" {
+  // Metrics is go-zero's internal stat sink; the numbers it records are the
+  // Prometheus families the Prometheus flag installs, so the flag loads and
+  // changes no layer.
   let on = test_engine(@conf.RestConf::new()).names()
   let off = test_engine(
-    @conf.RestConf::new(
-      middlewares=@conf.MiddlewaresConf::new(metrics=false, gunzip=false),
-    ),
+    @conf.RestConf::new(middlewares=@conf.MiddlewaresConf::new(metrics=false)),
   ).names()
   assert_eq(on, full_chain())
   assert_eq(off, full_chain())
@@ -99,7 +99,7 @@ test "a layer whose setting disables it is left out even with its flag on" {
     service=@conf.ServiceConf::new(timeout_ms=0),
   )
   assert_eq(test_engine(conf).names(), [
-    "trace", "log", "prometheus", "breaker", "recover",
+    "trace", "log", "prometheus", "breaker", "recover", "gunzip",
   ])
 }
 
@@ -107,7 +107,7 @@ test "a layer whose setting disables it is left out even with its flag on" {
 test "the chain the engine builds is the chain it names" {
   let conf = @conf.RestConf::from_yaml(gozero_yaml())
   let engine = test_engine(conf)
-  // the file turns Prometheus off
+  // the file turns Prometheus and Gunzip off
   assert_eq(engine.names(), [
     "trace", "log", "maxConns", "breaker", "shedding", "timeout", "recover", "maxBytes",
   ])
@@ -126,7 +126,7 @@ test "a strict signature with no keys is refused" {
   try {
     let _ = test_engine(strict)
   } catch {
-    ConfigError(msg) =>
+    Refused(msg) =>
       assert_eq(msg, "signature is strict but no private keys are configured")
   } noraise {
     _ =>
