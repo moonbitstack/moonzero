@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
-"""Generate a self-contained, styled API-reference site (docs/index.html) for
-gh-pages from the package sources' `///` doc comments. Reproducible: reads the
-.mbt files, so the docs never drift from the code."""
+"""The package list and the parser that reads it out of the sources.
+
+`gen_site.py` turns this into pages: one entry per package, each naming the files
+that document it and the sentence that describes it, and a `parse()` that reads a
+file's `///` comments and declarations back out so a page can never drift from the
+code it documents."""
+
 import re, html, pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -370,87 +374,3 @@ document.addEventListener("DOMContentLoaded",()=>{
     document.documentElement.setAttribute("data-theme",cur==="dark"?"light":"dark");});
 });
 """
-
-CONTRACT = """let conf = RestConf::from_yaml(etc_yaml)   // one etc/*.yaml
-let server = RestEngine::new(conf).build(app)
-
-server.describe()                    // "greet listening on 127.0.0.1:12000"
-server.to_asgi()                     // hand it to any ASGI host"""
-
-
-def neutral(t):
-    """Keep the page's prose about this library: the reference implementation is
-    named nowhere, and an ASGI host is not named either."""
-    for word, replacement in (
-        ("go-zero's", "the reference implementation's"),
-        ("go-zero", "the reference implementation"),
-        ("mooncat", "an ASGI host"),
-        ("moonapi", "the application layer"),
-        ("moonasgi", "the ASGI transport"),
-    ):
-        t = t.replace(word, replacement)
-    return t
-
-
-def esc(t):
-    return html.escape(neutral(t))
-
-
-def main():
-    HEAD = ('<!doctype html><html lang="en"><head><meta charset="utf-8">'
-            '<meta name="viewport" content="width=device-width,initial-scale=1">'
-            '<title>moonzero — MoonBit service framework API</title>'
-            '<link rel="preconnect" href="https://fonts.googleapis.com">'
-            '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
-            '<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&'
-            'family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">'
-            '<style>' + CSS + '</style></head><body>')
-
-    side = ['<aside class="sidebar"><div class="brand"><span class="dot"></span>moonzero</div>'
-            '<p class="brand-sub">MoonBit service framework — API reference</p><nav class="side-nav">']
-    side += ['<a href="#%s"><span class="at">§</span>%s</a>' % (sid, title)
-             for sid, _, title, _ in SECTIONS]
-    side += ['</nav>'
-             '<button class="theme-btn" id="theme">◐ toggle theme</button>'
-             '<div class="side-foot">'
-             '<a href="https://github.com/moonbitstack/moonzero/actions"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/moonbitstack/moonzero/ci.yml?branch=master&label=CI&logo=github"></a>'
-             '<a href="https://mooncakes.io/docs/moonbitstack/moonzero"><img alt="mooncakes" src="https://img.shields.io/badge/mooncakes-Lfan--ke%2Fmoonzero-1f6feb"></a>'
-             '</div></aside>']
-
-    hero = ('<main><header class="hero"><h1>moonzero</h1>'
-            '<p class="tag">A service framework for MoonBit &#8212; configuration, middleware, zRPC, '
-            'resilience and discovery, assembled into one application the host can run.</p>'
-            '<div class="badges">'
-            '<a href="https://github.com/moonbitstack/moonzero/actions"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/moonbitstack/moonzero/ci.yml?branch=master&label=CI&logo=github"></a>'
-            '<a href="https://github.com/moonbitstack/moonzero"><img alt="GitHub" src="https://img.shields.io/badge/GitHub-source-24292f?logo=github"></a>'
-            '<img alt="license" src="https://img.shields.io/badge/license-Apache--2.0-6d5efc"></div>'
-            '<div class="install"><span class="prompt">$</span><code>moon add moonbitstack/moonzero</code>'
-            '<button class="copy" data-copy="moon add moonbitstack/moonzero">copy</button></div>'
-            '<div class="contract"><h2><span class="spark">&#10038;</span> The contract at a glance</h2>'
-            '<pre>' + tint(CONTRACT) + '</pre></div></header>')
-
-    body = [HEAD, '<div class="layout">'] + side + [hero]
-    total = 0
-    for sid, rel, title, desc in SECTIONS:
-        body.append('<section class="pkg" id="%s"><h2><span class="at">§</span>%s</h2>'
-                    '<p class="pdesc">%s</p>' % (sid, title, esc(desc)))
-        files = rel if isinstance(rel, tuple) else (rel,)
-        for kind, sig, doc in [it for f in files for it in parse(ROOT / "src" / f)]:
-            total += 1
-            body.append('<div class="item" data-k="%s"><span class="kind">%s</span>'
-                        '<pre class="sig">%s</pre>%s</div>'
-                        % (kind, kind, tint(sig), ('<p class="doc">%s</p>' % prose(neutral(doc))) if doc else ''))
-        body.append('</section>')
-    body.append('<footer>Generated from source <code>///</code> doc-comments · '
-                '<a href="https://mooncakes.io/docs/moonbitstack/moonzero">mooncakes</a> · '
-                '<a href="https://github.com/moonbitstack/moonzero">GitHub</a> · Apache-2.0 &#169; Leo Cheng</footer>')
-    body.append('</main></div><script>' + JS + '</script></body></html>')
-
-    out = ROOT / "docs" / "index.html"
-    out.parent.mkdir(exist_ok=True)
-    out.write_text("\n".join(body), encoding="utf-8")
-    print("wrote %s (%d public items across %d sections)" % (out, total, len(SECTIONS)))
-
-
-if __name__ == "__main__":
-    main()

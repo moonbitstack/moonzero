@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en" data-theme="day">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skill — moonzero</title>
+<meta name="description" content="The skill an agent reads to use this library.">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Space+Grotesk:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="assets/site.css">
+<script>try{var q=new URLSearchParams(location.search).get('theme');var t=q||localStorage.getItem('mz-theme');document.documentElement.setAttribute('data-theme',t||(matchMedia('(prefers-color-scheme: dark)').matches?'night':'day'))}catch(e){}</script>
+</head>
+<body data-up="">
+<header class="bar">
+  <a class="mark" href="index.html">moonzero</a>
+  <span class="mode">· control plane</span>
+  <span class="facts">v0.14.6  ·  46 packages  ·  4 targets  ·  Apache-2.0</span>
+  <span class="spacer"></span>
+  <span class="crumb"><b>skills</b></span>
+  <button class="plain" data-palette-open type="button" title="Search packages">⌘K</button>
+  <button class="theme" type="button" aria-label="Colour theme">
+    <span data-theme-set="day">DAY</span><span data-theme-set="night">NIGHT</span>
+  </button>
+  <a href="https://github.com/moonbitstack/moonzero" title="Source on GitHub">GitHub</a>
+</header>
+<main class="shell" style="grid-template-columns:minmax(0,1fr);padding-top:32px">
+  <div class="paper" style="padding:44px 48px">
+    <p class="eyebrow">SKILL</p>
+    <p class="lead">The same instructions an agent gets from
+      <code>docs/skills/moonzero/SKILL.md</code>, published with every release.</p>
+    <div class="skill-body" style="margin-top:32px"><h1>moonzero</h1>
+<p>A service is assembled, not written: a config document says which middlewares run,</p>
+<p>the engine builds the chain around an application, and the result is an ASGI</p>
+<p>application a host runs.</p>
+<div class="code"><pre><code>
+moon add moonbitstack/moonzero
+</code></pre></div>
+<p>One package per job: <code>rest</code> (engine, server, groups, route options), <code>rest/handler</code></p>
+<p>(the middlewares), <code>zrpc</code> (server, channel, interceptor chains), <code>balance</code>,</p>
+<p><code>conf</code>, <code>breaker</code>, <code>shedder</code>, <code>limit</code>, <code>stores/*</code>, and the utilities <code>syncx</code>,</p>
+<p><code>collection</code>, <code>mr</code>, <code>fx</code>, <code>threading</code>, <code>service</code>. <code>moonbitstack/moonzero</code></p>
+<p>re-exports the common surface, so one import reaches most of it.</p>
+<h2>Assemble a service</h2>
+<p>The engine reads <code>RestConf</code> and returns a <code>Server</code>; <code>to_asgi</code> hands the application</p>
+<p>to whatever serves it. Middleware flags default to on, so a document that says</p>
+<p>nothing about them still gets the whole chain.</p>
+<div class="code"><pre><code>
+import {
+  &quot;moonbitstack/moonzero&quot;,
+  &quot;moonbitstack/moonapi&quot;,
+}
+</code></pre></div>
+<div class="code"><pre><code>
+fn assemble(conf : @moonzero.RestConf) -&gt; @moonzero.Server raise @moonzero.Refused {
+  let app = @moonapi.App::new()
+  let api = @moonzero.Group::new(app, &quot;/api/v1&quot;)
+  api.get(&quot;/ping&quot;, _ctx =&gt; @moonapi.text(200, &quot;pong&quot;))
+  @moonzero.RestEngine::new(conf).build(app)
+}
+</code></pre></div>
+<p><code>RestConf::from_yaml(text)</code> loads an <code>etc/*.yaml</code>; <code>RestEngine::names()</code> answers the</p>
+<p>layers the document installed, outermost first, which is the fastest way to check a</p>
+<p>config before deploying it.</p>
+<h2>Checks that belong to a route</h2>
+<p>A route carries its own options: a JWT with a rotation window, a deadline, a body</p>
+<p>cap, a signature verifier, a priority shedder, an event-stream stamp. Each becomes a</p>
+<p>check that runs before the handler and refuses with the status the option promises.</p>
+<div class="code"><pre><code>
+fn guarded(api : @moonzero.Group, clock : @moonzero.Clock) -&gt; Unit {
+  let checks = @moonzero.RouteOptions::new(clock~)
+    .jwt(secret=&quot;s3cret&quot;, prev_secret=&quot;old-secret&quot;)
+    .timeout(2_000L)
+    .max_bytes(64 * 1024)
+  api.options_(checks).post(&quot;/orders&quot;, _ctx =&gt; @moonapi.text(201, &quot;created&quot;))
+}
+</code></pre></div>
+<p><code>prev_secret</code> is the secret a rotation is retiring: a token signed with it keeps</p>
+<p>working while clients pick the new one up, and stops when the window closes. A JWT</p>
+<p>route answers <code>401</code> with the <code>WWW-Authenticate</code> challenge; a body past the cap</p>
+<p>answers <code>413</code>; a handler past its deadline is abandoned and answered <code>503</code>.</p>
+<h2>One chain shape on both halves of zRPC</h2>
+<p>An invoker turns a call into a result, an interceptor wraps an invoker, and the</p>
+<p>transport is the innermost invoker. The presets build the chain a config document</p>
+<p>asks for: five client layers, eight server layers.</p>
+<div class="code"><pre><code>
+import {
+  &quot;moonbitstack/moonzero&quot;,
+  &quot;moonbitstack/moonrpc&quot;,
+}
+</code></pre></div>
+<div class="code"><pre><code>
+fn call_with_chain(
+  conf : @moonzero.RpcClientMiddlewaresConf,
+) -&gt; Result[Bytes, @moonrpc.Status] raise {
+  let deps = @moonzero.ClientDeps::new() catch {
+    _ =&gt; abort(&quot;the default client deps must build&quot;)
+  }
+  let transport : @moonzero.Invoker = call =&gt; Ok(call.request)
+  let call = @moonzero.chain(
+    @moonzero.client_interceptors(conf, deps),
+    transport,
+  )
+  call({ path: &quot;/greeter.Greeter/Say&quot;, request: b&quot;hi&quot;, parent: None })
+}
+</code></pre></div>
+<p>The server side is the mirror: <code>RpcServer::of(conf)</code> builds the eight layers from</p>
+<p><code>RpcServerConf</code>, and <code>invoke</code> runs a call through them to the handler registered for</p>
+<p>its path. Both sides take their clock, randomness and metrics from the caller, so a</p>
+<p>test drives time instead of waiting for it.</p>
+<h2>Resilience primitives</h2>
+<p>Each decision is a pure function of an injected clock, which is what makes it</p>
+<p>testable and replayable.</p>
+<div class="code"><pre><code>
+fn guarded_call(
+  breaker : @moonzero.Breaker,
+  backend : () -&gt; Bytes raise,
+) -&gt; Bytes raise {
+  breaker.run(() =&gt; backend())
+}
+</code></pre></div>
+<p>The breaker counts the last ten seconds in forty buckets and sheds a *fraction* of</p>
+<p>calls once the failure ratio passes its budget, so a struggling backend keeps the</p>
+<p>load it can still serve. <code>Shedder</code> refuses only when the machine is both hot and</p>
+<p>full. <code>TokenBucket</code>, <code>PeriodLimit</code> and <code>MaxConns</code> live in <code>limit</code>, in memory or on</p>
+<p>Redis; the Redis token limiter keeps limiting from a local bucket while it cannot</p>
+<p>reach the server, and returns to the shared one when a probe finds it again.</p>
+<h2>Rules that bite</h2>
+<ul>
+<li><strong><code>Refused</code> is the config error.</strong> Every loader raises it; a document that names</li>
+<p>  one TLS file without the other, or a strict signature policy with no keys, is</p>
+<p>  refused at load rather than at the first request.</p>
+<li><strong>Middleware flags default to on.</strong> Turning one off is explicit:</li>
+<p>  <code>MiddlewaresConf::new(breaker=false)</code>. <code>RestEngine::names()</code> tells you what you</p>
+<p>  actually got.</p>
+<li><strong>TLS is the host&#x27;s.</strong> The certificate pair is carried and validated as a pair, but</li>
+<p>  the object built here is an application, not a socket.</p>
+<li><strong>Metrics and spans come from elsewhere.</strong> Families are moonp8s&#x27;s, spans moontel&#x27;s;</li>
+<p>  the request counter keeps path, method and code as three labels, not one string.</p>
+<li><strong>The p2c lag is milliseconds.</strong> The picker&#x27;s load is the truncated square root of</li>
+<p>  the lag times in-flight plus one, and the comparison is what decides between two</p>
+<p>  instances; <code>Balancer::report</code> is how a finished call moves those numbers.</p>
+<li><strong>A file set is data, not a directory.</strong> <code>Files::add</code> puts bytes in a value and</li>
+<p>  <code>file_server</code> serves them under a prefix; <code>rest/files</code> loads a directory at start-up</p>
+<p>  and needs a file system, so it is native only.</p>
+</ul></div>
+  </div>
+</main>
+<style>
+  .skill-body h1{font-family:var(--grotesk);font-size:30px;margin:0 0 16px}
+  .skill-body h2{font-family:var(--grotesk);font-size:20px;font-weight:500;margin:34px 0 10px}
+  .skill-body p{margin:0 0 12px;color:var(--ink-2);max-width:70ch}
+  .skill-body li{margin:0 0 6px;color:var(--ink-2)}
+  .skill-body code{font-family:var(--mono);font-size:12px;background:var(--paper-2);
+    border:1px solid var(--rule);border-radius:2px;padding:1px 4px;overflow-wrap:anywhere}
+  .skill-body .code code{background:none;border:0;padding:0;color:var(--code-ink)}
+</style>
+<footer class="foot">
+  <span>moonzero · Apache-2.0 · generated from <code>///</code></span>
+  <nav class="links">
+    <a href="guide.html">Guide</a>
+    <a href="reference.html">API</a>
+    <a href="lab.html">Lab</a>
+    <a href="skill.html">Skills</a>
+  </nav>
+  <a class="repo" href="https://github.com/moonbitstack/moonzero">GitHub</a>
+</footer>
+<div class="palette" role="dialog" aria-label="Jump to a package">
+  <div class="box">
+    <input type="search" placeholder="grep packages…" autocomplete="off" spellcheck="false">
+    <ul></ul>
+  </div>
+</div>
+<script type="application/json" id="site-index">[{"name": "Service assembly", "href": "pkg/service.html", "lane": "EDGE", "summary": "ServiceConf (typed config: name, host, port, timeout, log level) + Server tie the application an"}, {"name": "Middleware set", "href": "pkg/middleware.html", "lane": "EDGE", "summary": "The onion layers that wrap the app: recovery (500 instead of a panic), cors (Access-Control-* he"}, {"name": "Route groups", "href": "pkg/group.html", "lane": "EDGE", "summary": "Group registers a set of routes under a shared path prefix, so related endpoints are declared wi"}, {"name": "Route options", "href": "pkg/route.html", "lane": "EDGE", "summary": "The settings a route carries into its own registration: a JWT with a rotation window, a signatur"}, {"name": "Route-level checks", "href": "pkg/hoops.html", "lane": "EDGE", "summary": "One hoop per option that can refuse a request, applied where the route is registered: the token,"}, {"name": "Static files", "href": "pkg/files.html", "lane": "EDGE", "summary": "A file-serving layer over an in-memory set: a GET under a prefix whose remaining path names a re"}, {"name": "Compressed request bodies", "href": "pkg/gunzip.html", "lane": "EDGE", "summary": "Read a Content-Encoding: gzip body, inflate it, and hand the application the plain bytes, with a"}, {"name": "Content security", "href": "pkg/signature.html", "lane": "EDGE", "summary": "The X-Content-Security request signature: an RSA-sealed envelope carrying the MAC key, the time "}, {"name": "The envelope key", "href": "pkg/rsa.html", "lane": "EDGE", "summary": "The RSA decrypter a content-security key set is built from: raw RSA private operation, PKCS#1 v1"}, {"name": "JWT (HS256)", "href": "pkg/jwt.html", "lane": "EDGE", "summary": "base64url plus compact-JWT signing and verification under HS256: jwt_sign / jwt_verify check the"}, {"name": "JWT auth middleware", "href": "pkg/auth.html", "lane": "EDGE", "summary": "The auth middleware requires every HTTP request to carry a valid Authorization: Bearer <jwt>, re"}, {"name": "Request metrics", "href": "pkg/metrics.html", "lane": "EDGE", "summary": "Two Prometheus families over the process registry: a duration histogram and a code counter, labe"}, {"name": "Tracing", "href": "pkg/tracing.html", "lane": "EDGE", "summary": "A server span per request, joined to the trace the request arrived with and written to whatever "}, {"name": "Typed config loading", "href": "pkg/config.html", "lane": "CONTROL", "summary": "Parse a JSON or YAML config string into a ServiceConf: a strict derived FromJson path plus lenie"}, {"name": "Config keys", "href": "pkg/conf.html", "lane": "CONTROL", "summary": "The canonical config-key form: lowercased, `_` and `-` dropped, so MaxBytes, maxBytes, max_bytes"}, {"name": "Engine configuration", "href": "pkg/restconf.html", "lane": "CONTROL", "summary": "Which built-in layers the engine installs (`MiddlewaresConf`), every flag on by default, so an e"}, {"name": "Logging", "href": "pkg/logx.html", "lane": "CONTROL", "summary": "Structured logging over moonlog's sink: the four level names an etc/*"}, {"name": "Structured logging", "href": "pkg/logging.html", "lane": "CONTROL", "summary": "RequestLog captures typed access-log fields (method, path, status, duration, request-id, client-"}, {"name": "Turning a request away", "href": "pkg/refusal.html", "lane": "CONTROL", "summary": "What a request refused by a middleware receives: 503 for an open breaker, a spent connection bud"}, {"name": "Clock abstraction", "href": "pkg/clock.html", "lane": "CONTROL", "summary": "A millisecond time source injected into the resilience middlewares so their timing is a pure fun"}, {"name": "Graceful shutdown", "href": "pkg/shutdown.html", "lane": "CONTROL", "summary": "A ShutdownCoordinator that drains in-flight zRPC calls: dispatch_graceful counts each call for i"}, {"name": "The default tracer", "href": "pkg/telemetry.html", "lane": "CONTROL", "summary": "The tracer a service runs on when nobody configured one: ids from the platform entropy source, s"}, {"name": "Circuit breaker", "href": "pkg/breaker.html", "lane": "RESILIENCE", "summary": "The Google SRE client-side throttling breaker over moonward's: it reads the last ten seconds of "}, {"name": "Load shedding", "href": "pkg/shedder.html", "lane": "RESILIENCE", "summary": "The adaptive shedder over moonward's, wired from RestConf"}, {"name": "Rate limiting", "href": "pkg/ratelimit.html", "lane": "RESILIENCE", "summary": "A token-bucket limiter over moonward's bucket, on the millisecond clock, and the rate_limit midd"}, {"name": "Timeout & max-bytes", "href": "pkg/limits.html", "lane": "RESILIENCE", "summary": "The timeout middleware, which starts a moonward Deadline per request and enforces it on the resp"}, {"name": "Admission control", "href": "pkg/limiting.html", "lane": "RESILIENCE", "summary": "The concurrency limiter that sheds load past a ceiling \u2014 releasing its permit with defer, so can"}, {"name": "zRPC service groups", "href": "pkg/rpc.html", "lane": "ROUTING", "summary": "An RpcServer (config-driven) registers moonrpc Method handlers by gRPC path and dispatches unary"}, {"name": "zRPC over the h2c transport", "href": "pkg/zrpc.html", "lane": "ROUTING", "summary": "RpcServer::to_h2 exposes the registered handlers as a moonrpc H2Server, and RpcChannel drives re"}, {"name": "Balancers & load-balanced client", "href": "pkg/balance.html", "lane": "ROUTING", "summary": "Balancers over moonpool's RoundRobin and Weighted, and a LoadBalancedChannel that resolves a ser"}, {"name": "Discovery over a file", "href": "pkg/discov.html", "lane": "ROUTING", "summary": "A moonsd Discovery over a file: publish writes what a memory registry holds, FileDiscovery resol"}, {"name": "Power of two choices", "href": "pkg/p2c.html", "lane": "ROUTING", "summary": "Choose two instances at random and take the less loaded: sqrt(lag + 1) * (inflight + 1), with th"}, {"name": "The interceptor chain", "href": "pkg/interceptor.html", "lane": "ROUTING", "summary": "One shape for both halves of the wire: an invoker turns a call into a result, an interceptor wra"}, {"name": "Client interceptors", "href": "pkg/clientinterceptors.html", "lane": "ROUTING", "summary": "Tracing, the duration log, the Prometheus families, the breaker and the deadline \u2014 the five laye"}, {"name": "Server interceptors", "href": "pkg/serverinterceptors.html", "lane": "ROUTING", "summary": "Authentication, tracing, recovery, the stat log, the Prometheus families, the breaker, shedding "}, {"name": "zRPC configuration", "href": "pkg/rpcconf.html", "lane": "ROUTING", "summary": "The server and client blocks: the timeout, both CPU thresholds, authentication, and one flag per"}, {"name": "Cache aside", "href": "pkg/cache.html", "lane": "DATA", "summary": "Read through a store, run the loader once per key however many callers arrive, and write the ans"}, {"name": "SQL", "href": "pkg/sql.html", "lane": "DATA", "summary": "Statements, rows, single values and transactions over a database driver the caller supplies; a t"}, {"name": "The redis store", "href": "pkg/redis.html", "lane": "DATA", "summary": "The same Store contract the memory store implements, over a redis client and a key prefix, so a "}, {"name": "Bounded containers", "href": "pkg/collection.html", "lane": "DATA", "summary": "A cache with a size limit and an optional expiry over a doubly linked recency list, so a hit is "}, {"name": "One call in flight per key", "href": "pkg/syncx.html", "lane": "DATA", "summary": "A second caller asking for a key while the first is still running waits for that answer instead "}, {"name": "Map-reduce", "href": "pkg/mr.html", "lane": "DATA", "summary": "A mapper that sees one item and emits any number of values, a finish step for the aggregate that"}, {"name": "Retrying and deadlines", "href": "pkg/fx.html", "lane": "DATA", "summary": "Call a body until it stops raising, with a predicate that stops the ladder early for a failure t"}, {"name": "Tasks and queues", "href": "pkg/threading.html", "lane": "DATA", "summary": "A fan-out group that is collected first and joined at wait, a queue drained by one consumer for "}, {"name": "Running several services", "href": "pkg/services.html", "lane": "DATA", "summary": "A group whose members share one lifetime: every service is a task that runs until it returns or "}, {"name": "One-time bodies and pools", "href": "pkg/once.html", "lane": "DATA", "summary": "A body that runs at most once, for the initialisation that must not happen twice, and a pool tha"}]</script>
+<script src="assets/site.js" defer></script>
+</body>
+</html>

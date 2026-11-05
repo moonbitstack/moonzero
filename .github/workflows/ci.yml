@@ -63,6 +63,13 @@ jobs:
       - name: skill snippets compile
         if: runner.os == 'Linux'
         run: python3 scripts/check_skill.py
+      # The site is generated from the sources, so a page that no longer matches
+      # them is a stale page: regenerate and fail on any difference.
+      - name: site is up to date
+        if: runner.os == 'Linux'
+        run: |
+          python3 scripts/gen_site.py
+          git diff --exit-code docs
 
       - name: interfaces are up to date
         run: |
