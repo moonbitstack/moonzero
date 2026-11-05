@@ -1,0 +1,7 @@
+// The cache store that lives in redis: the same `Store` contract the memory store
+// implements, so a service switches a cache from one process to a fleet by changing
+// the value it passes in.
+import {
+  "moonbitstack/moonzero/stores/cache",
+  "moonbitstack/moonredis",
+}

@@ -1,0 +1,52 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/moonzero/collection"
+
+import {
+  "moonbitstack/moonzero/clock",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub struct Cache[K, V] {
+  limit : Int32
+  ttl_ms : Int64
+  clock : @clock.Clock
+  entries : Map[K, Entry[V]]
+  links : Map[K, Link[K]]
+  mut head : K?
+  mut tail : K?
+}
+pub fn[K : Hash + Eq, V] Cache::contains(Self[K, V], K) -> Bool
+pub fn[K : Hash + Eq, V] Cache::get(Self[K, V], K) -> V?
+pub fn[K : Hash + Eq, V] Cache::keys(Self[K, V]) -> Array[K]
+pub fn[K, V] Cache::len(Self[K, V]) -> Int32
+pub fn[K, V] Cache::limit(Self[K, V]) -> Int32
+pub fn[K : Hash + Eq, V] Cache::new(limit? : Int32, ttl_ms? : Int64, clock? : @clock.Clock) -> Self[K, V]
+pub fn[K : Hash + Eq, V] Cache::remove(Self[K, V], K) -> Unit
+pub fn[K : Hash + Eq, V] Cache::set(Self[K, V], K, V) -> Unit
+pub fn[K : Hash + Eq, V] Cache::set_until(Self[K, V], K, V, Int64) -> Unit
+
+type Entry[V]
+
+type Link[K]
+
+pub struct Ring[T] {
+  slots : Array[T?]
+  capacity : Int32
+  mut start : Int32
+  mut size : Int32
+}
+pub fn[T] Ring::capacity(Self[T]) -> Int32
+pub fn[T] Ring::get(Self[T], Int32) -> T?
+pub fn[T] Ring::last(Self[T]) -> T?
+pub fn[T] Ring::len(Self[T]) -> Int32
+pub fn[T] Ring::new(Int32) -> Self[T]
+pub fn[T] Ring::push(Self[T], T) -> Unit
+pub fn[T] Ring::to_array(Self[T]) -> Array[T]
+
+// Type aliases
+
+// Traits

@@ -1,0 +1,13 @@
+// The cache in front of a store: read through it, load once on a miss however many
+// callers are waiting, and write back with a lifetime that does not expire the whole
+// fleet at the same instant.
+import {
+  "moonbitstack/moonzero/clock",
+  "moonbitstack/moonzero/collection",
+  "moonbitstack/moonzero/syncx",
+}
+
+import {
+  "moonbitlang/async",
+  "moonbitlang/core/encoding/utf8",
+} for "wbtest"

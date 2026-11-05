@@ -1,0 +1,25 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/moonzero/fx"
+
+import {
+  "moonbitstack/moonward",
+}
+
+// Values
+pub fn[A] chunk(Array[A], Int32) -> Array[Array[A]]
+
+pub fn[A, K : Hash + Eq] group_by(Array[A], (A) -> K) -> Array[(K, Array[A])]
+
+pub fn[A] retry(() -> A raise, attempts? : Int32, fatal? : (Error) -> Bool) -> A raise
+
+pub async fn[A] retry_with_backoff(async () -> A, backoff? : @moonward.Backoff, fatal? : (Error) -> Bool) -> A
+
+pub async fn[A] timeout(Int32, async () -> A) -> A?
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits

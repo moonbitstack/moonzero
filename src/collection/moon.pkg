@@ -1,0 +1,6 @@
+// The bounded containers a service keeps in memory: a cache that evicts the least
+// recently used entry and forgets an expired one, and a fixed-size ring that keeps
+// the most recent samples.
+import {
+  "moonbitstack/moonzero/clock",
+}

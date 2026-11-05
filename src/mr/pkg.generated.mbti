@@ -1,0 +1,21 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/moonzero/mr"
+
+// Values
+pub fn[A, B, C] map_reduce(Array[A], Mapper[A, B], (Array[B]) -> C) -> C
+
+pub async fn[A, B, C] map_reduce_parallel(Array[A], Mapper[A, B], (Array[B]) -> C, max_concurrent? : Int32) -> C
+
+// Errors
+
+// Types and methods
+pub(all) struct Mapper[A, B] {
+  map : (A, (B) -> Unit) -> Unit
+  finish : ((B) -> Unit) -> Unit
+}
+pub fn[A, B] Mapper::new(map~ : (A, (B) -> Unit) -> Unit, finish? : ((B) -> Unit) -> Unit) -> Self[A, B]
+pub fn[A, B] Mapper::one((A) -> B) -> Self[A, B]
+
+// Type aliases
+
+// Traits

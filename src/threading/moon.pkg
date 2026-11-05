@@ -1,0 +1,10 @@
+// Running work in tasks: a group that fans out and joins, a queue drained by one
+// consumer, and a queue that keeps only the newest pending item.
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/aqueue",
+}
+
+import {
+  "moonbitlang/async",
+} for "wbtest"

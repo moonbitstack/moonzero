@@ -1,0 +1,34 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/moonzero/stores/redis"
+
+import {
+  "moonbitstack/moonredis",
+  "moonbitstack/moonzero/stores/cache",
+}
+
+// Values
+pub fn of_latin1(String) -> Bytes
+
+pub fn to_latin1(BytesView) -> String
+
+// Errors
+
+// Types and methods
+pub struct RedisStore {
+  client : @moonredis.Client
+  prefix : String
+}
+pub async fn RedisStore::add(Self, String, Int64) -> Int64 raise @cache.Refused
+pub fn RedisStore::client(Self) -> @moonredis.Client
+pub async fn RedisStore::del(Self, String) -> Unit raise @cache.Refused
+pub async fn RedisStore::get(Self, String) -> Bytes? raise @cache.Refused
+pub fn RedisStore::key_of(Self, String) -> String
+pub fn RedisStore::new(@moonredis.Client, prefix? : String) -> Self
+pub async fn RedisStore::re_expire(Self, Int64) -> Int32 raise @cache.Refused
+pub async fn RedisStore::set(Self, String, Bytes, Int64) -> Unit raise @cache.Refused
+pub async fn RedisStore::ttl_ms(Self, String) -> Int64 raise @cache.Refused
+pub impl @cache.Store for RedisStore
+
+// Type aliases
+
+// Traits

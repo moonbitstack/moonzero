@@ -1,0 +1,36 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/moonzero/syncx"
+
+// Values
+
+// Errors
+
+// Types and methods
+type Inflight[T]
+
+pub struct Once {
+  mut done : Bool
+}
+pub fn Once::done(Self) -> Bool
+pub fn Once::new() -> Self
+pub fn Once::run(Self, () -> Unit) -> Bool
+
+pub struct Pool[T] {
+  make : () -> T
+  idle : Array[T]
+}
+pub fn[T] Pool::get(Self[T]) -> T
+pub fn[T] Pool::idle(Self[T]) -> Int32
+pub fn[T] Pool::new(() -> T) -> Self[T]
+pub fn[T] Pool::put(Self[T], T) -> Unit
+
+pub struct Single[T] {
+  inflight : Map[String, Inflight[T]]
+}
+pub fn[T] Single::len(Self[T]) -> Int32
+pub fn[T] Single::new() -> Self[T]
+pub async fn[T] Single::run(Self[T], String, async () -> T) -> T
+
+// Type aliases
+
+// Traits

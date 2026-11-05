@@ -14,4 +14,10 @@ import {
   "moonbitstack/moonzero/limit",
   "moonbitstack/moonzero/rest/handler",
   "moonbitstack/moonzero/rest",
+  "moonbitstack/moonzero/syncx",
+  "moonbitstack/moonzero/collection",
+  "moonbitstack/moonzero/mr",
+  "moonbitstack/moonzero/fx",
+  "moonbitstack/moonzero/threading",
+  "moonbitstack/moonzero/service",
 }

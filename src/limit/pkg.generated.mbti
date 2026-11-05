@@ -61,10 +61,18 @@ pub struct RedisTokenLimit {
   token_key : String
   ts_key : String
   rescue : TokenBucket
+  mut alive : Bool
+  mut probing : Bool
 }
 pub async fn RedisTokenLimit::allow(Self, Int64) -> Bool
 pub async fn RedisTokenLimit::allow_n(Self, Int32, Int64) -> Bool
+pub fn RedisTokenLimit::is_alive(Self) -> Bool
+pub fn RedisTokenLimit::mark_alive(Self) -> Unit
+pub fn RedisTokenLimit::mark_down(Self) -> Unit
 pub fn RedisTokenLimit::new(@moonredis.Client, rate~ : Int32, burst~ : Int32, key~ : String) -> Self
+pub async fn RedisTokenLimit::probe(Self) -> Bool
+pub async fn RedisTokenLimit::probe_forever(Self, interval_ms? : Int32, report? : (Bool) -> Unit) -> Unit
+pub fn RedisTokenLimit::probing(Self) -> Bool
 pub fn RedisTokenLimit::rescue(Self) -> TokenBucket
 
 pub struct TokenBucket {

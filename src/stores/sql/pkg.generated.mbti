@@ -1,0 +1,39 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/moonzero/stores/sql"
+
+import {
+  "moonbitstack/moondb",
+}
+
+// Values
+pub fn count_rows(Array[@moondb.Row], (@moondb.Row) -> Bool) -> Int32
+
+// Errors
+
+// Types and methods
+type Blocking
+pub async fn Blocking::begin(Self) -> Unit raise @moondb.DbError
+pub async fn Blocking::close(Self) -> Unit
+pub async fn Blocking::commit(Self) -> Unit raise @moondb.DbError
+pub async fn Blocking::execute(Self, String, Array[@moondb.Value]) -> @moondb.ExecResult raise @moondb.DbError
+pub async fn Blocking::ping(Self) -> Bool
+pub async fn Blocking::query(Self, String, Array[@moondb.Value]) -> Array[@moondb.Row] raise @moondb.DbError
+pub async fn Blocking::query_stream(Self, String, Array[@moondb.Value]) -> &@moondb.AsyncCursor raise @moondb.DbError
+pub async fn Blocking::rollback(Self) -> Unit raise @moondb.DbError
+pub impl @moondb.AsyncDriver for Blocking
+
+pub struct Sql {
+  driver : &@moondb.AsyncDriver
+}
+pub fn Sql::blocking(&@moondb.Driver) -> Self
+pub async fn Sql::exec(Self, String, args? : Array[@moondb.Value]) -> @moondb.ExecResult raise @moondb.DbError
+pub fn Sql::new(&@moondb.AsyncDriver) -> Self
+pub async fn Sql::one(Self, String, args? : Array[@moondb.Value]) -> @moondb.Row? raise @moondb.DbError
+pub async fn Sql::ping(Self) -> Bool
+pub async fn Sql::query(Self, String, args? : Array[@moondb.Value]) -> Array[@moondb.Row] raise @moondb.DbError
+pub async fn[T : @moondb.FromValue] Sql::scalar(Self, String, args? : Array[@moondb.Value]) -> T? raise @moondb.DbError
+pub async fn[T] Sql::transact(Self, async (Self) -> T) -> T
+
+// Type aliases
+
+// Traits

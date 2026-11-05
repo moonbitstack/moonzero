@@ -13,16 +13,22 @@ import {
   "moonbitstack/moonrpc/wire",
   "moonbitstack/moonsd",
   "moonbitstack/moontel/trace",
+  "moonbitstack/moonward",
   "moonbitstack/moonzero/balance",
   "moonbitstack/moonzero/breaker",
   "moonbitstack/moonzero/clock",
+  "moonbitstack/moonzero/collection",
   "moonbitstack/moonzero/conf",
   "moonbitstack/moonzero/limit",
   "moonbitstack/moonzero/logx",
+  "moonbitstack/moonzero/mr",
   "moonbitstack/moonzero/proc",
   "moonbitstack/moonzero/rest",
   "moonbitstack/moonzero/rest/handler",
+  "moonbitstack/moonzero/service",
   "moonbitstack/moonzero/shedder",
+  "moonbitstack/moonzero/syncx",
+  "moonbitstack/moonzero/threading",
   "moonbitstack/moonzero/zrpc",
 }
 
@@ -34,6 +40,8 @@ pub fn breaker(@breaker.Breaker, refusal? : @handler.Refusal) -> (async (@spec.S
 pub fn canonical_key(String) -> String
 
 pub fn chain(Array[((@zrpc.Call) -> Result[Bytes, @wire.Status] raise) -> (@zrpc.Call) -> Result[Bytes, @wire.Status] raise], (@zrpc.Call) -> Result[Bytes, @wire.Status] raise) -> (@zrpc.Call) -> Result[Bytes, @wire.Status] raise
+
+pub fn[A] chunk(Array[A], Int32) -> Array[Array[A]]
 
 pub fn client_breaker(@breaker.Breaker) -> ((@zrpc.Call) -> Result[Bytes, @wire.Status] raise) -> (@zrpc.Call) -> Result[Bytes, @wire.Status] raise
 
@@ -61,6 +69,8 @@ pub let exposition_content_type : String
 
 pub fn file_server(@handler.Files, String) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
+pub fn[A, K : Hash + Eq] group_by(Array[A], (A) -> K) -> Array[(K, Array[A])]
+
 pub async fn hold(&@moonsd.Registrar, String, @moonsd.Endpoint, ttl? : Int32, report? : (Error) -> Unit) -> Unit
 
 pub fn jwt_authorized(String?, String, Int64) -> Bool
@@ -76,6 +86,10 @@ pub fn level_name(@moonlog.Level) -> String
 pub fn logging(async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
 pub let logx : @logx.Logger
+
+pub fn[A, B, C] map_reduce(Array[A], @mr.Mapper[A, B], (Array[B]) -> C) -> C
+
+pub async fn[A, B, C] map_reduce_parallel(Array[A], @mr.Mapper[A, B], (Array[B]) -> C, max_concurrent? : Int32) -> C
 
 pub fn max_conns(@limit.MaxConns, refusal? : @handler.Refusal) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
@@ -114,6 +128,10 @@ pub fn redis_rate_limit(@limit.RedisTokenLimit, @clock.Clock, refusal? : @handle
 pub let refusal : @handler.Refusal
 
 pub fn request_id(header? : String) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+
+pub fn[A] retry(() -> A raise, attempts? : Int32, fatal? : (Error) -> Bool) -> A raise
+
+pub async fn[A] retry_with_backoff(async () -> A, backoff? : @moonward.Backoff, fatal? : (Error) -> Bool) -> A
 
 pub let rpc_port : Int32
 
@@ -228,6 +246,8 @@ pub using @logx {type Logger}
 
 pub using @clock {type ManualClock}
 
+pub using @mr {type Mapper}
+
 pub using @limit {type MaxConns}
 
 pub using @zrpc {type MethodTimeout}
@@ -236,9 +256,13 @@ pub type Middleware = (async (@spec.Scope, async () -> @spec.Event, async (@spec
 
 pub using @conf {type MiddlewaresConf}
 
+pub using @syncx {type Once}
+
 pub using @limit {type PeriodLimit}
 
 pub using @limit {type PeriodResult}
+
+pub using @syncx {type Pool}
 
 pub using @conf {type PrivateKeyConf}
 
@@ -260,7 +284,11 @@ pub using @conf {type RestConf}
 
 pub using @rest {type RestEngine}
 
+pub using @collection {type Ring}
+
 pub using @rest {type RouteOptions}
+
+pub using @threading {type RoutineGroup}
 
 pub using @zrpc {type RpcChannel}
 
@@ -290,7 +318,11 @@ pub using @handler {type ServerMetrics}
 
 pub type ServerStreamHandler = (Bytes) -> Array[Bytes]
 
+pub using @service {type Service}
+
 pub using @conf {type ServiceConf}
+
+pub using @service {type ServiceGroup}
 
 pub using @shedder {type Shedder}
 
@@ -304,7 +336,13 @@ pub using @handler {type SignatureKey}
 
 pub using @handler {type SignatureVerifier}
 
+pub using @syncx {type Single}
+
+pub using @threading {type StableRunner}
+
 pub using @zrpc {type StatConf}
+
+pub using @threading {type TaskRunner}
 
 pub using @shedder {type Ticket}
 

@@ -1,0 +1,7 @@
+// The odds and ends a service wants around a function: try it more than once, give
+// it a deadline, and group what it returned. The pipeline operators themselves are
+// the standard library's `Iter`, so there is no second stream type here.
+import {
+  "moonbitstack/moonward",
+  "moonbitlang/async",
+}

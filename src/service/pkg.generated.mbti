@@ -1,0 +1,26 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/moonzero/service"
+
+// Values
+
+// Errors
+
+// Types and methods
+pub(all) struct Service {
+  name : String
+  start : async () -> Unit
+}
+pub fn Service::new(String, async () -> Unit) -> Self
+
+pub struct ServiceGroup {
+  services : Array[Service]
+}
+pub fn ServiceGroup::add(Self, Service) -> Unit
+pub fn ServiceGroup::add_fn(Self, String, async () -> Unit) -> Unit
+pub fn ServiceGroup::names(Self) -> Array[String]
+pub fn ServiceGroup::new() -> Self
+pub async fn ServiceGroup::start(Self) -> Unit
+
+// Type aliases
+
+// Traits

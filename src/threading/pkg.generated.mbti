@@ -1,0 +1,40 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/moonzero/threading"
+
+import {
+  "moonbitlang/async/aqueue",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub struct RoutineGroup {
+  tasks : Array[async () -> Unit]
+}
+pub fn RoutineGroup::len(Self) -> Int32
+pub fn RoutineGroup::new() -> Self
+pub fn RoutineGroup::run(Self, async () -> Unit) -> Unit
+pub async fn RoutineGroup::wait(Self) -> Unit
+
+pub struct StableRunner[T] {
+  queue : @aqueue.Queue[T]
+}
+pub fn[T] StableRunner::close(Self[T]) -> Unit
+pub fn[T] StableRunner::new() -> Self[T]
+pub async fn[T] StableRunner::push(Self[T], T) -> Unit
+pub async fn[T] StableRunner::run(Self[T], async (T) -> Unit) -> Unit
+
+pub struct TaskRunner[T] {
+  queue : @aqueue.Queue[T]
+}
+pub fn[T] TaskRunner::close(Self[T]) -> Unit
+pub fn[T] TaskRunner::new() -> Self[T]
+pub async fn[T] TaskRunner::push(Self[T], T) -> Unit
+pub async fn[T] TaskRunner::run(Self[T], async (T) -> Unit) -> Unit
+pub fn[T] TaskRunner::try_push(Self[T], T) -> Bool
+
+// Type aliases
+
+// Traits

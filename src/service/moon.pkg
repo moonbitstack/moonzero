@@ -1,0 +1,9 @@
+// A process that runs several services: each one is a body that runs until it is
+// cancelled, and the group owns their lifetimes together.
+import {
+  "moonbitlang/async",
+}
+
+import {
+  "moonbitlang/async",
+} for "wbtest"

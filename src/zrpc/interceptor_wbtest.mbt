@@ -75,7 +75,7 @@ test "the breaker refuses without reaching the transport" {
 ///|
 test "an acceptable failure does not open the breaker" {
   let (manual, clock) = ticker()
-  let breaker = @breaker.Breaker::new(clock)
+  let breaker = @breaker.Breaker::new(clock, rand=fn() { 0.0 })
   let calls : Ref[Int32] = { val: 0, }
   let invoker = chain(
     [client_breaker(breaker)],

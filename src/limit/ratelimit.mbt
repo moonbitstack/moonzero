@@ -120,6 +120,11 @@ pub struct RedisTokenLimit {
   token_key : String
   ts_key : String
   rescue : TokenBucket
+  /// Whether redis is answering. A limiter that has lost redis keeps limiting from
+  /// its local bucket instead of opening the gate, and returns to the shared bucket
+  /// once the probe finds redis again.
+  mut alive : Bool
+  mut probing : Bool
 }
 
 ///|
@@ -139,6 +144,8 @@ pub fn RedisTokenLimit::new(
     token_key: "{" + key + "}.tokens",
     ts_key: "{" + key + "}.ts",
     rescue: TokenBucket::new(rate.to_double(), burst=burst.to_double()),
+    alive: true,
+    probing: false,
   }
 }
 
@@ -168,17 +175,96 @@ pub async fn RedisTokenLimit::allow_n(
   n : Int32,
   now_ms : Int64,
 ) -> Bool {
+  // A read of a plain flag, so the fast path costs nothing once redis is known to be
+  // down: every call goes straight to the local bucket until the probe says
+  // otherwise.
+  if !self.alive {
+    return self.rescue.allow_n(n.to_double(), now_ms)
+  }
   let reply = self.script.run(self.client, [self.token_key, self.ts_key], [
     self.rate.to_string(),
     self.burst.to_string(),
     (now_ms / 1000L).to_string(),
     n.to_string(),
   ]) catch {
-    _ => return self.rescue.allow_n(n.to_double(), now_ms)
+    _ => {
+      self.alive = false
+      return self.rescue.allow_n(n.to_double(), now_ms)
+    }
   }
   match reply {
     Integer(code) => code == 1L
     Null => false
-    _ => self.rescue.allow_n(n.to_double(), now_ms)
+    _ => {
+      self.alive = false
+      self.rescue.allow_n(n.to_double(), now_ms)
+    }
+  }
+}
+
+///|
+/// Whether this limiter is drawing on the shared bucket. `false` means it is on its
+/// local one, waiting for the probe to find redis again.
+pub fn RedisTokenLimit::is_alive(self : RedisTokenLimit) -> Bool {
+  self.alive
+}
+
+///|
+/// Mark redis as unreachable without waiting for a call to fail — what a liveness
+/// probe does when it sees the connection drop.
+pub fn RedisTokenLimit::mark_down(self : RedisTokenLimit) -> Unit {
+  self.alive = false
+}
+
+///|
+/// Mark redis as answering again. The shared bucket still holds whatever the last
+/// replica left in it, so the limiter picks up the fleet's quota rather than a fresh
+/// one.
+pub fn RedisTokenLimit::mark_alive(self : RedisTokenLimit) -> Unit {
+  self.alive = true
+}
+
+///|
+/// Whether a background probe is running.
+pub fn RedisTokenLimit::probing(self : RedisTokenLimit) -> Bool {
+  self.probing
+}
+
+///|
+/// Ping redis once and switch the limiter back to the shared bucket when it answers.
+/// The reading is the caller's: an unreachable redis is not an error here, it is the
+/// reason the local bucket exists.
+pub async fn RedisTokenLimit::probe(self : RedisTokenLimit) -> Bool {
+  let answered = try {
+    let _ = self.client.ping()
+    true
+  } catch {
+    _ => false
+  }
+  if answered {
+    self.alive = true
+  } else {
+    self.alive = false
+  }
+  answered
+}
+
+///|
+/// Probe every `interval_ms` until cancelled, and hand each reading to `report`.
+///
+/// This is the background half of the liveness model: the limiter marks itself down
+/// the moment a call fails, and this loop is what brings it back. It is a function
+/// rather than a task the limiter starts for itself, so where the task belongs —
+/// which group, which lifetime — stays the caller's decision.
+pub async fn RedisTokenLimit::probe_forever(
+  self : RedisTokenLimit,
+  interval_ms~ : Int32 = 100,
+  report~ : (Bool) -> Unit = _alive => (),
+) -> Unit {
+  self.probing = true
+  while true {
+    let alive = self.probe()
+    report(alive)
+    @async.sleep(interval_ms)
   }
 }

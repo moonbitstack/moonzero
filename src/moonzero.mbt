@@ -187,3 +187,21 @@ pub using @rest {
   not_allowed,
   not_found,
 }
+
+///|
+pub using @syncx {type Once, type Pool, type Single}
+
+///|
+pub using @collection {type Ring}
+
+///|
+pub using @mr {type Mapper, map_reduce, map_reduce_parallel}
+
+///|
+pub using @fx {chunk, group_by, retry, retry_with_backoff}
+
+///|
+pub using @threading {type RoutineGroup, type StableRunner, type TaskRunner}
+
+///|
+pub using @service {type Service, type ServiceGroup}

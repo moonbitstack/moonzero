@@ -2,6 +2,7 @@
 // limit, each in memory or on Redis (go-zero's core/limit and core/syncx).
 import {
   "moonbitstack/moonredis",
+  "moonbitlang/async",
   "moonbitstack/moondate",
   "moonbitstack/moonward",
 }

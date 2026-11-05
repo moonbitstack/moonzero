@@ -1,0 +1,9 @@
+// The synchronisation primitives a service reaches for: one call in flight per
+// key, a body that runs once, and a pool of reusable objects.
+import {
+  "moonbitlang/async/cond_var",
+}
+
+import {
+  "moonbitlang/async",
+} for "wbtest"

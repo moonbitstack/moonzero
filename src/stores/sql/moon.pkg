@@ -1,0 +1,10 @@
+// SQL over the database driver contract: one place a statement is prepared, one
+// place a transaction is opened, and one place a transient failure is retried.
+import {
+  "moonbitstack/moondb",
+}
+
+import {
+  "moonbitlang/async",
+  "moonbitstack/moondb",
+} for "wbtest"

@@ -1,0 +1,48 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitstack/moonzero/stores/cache"
+
+import {
+  "moonbitstack/moonzero/clock",
+  "moonbitstack/moonzero/collection",
+  "moonbitstack/moonzero/syncx",
+}
+
+// Values
+
+// Errors
+pub(all) suberror Refused {
+  Refused(String)
+}
+
+// Types and methods
+pub struct Cache[V] {
+  store : &Store
+  encode : (V) -> Bytes
+  decode : (Bytes) -> V? raise
+  flights : @syncx.Single[V?]
+  ttl_ms : Int64
+  jitter : (Int64) -> Int64
+}
+pub async fn[V] Cache::evict(Self[V], String) -> Unit
+pub fn[V] Cache::inflight(Self[V]) -> Int32
+pub fn[V] Cache::new(&Store, encode~ : (V) -> Bytes, decode~ : (Bytes) -> V? raise, ttl_ms? : Int64, jitter? : (Int64) -> Int64) -> Self[V]
+pub async fn[V] Cache::take(Self[V], String, async () -> V?) -> V?
+pub fn[V] Cache::ttl_ms(Self[V]) -> Int64
+
+pub struct Memory {
+  entries : @collection.Cache[String, Bytes]
+}
+pub async fn Memory::del(Self, String) -> Unit raise Refused
+pub async fn Memory::get(Self, String) -> Bytes? raise Refused
+pub fn Memory::new(limit? : Int32, clock? : @clock.Clock) -> Self
+pub async fn Memory::set(Self, String, Bytes, Int64) -> Unit raise Refused
+pub impl Store for Memory
+
+// Type aliases
+
+// Traits
+pub(open) trait Store {
+  async fn get(Self, String) -> Bytes? raise Refused
+  async fn set(Self, String, Bytes, Int64) -> Unit raise Refused
+  async fn del(Self, String) -> Unit raise Refused
+}

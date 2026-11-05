@@ -1,0 +1,5 @@
+// Map-reduce: one mapper over every item, then one reducer over everything the
+// mapper emitted.
+import {
+  "moonbitlang/async",
+}
