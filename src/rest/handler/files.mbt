@@ -177,7 +177,13 @@ async fn serve_file(
   verb : String,
   send : @moonasgi.Send,
 ) -> Bool {
-  let relative = if path.has_prefix(mount) {
+  // The mount has to end where its name ends: `/static` must not answer a request
+  // for `/staticx/a.css` out of a file registered as `/x/a.css`.
+  let relative = if mount == "/" {
+    path
+  } else if path == mount {
+    "/"
+  } else if path.has_prefix(mount + "/") {
     path.exact_view(start=mount.length()).to_owned()
   } else {
     return false
