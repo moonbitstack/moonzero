@@ -2,32 +2,42 @@
 
 # moonzero
 
-**A service framework for MoonBit — `← go-zero`.**
+**A service framework for MoonBit — configuration, middleware, zRPC, resilience and discovery in one place.**
 
-[![Check and Test](https://github.com/moonbitstack/moonzero/actions/workflows/ci.yml/badge.svg)](https://github.com/moonbitstack/moonzero/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](./LICENSE)
 [![mooncakes](https://img.shields.io/badge/mooncakes-moonbitstack%2Fmoonzero-brightgreen)](https://mooncakes.io/docs/moonbitstack/moonzero)
 
 </div>
 
-> Moved on mooncakes from `Lfan-ke/moonzero` to `moonbitstack/moonzero`.
+`moonzero` assembles a service from a config document: it builds the application,
+wraps it in the middleware the config asks for, and hands back an ASGI application
+that any host can run. It also speaks zRPC — the h2c gRPC profile with its own
+client and server interceptor chains — and it carries the resilience primitives,
+the service discovery glue and the small utilities a service ends up needing.
 
-`moonzero` is the integration layer of the **moon\*** suite — the role `go-zero` plays for Go. It assembles a [`moonapi`](https://github.com/moonbitstack/moonapi) application from config, wraps it in middleware, and produces a runnable [`moonasgi`](https://github.com/moonbitstack/moonasgi) `AsgiApp` that a server (`mooncat`) runs. It never names a server, so any ASGI host runs it.
-
+<!-- nocheck -->
 ```mermaid
 flowchart LR
-  conf["ServiceConf"] --> srv["**moonzero** Server"]
-  api["moonapi App"] --> srv
-  mw["middleware<br/>(logging, ...)"] --> srv
-  srv -->|"to_asgi()"| asgi(["moonasgi AsgiApp"])
-  asgi --> cat["mooncat serves it"]
+  conf["RestConf"] --> engine["RestEngine"]
+  app["application"] --> engine
+  engine -->|"build()"| server["Server"]
+  server -->|"to_asgi()"| asgi(["AsgiApp"])
+  asgi --> host["any ASGI host"]
+```
+
+## Install
+
+<!-- nocheck -->
+```moonbit
+moon add moonbitstack/moonzero
 ```
 
 ## Quickstart
 
+<!-- nocheck -->
 ```moonbit
 let app = @moonapi.App::new()
-let api = @moonzero.Group::new(app, "/api/v1")     // prefix a set of routes
+let api = @moonzero.Group::new(app, "/api/v1")   // a prefix for a set of routes
 api.get("/ping", _ctx => @moonapi.text(200, "pong"))
 
 let conf = @moonzero.ServiceConf::new(
@@ -36,144 +46,251 @@ let conf = @moonzero.ServiceConf::new(
 let server = @moonzero.Server::new(conf, app)
   .use_(@moonzero.cors(@moonzero.CorsConf::new()))   // Access-Control-* headers
   .use_(@moonzero.request_id())                      // x-request-id per request
-  .use_(@moonzero.recovery)                           // 500 instead of a panic
+  .use_(@moonzero.recovery)                          // 500 while nothing is sent
   .use_(@moonzero.logging)
 
-server.describe()        // "greet listening on 127.0.0.1:12000"
-@mooncat.serve(server.to_asgi(), host=conf.host, port=conf.port)   // run it (native)
+println(server.describe())   // "greet listening on 127.0.0.1:12000"
 ```
 
-Verified across all backends (`wasm`, `wasm-gc`, `js`, `native`) in CI, 0 warnings under `--deny-warn`.
+`server.to_asgi()` is an `AsgiApp`: hand it to a server, or drive it in a test with
+no socket in sight.
 
 ## Packages
 
-The layout follows go-zero's own: algorithms in packages of their own, every HTTP middleware in `rest/handler`, and the engine that assembles them in `rest`. The root re-exports the lot, so `@moonzero.Breaker` works as well as `@breaker.Breaker`.
+| Package | What it does |
+|:--|:--|
+| `rest` | the config-driven engine, the server, route groups and route options |
+| `rest/handler` | the middlewares: CORS, recovery, request ids, deadlines, body caps, gzip, JWT, content signatures, breaker, shedding, rate limits, tracing, metrics, access logs |
+| `rest/files` | reading a directory into the static file set |
+| `zrpc` | the zRPC server, the client channel, the interceptor chains, per-method metrics |
+| `balance` | round-robin, weighted and power-of-two-choices balancers, the load-balanced channel |
+| `conf` | the config loader and the service, REST, RPC and signature blocks |
+| `breaker` | the client-side adaptive breaker |
+| `shedder` | the adaptive load shedder |
+| `limit` | token bucket, fixed window and connection limit, in memory or on Redis |
+| `stores/cache` | cache-aside over an open store contract, one load per key |
+| `stores/redis` | that contract over Redis |
+| `stores/sql` | statements, rows and transactions over a database driver |
+| `syncx` | one call in flight per key, a body that runs once, an object pool |
+| `collection` | an LRU cache with lifetimes, a fixed-size ring |
+| `mr` | map-reduce, sequential and parallel |
+| `fx` | retry, backoff, deadlines, grouping |
+| `threading` | a fan-out group, a queue drained by one consumer, a newest-only queue |
+| `service` | several services with one lifetime |
+| `telemetry` | the tracer a service runs on when nobody configured one |
+| `clock` | the millisecond clock every timing decision is a function of |
+| `logx` | levelled, structured logging |
+| `proc` | graceful shutdown |
+| `discov` | file-backed discovery for native hosts |
 
-| Package | What | go-zero |
-|:--:|:--|:--|
-| `clock` | the millisecond clock every timing decision is a function of | `core/timex` |
-| `breaker` | the adaptive circuit breaker, over moonward's | `core/breaker` |
-| `shedder` | the adaptive load shedder, over moonward's | `core/load` |
-| `limit` | token bucket, period limit and connection limit, in memory over moonward's or on Redis | `core/limit`, `core/syncx` |
-| `logx` | levelled, structured logging | `core/logx` |
-| `metric` | counters and histograms in the Prometheus format | `core/metric` |
-| `trace` | W3C trace context | `core/trace` |
-| `proc` | graceful shutdown | `core/proc` |
-| `conf` | configuration loading and the service, REST and RPC configuration | `core/conf` |
-| `balance` | balancers and the load-balanced zRPC channel, over [moonsd](https://github.com/moonbitstack/moonsd) and [moonpool](https://github.com/moonbitstack/moonpool) | `core/discov`, `zrpc` |
-| `zrpc` | the zRPC server and client on moonrpc | `zrpc` |
-| `rest/handler` | the middlewares | `rest/handler` |
-| `rest` | the engine, the server and route groups | `rest` |
-| `discov` | native file, socket and watch drivers for the registries | — |
+The root re-exports the surface: `@moonzero.Breaker`, `@moonzero.Server`,
+`@moonzero.jwt_sign` and the rest all work from one import.
 
 ## Ports
 
-The default listen port is **12000** for the REST engine and **12001** for the zRPC server — the family's numbers rather than go-zero's 8888 and 8080, so every example and every local run in this ecosystem points at the same place. gRPC shares a port with HTTP wherever one listener carries both; a moonzero process binds its REST and zRPC servers separately, and two listeners cannot hold one port, so the second takes the next number.
+The REST engine listens on **12000** and the zRPC server on **12001**. Both are
+ordinary parameters over public presets (`@moonzero.port`, `@moonzero.rpc_port`),
+so a service that wants 8080 writes `ServiceConf::new(port=8080)`. A process that
+runs both binds them separately — two listeners cannot hold one port.
 
-Both are ordinary parameters over public presets (`@moonzero.port`, `@moonzero.rpc_port`): changing one is `ServiceConf::new(port=8888)`.
+## Configuration
 
-## Refusals
+`RestConf` loads the `etc/*.yaml` a scaffolder writes: PascalCase keys, nested
+blocks, `MOONZERO_*` environment overrides, and `default=`/`options=`/`range=`
+constraints. A missing required field, or a value outside its range, is an error
+rather than a silent default.
 
-Every middleware that can turn a request away takes a `refusal` — the status, body and headers a rejected request receives. The presets are go-zero's (`unavailable` 503, `too_many` 429, `timed_out` 503, `too_large` 413); a gateway that answers 429 where the service alone answers 503 writes `shedding(s, refusal=Refusal::new(status=429))`.
-
-## Resilience middleware
-
-Beyond the base onion (logging, recovery, CORS, request-id), moonzero ships go-zero's resilience set, each modelled as a pure decision core over an injected [`Clock`](src/clock/clock.mbt) so its timing is exactly testable:
-
+<!-- nocheck -->
 ```moonbit
-let clock = @moonzero.Clock::new(() => now_ms())     // real time at the async edge
-let server = @moonzero.Server::new(conf, app)
-  .use_(@moonzero.maxbytes(1 << 20))                                   // 413 over 1 MiB
-  .use_(@moonzero.rate_limit(@moonzero.TokenBucket::new(100.0), clock))// 429 when empty
-  .use_(@moonzero.breaker(@moonzero.Breaker::new(clock)))              // 503 while shedding
-  .use_(@moonzero.timeout(3000L, clock))                              // deadline
-  .use_(@moonzero.structured_logging(clock))                          // one JSON line/req
-```
-
-- **`rate_limit`** / **`period_limit`** — a [`TokenBucket`](src/limit/ratelimit.mbt) that admits a burst and refills continuously, and a [`PeriodLimit`](src/limit/periodlimit.mbt) that counts a fixed window per key; both answer `429` once they run out. Both are process-local, so N replicas admit N quotas — for a fleet use **`redis_rate_limit`** / **`redis_period_limit`** over `RedisTokenLimit` / `RedisPeriodLimit`, which run go-zero's `tokenscript.lua` and `periodscript.lua` in redis so every replica draws on one bucket or one window. An unreachable redis leaves the token limiter running on its local bucket (go-zero's `rescueLimiter`) rather than opening the gate.
-- **`breaker`** — a [`Breaker`](src/breaker/breaker.mbt): go-zero's `googleBreaker`, Google SRE's client-side throttle. It counts the last 10s in 40 buckets and sheds a *fraction* of calls, `(total - 5 - max(w, 1.1) * accepts) / (total + 1)` scaled by the run of clean buckets, answering `503` for the ones it sheds — a struggling backend keeps whatever load it can still serve instead of being cut off wholesale. The clock and the shed roll are both injected, so the decisions are exactly reproducible.
-- **`shedding`** — a [`Shedder`](src/shedder/shedder.mbt): go-zero's `AdaptiveShedder`. While the CPU is at or above `CpuThreshold`, or was within the last second, it sheds once more requests are in flight than the best throughput and latency of the last five seconds can carry, answering `503`; an app's own `503` is not counted as throughput.
-- **`timeout`** — a [moonward `Deadline`](src/rest/handler/limits.mbt) per request, enforced on the response path. Preemptively aborting a hung handler needs racing it against a timer (`@async.any`) under the native runtime; that race is wired at the async server edge.
-- **`maxbytes`** — rejects a request whose declared `Content-Length` exceeds the limit with `413`.
-- **`structured_logging`** — a [`RequestLog`](src/rest/handler/logging.mbt) rendered as one JSON line per request (method, path, status, duration, request-id, client-ip, user-agent).
-
-## Auth, YAML config, and zRPC over the h2c transport
-
-```moonbit
-// JWT HS256, on mooncred and mooncrypt
-let token = @moonzero.jwt_sign(
-  Map([("sub", Json::string("alice")), ("exp", Json::number(1893456000.0))]),
-  "topsecret",
+let conf = @moonzero.RestConf::from_yaml(
+  #|Name: greet-api
+  #|Host: 127.0.0.1
+  #|Port: 12000
+  #|Timeout: 5000
+  #|Middlewares:
+  #|  Gunzip: false
+  #|Log:
+  #|  Level: error
 )
-let server = @moonzero.Server::new(conf, app)
-  .use_(@moonzero.auth("topsecret", clock))   // 401 unless a valid Bearer JWT
-  .use_(@moonzero.tracing())                  // W3C traceparent in/out
-  .use_(@moonzero.metrics(m, clock))          // request counter + latency histogram
-
-// The etc/*.yaml goctl writes, loaded and assembled the way go-zero's engine does
-let conf = @moonzero.RestConf::from_yaml(etc_yaml)   // PascalCase keys, MOONZERO_* env overrides
-let server = @moonzero.RestEngine::new(conf).build(app)  // the chain Middlewares asks for
-
-// A real zRPC call over moonrpc's h2c transport — unary and streaming
-let rpc = @moonzero.RpcServer::new(@moonzero.RpcServerConf::new(name="greeter", port=9090))
-let g = rpc.group("hello.Greeter")
-g.register("SayHello", req => handle(req))                        // unary
-g.register_server_streaming("Tail", req => chunks(req))          // one in, many out
-g.register_client_streaming("Upload", msgs => summarize(msgs))   // many in, one out
-g.register_bidi_streaming("Chat", () => @moonzero.BidiStreamHandler::{
-  on_message: m => [echo(m)],   // a reply the instant each message arrives
-  on_end: () => [b"bye"],       // a farewell after the client half-closes
-})
-let ch = @moonzero.RpcChannel::connect(rpc)
-ch.call("/hello.Greeter/SayHello", request)              // Ok(reply) | Err(status)
-ch.call_server_streaming("/hello.Greeter/Tail", request) // Ok([msg, ...]) | Err(status)
-ch.call_client_streaming("/hello.Greeter/Upload", [a, b]) // Ok(reply) | Err(status)
-let call = ch.open_bidi("/hello.Greeter/Chat")           // stream both ways
-call.send(a)          // -> the replies produced right then (interleaved)
-call.close_send()     // -> Ok([on_end replies...]) | Err(status)
+let engine = @moonzero.RestEngine::new(conf)
+println(engine.names().join(", "))
 ```
 
-- **`jwt_sign` / `jwt_verify`** — compact HS256 tokens through [`mooncred/jwt`](https://github.com/moonbitstack/mooncred) over [`mooncrypt`](https://github.com/moonbitstack/mooncrypt)'s SHA-256 and HMAC: signatures compared in constant time, `exp`/`nbf` enforced, the `alg:none` downgrade refused, and every check a field of the `policy` record. Interop-verified against the canonical jwt.io token.
-- **`auth`** — the [middleware](src/rest/handler/auth.mbt) that requires `Authorization: Bearer <jwt>` and answers `401` for an absent, malformed, tampered, or expired token.
-- **`ServiceConf::from_yaml`** — [`moonyaml`](https://github.com/moonbitstack/moonyaml) reads the `etc/*.yaml` into the same `Json` tree the JSON loader produces, so both formats agree field-for-field.
-- **`Conf`** — the [`conf.Load` port](src/conf/conf.mbt): keys match canonically (lowercase, `_` and `-` ignored), so a goctl-written `Name`/`MaxBytes`/`Log.Level` loads as readily as `name`/`max_bytes`/`log_level`; dotted paths reach nested blocks; `,env=` lets a variable override the file; and `default=` / `options=` / `range=[a:b)` behave as go-zero's tags do — a missing required field or a value outside its constraint is an error, never a quiet default.
-- **`RestConf` / `RestEngine`** — [config-driven assembly](src/rest/engine.mbt) (← `rest.RestConf` and `newEngine`): host, port, TLS files, `MaxConns`, `MaxBytes`, `Timeout`, `CpuThreshold`, `Signature`, `TraceIgnorePaths` and the eleven `Middlewares` flags load from one `etc/*.yaml`, and the engine installs exactly the layers those flags ask for, in go-zero's order, over shared connection permits, breaker and metric set. `Metrics` and `Gunzip` load but install nothing.
-- **`logx`** — go-zero's [leveled structured logger](src/logx/logx.mbt) over [`moonlog`](https://github.com/moonbitstack/moonlog)'s sink: entries below the configured level are dropped unrendered, everything else is one JSON object per line with `@timestamp`, `level`, `content`, an optional `WithDuration`, and typed fields. `RestEngine::new` points it at the config's `Log.Level`, which is what finally makes that setting mean something. Point it at another `moonlog` sink and every other library in the family writes to the same place.
-- **`RpcServer` / `RpcGroup`** — [config-driven zRPC groups](src/zrpc/server.mbt) that register [`moonrpc`](https://github.com/moonbitstack/moonrpc) `Method` handlers by gRPC path.
-- **`RpcChannel`** — a [client over the h2c transport](src/zrpc/client.mbt): `to_h2` turns the registered handlers into a `moonrpc` `H2Server`, and the `call` family runs real exchanges through it — HPACK-coded HEADERS, length-prefixed DATA frames, and the `grpc-status` trailer read back off the reply. Unary (`call`), server-streaming (`call_server_streaming`, one request then every framed reply in order), client-streaming (`call_client_streaming`, each request as its own DATA frame then one reply after half-close), and bidirectional streaming all round-trip through the same engine. A call to an unregistered path comes back `UNIMPLEMENTED`, the trailers-only response a gRPC server sends for an unknown method.
-- **Bidi streaming** — `open_bidi` opens a stream that stays open both ways: each `BidiCall::send` writes one request message and returns the replies the server produced right then (an echo handler answers each message as it arrives), and `close_send` half-closes, runs the server's `on_end`, and reports the final `grpc-status`. `call_bidi_streaming` drives a whole exchange in one shot, returning the interleaved replies followed by the `on_end` messages. The channel's HPACK decoder is advanced across every reply block, so its dynamic table stays in lockstep with the engine's encoder for the life of the call.
-- **`ShutdownCoordinator`** — [graceful shutdown](src/proc/shutdown.mbt) for a serving zRPC server: `dispatch_graceful` counts each call as in-flight for its duration, `initiate_shutdown` makes new calls come back `Unavailable` (a stopped listener) while in-flight ones run to completion, and `is_drained` reports when the last one has finished so the process may exit.
+The engine installs exactly the layers the config's `Middlewares` flags ask for, in
+a fixed order, and leaves out a layer whose own setting disables it — no shedder
+without a CPU threshold, no deadline without a budget.
 
-## Discovery, metrics, tracing
+| `RestConf` field | Meaning |
+|:--|:--|
+| `Service` | name, bind address, request budget, log level |
+| `CertFile`, `KeyFile` | TLS material; both or neither, refused otherwise |
+| `Verbose` | access logs carry both header sets |
+| `MaxConns`, `MaxBytes` | connection permits, declared-body cap |
+| `CpuThreshold` | the CPU reading at which shedding starts |
+| `Signature` | content-security keys, tolerance, strict or lenient |
+| `Middlewares` | one flag per layer |
+| `TraceIgnorePaths` | paths left untraced |
 
+## Route options
+
+A route carries its own settings, applied where it is registered:
+
+<!-- nocheck -->
 ```moonbit
-// An instance keeps its registration for as long as its task runs
-@moonzero.hold(registry, "greeter", @moonzero.Endpoint::new("10.0.0.1", 9090))
+let api = @moonzero.Group::new(app, "/api/v1")
+let admin = api.sub("/admin").options_(
+  @moonzero.RouteOptions::new()
+    .jwt(secret="current", prev_secret=Some("retiring"))
+    .timeout(500)
+    .max_bytes(4096)
+    .priority(engine.priority_shedder()),
+)
+admin.get("/stats", ctx => @moonapi.text(200, "ok"))
+```
 
-// A client follows the service in a task of its own, and reads the view without waiting
+| Option | Effect |
+|:--|:--|
+| `jwt` | requires a valid bearer token; `prev_secret` keeps a rotation working |
+| `signature` | verifies the content-security MAC before the handler runs |
+| `timeout` | abandons the handler at the deadline and answers 503 |
+| `max_bytes` | refuses a declared body past the cap with 413 |
+| `priority` | draws the call from the priority shedder |
+| `prefix` | joins another prefix onto the group's |
+| `sse` | stamps the event-stream media type and no-cache headers |
+
+## Middlewares
+
+`rest/handler` exports each layer as an `AsgiApp` transformer, so they compose in
+any order and none needs the engine to exist:
+
+<!-- nocheck -->
+```moonbit
+let clock = @moonzero.Clock::new(() => 0L)   // inject time; no hidden reads
+let server = @moonzero.Server::new(conf, app)
+  .use_(@moonzero.maxbytes(1 << 20))                     // 413 past 1 MiB
+  .use_(@moonzero.rate_limit(@moonzero.TokenBucket::new(100.0), clock))
+  .use_(@moonzero.breaker(@moonzero.Breaker::new(clock)))
+  .use_(@moonzero.timeout(3000L, clock))
+  .use_(@moonzero.tracing())                             // W3C traceparent in/out
+  .use_(@moonzero.metrics(metrics, clock))               // path/method/code families
+```
+
+- **`cors`** matches an origin against the allowed set and its subdomains, answers
+  a preflight with `204`, and never pairs `*` with credentials.
+- **`recovery`** answers `500` only while nothing of the response has gone out; once
+  the status line is on the wire the error is re-raised for the server to close on.
+- **`gunzip`** inflates a `Content-Encoding: gzip` body, with an optional cap on the
+  inflated size; a body that will not inflate is answered `400`.
+- **`content_security`** verifies `X-Content-Security`: RSA-sealed envelope,
+  HS256-class MAC over the request, a timestamp inside the tolerance, and an
+  AES-ECB payload when the envelope says the body is sealed.
+- **`metrics`** records two families labelled `path`, `method` and `code`; the
+  labels stay three labels, so a dashboard can select on any one of them.
+- **`layer`** adapts any `mid.Layer` from the ASGI toolkit, so a layer written for
+  the host drops in unchanged.
+
+`Refusal` is what a turned-away request receives — status, body and headers — and
+every refusing middleware takes one, so a gateway can answer `429` where a service
+alone answers `503`.
+
+## zRPC
+
+Both halves of the wire run through one chain: an invoker turns a call into a
+result, an interceptor wraps an invoker, and the transport is the innermost one.
+
+<!-- nocheck -->
+```moonbit
+let rpc = @moonzero.RpcServer::of(@moonzero.RpcServerConf::new(name="greeter"))
+rpc.group("hello.Greeter").register("SayHello", req => req)
+
+let ch = @moonzero.RpcChannel::connect(rpc)
+  .with_interceptors(@moonzero.client_interceptors(conf.middlewares, deps))
+let reply = ch.call_through("/hello.Greeter/SayHello", b"world")
+```
+
+| Side | Interceptors |
+|:--|:--|
+| client | `client_tracing`, `client_duration`, `client_prometheus`, `client_breaker`, `client_timeout` |
+| server | `server_auth`, `server_tracing`, `server_recover`, `server_stat`, `server_prometheus`, `server_breaker`, `server_shedding`, `server_timeout` |
+
+`RpcServerConf` and `RpcClientConf` carry the timeout, both CPU thresholds,
+authentication and the per-side flags, so both chains are built from config.
+
+## Balancing
+
+`Balancer` chooses an instance three ways: in turn, by weight, or by power of two
+choices over each instance's measured load — `sqrt(lag + 1) * (inflight + 1)`,
+where the lag and the success count are moving averages that decay over ten
+seconds. A `LoadBalancedChannel` resolves, picks, dials and calls, and reports the
+outcome back so the next pick is informed.
+
+<!-- nocheck -->
+```moonbit
+let ch = @moonzero.LoadBalancedChannel::new(
+  _ => view.endpoints(),
+  cluster,
+  "greeter",
+  balancer=@moonzero.Balancer::p2c(),
+)
+```
+
+## Stores
+
+<!-- nocheck -->
+```moonbit
+// with `moonbitstack/moonzero/stores/redis` as @redis and `.../stores/cache` as @cache
+let store = @redis.RedisStore::new(client, prefix="orders:")
+let cache : @cache.Cache[Order] = @cache.Cache::new(
+  store, encode=order_to_bytes, decode=order_of_bytes, ttl_ms=60_000L,
+)
+let order = cache.take("42", () => load_order(42))
+```
+
+`take` runs the loader once per key however many callers arrive, and writes the
+answer back with a jittered lifetime so a fleet warmed at the same moment does not
+expire together. An absent value is not cached.
+
+## Resilience
+
+Three primitives, each a pure decision over an injected clock so every decision is
+reproducible:
+
+- **`Breaker`** counts the last ten seconds in forty buckets and sheds a *fraction*
+  of calls once the failure ratio is past its budget — a struggling backend keeps
+  the load it can still serve.
+- **`Shedder`** refuses work only when the machine is both hot and full: the CPU at
+  or above the threshold, and more calls in flight than the recent throughput and
+  latency can carry.
+- **`limit`** offers a token bucket, a fixed window and a connection count, each in
+  memory or on Redis. The Redis token limiter marks the shared bucket down the
+  moment a call fails and keeps limiting from its local bucket until a probe finds
+  Redis again.
+
+## Discovery
+
+`@moonzero.hold` keeps an instance registered for as long as its task runs, and a
+`View` follows a service in a task of its own, so a client reads the current set
+without waiting. Any registry that implements the discovery contract plugs in
+without a change here; the file-backed driver for native hosts ships in `discov`.
+
+<!-- nocheck -->
+```moonbit
+@moonzero.hold(registry, "greeter", @moonzero.Endpoint::new("10.0.0.1", 12001))
 let view = @moonzero.View::new()
 group.spawn_bg(no_wait=true, () => view.follow(registry, "greeter"))
-
-// Load-balanced client: choose an instance, then call it
-let ch = @moonzero.LoadBalancedChannel::new(_ => view.endpoints(), cluster, "greeter")
-ch.call("/hello.Greeter/SayHello", request)     // dials 10.0.0.1, then .2, cycling
-
-// Metrics read out for a /metrics scrape after serving
-let m = @moonzero.ServerMetrics::new()
-m.requests().value("GET /ping 200")            // request count for that label
-m.latency().mean()                             // mean request latency, ms
 ```
 
-- **Registries** come from the clients, not from here: `@sd.Registry` in [moonredis](https://github.com/moonbitstack/moonredis), [moonetcd](https://github.com/moonbitstack/moonetcd) and [moonconsul](https://github.com/moonbitstack/moonconsul), and `@memory.Registry` in [moonsd](https://github.com/moonbitstack/moonsd). Each implements `Registrar` and `Discovery`, so `hold` and `View` work on all of them. `moonzero` re-exports the contract.
-- **`Balancer`** — [how a channel chooses](src/balance/balance.mbt): `round_robin()`, `weighted()` (smooth weighted round-robin, over [moonpool](https://github.com/moonbitstack/moonpool)'s `RoundRobin` and `Weighted`) or `PickFirst`.
-- **`LoadBalancedChannel`** — a [load-balanced zRPC client](src/balance/balance.mbt) over a `Resolve` function: it resolves a service, picks an instance, dials it through an `RpcCluster` and makes the call, so instances coming and going take effect on the next call.
-- **`FileDiscovery`** — discovery over a file in the native [`discov`](src/discov/) package: `publish` writes what a `@memory.Registry` holds, and `FileDiscovery` resolves and watches it as a `@moonsd.Discovery`.
-- **`ServerMetrics`** — a [`CounterVec`](src/metric/metric.mbt) of per-method/route/status request tallies and a cumulative latency `Histogram` (Prometheus `le` buckets, sum, count), driven by the `metrics` middleware that times each request on the clock.
-- **`tracing`** — [trace-id propagation](src/trace/trace.mbt): continue an inbound W3C `traceparent` or start a new trace, mint a child span, and stamp `traceparent` + `x-trace-id` onto the response.
+## Observability
 
-## Roadmap (transliterating go-zero)
+Metrics come from moonp8s and spans from moontel, so the numbers and the traces a
+service emits are the ones the rest of the toolchain reads. The engine keeps the
+spans its default tracer records — `engine.spans()` — so a test can assert on a
+trace without a collector.
 
-A `conf.Load`-shaped loader (canonical keys, env overrides, `default=`/`options=`/`range=`) + `RestConf` and the engine that builds a chain from its `Middlewares` flags + leveled structured logging + service assembly + the base middleware onion (logging, recovery, CORS, request-id) + the resilience set (timeout, rate-limit, breaker, maxbytes, structured logging) + route groups + JWT auth + zRPC groups with real unary, server/client-streaming, and bidirectional h2c round-trips + graceful shutdown draining in-flight calls + a persisted, watchable registry with round-robin/weighted/pick-first balancers and a load-balanced client + real file-backed registry I/O with a live filesystem watcher + request metrics + trace-id propagation are here. Next: zRPC's client and server interceptors and its p2c balancer, per-route options (jwt, timeout, max bytes, prefix), and `moonctl`-driven scaffolding of a full `moonzero` service from a spec.
+<!-- nocheck -->
+```moonbit
+mount_metrics(app, engine.metrics())     // GET /metrics
+```
 
 ## Licence
 

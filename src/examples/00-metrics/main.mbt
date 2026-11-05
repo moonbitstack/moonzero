@@ -23,7 +23,9 @@ async fn main {
   let app = @moonapi.App::new()
   let api = @moonzero.Group::new(app, "/api/v1")
   api.get("/ping", _ctx => @moonapi.text(200, "pong"))
-  let m = @moonzero.ServerMetrics::new()
+  let m = @moonzero.ServerMetrics::new() catch {
+    _ => abort("the fixed metric names must register")
+  }
   let elapsed : Ref[Int64] = { val: 0L, }
   let clock = @moonzero.Clock::new(() => {
     let now = elapsed.val

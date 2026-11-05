@@ -52,7 +52,9 @@ test "a chain nests the first interceptor outermost" {
 ///|
 test "the breaker refuses without reaching the transport" {
   let (manual, clock) = ticker()
-  let breaker = @breaker.Breaker::new(clock)
+  // A fixed shed roll: every failure below drives the ratio to 1, so the decision
+  // is the breaker's and not the generator's.
+  let breaker = @breaker.Breaker::new(clock, rand=fn() { 0.0 })
   let calls : Ref[Int32] = { val: 0, }
   let invoker = chain(
     [client_breaker(breaker)],

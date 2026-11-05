@@ -8,23 +8,23 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 SECTIONS = [
     ("service", "rest/server.mbt", "Service assembly",
      "ServiceConf (typed config: name, host, port, timeout, log level) + Server "
-     "tie a moonapi App and a middleware onion into a runnable AsgiApp; logging "
-     "is a built-in middleware. Served by mooncat."),
+     "tie the application and a middleware onion into one runnable ASGI "
+     "application; logging is a built-in layer."),
     ("middleware", "rest/handler/middleware.mbt", "Middleware set",
      "The onion layers that wrap the app: recovery (500 instead of a panic), "
      "cors (Access-Control-* headers), and request_id (x-request-id per request)."),
     ("group", "rest/group.mbt", "Route groups",
-     "Group registers a set of moonapi routes under a shared path prefix, so "
+     "Group registers a set of routes under a shared path prefix, so "
      "related endpoints are declared without repeating the prefix."),
     ("config", "conf/service.mbt", "Typed config loading",
      "Parse a JSON or YAML config string into a ServiceConf: a strict derived "
      "FromJson path plus lenient ServiceConf::from_json / from_yaml loaders that "
-     "fill omitted fields from the new() defaults, the way go-zero's conf.Load "
-     "applies ,optional/,default= tags."),
+     "fill omitted fields from the new() defaults, so a document may name only "
+     "what it changes."),
     ("jwt", "rest/handler/jwt.mbt", "JWT (HS256)",
      "base64url plus compact-JWT signing and verification under HS256: "
      "jwt_sign / jwt_verify check the signature in constant time and enforce "
-     "exp/nbf, rejecting the alg:none downgrade — go-zero's token auth core."),
+     "exp/nbf, rejecting the alg:none downgrade."),
     ("auth", "rest/handler/auth.mbt", "JWT auth middleware",
      "The auth middleware requires every HTTP request to carry a valid "
      "Authorization: Bearer <jwt>, rejecting absent/malformed/tampered/expired "
@@ -53,25 +53,17 @@ SECTIONS = [
     ("discov", "discov/discov.mbt", "Discovery over a file",
      "A moonsd Discovery over a file: publish writes what a memory registry holds, "
      "FileDiscovery resolves from it and watches it through moonbitlang/async's fs."),
-    ("metrics", "metric/metric.mbt", "Metrics",
-     "A CounterVec of per-method/route/status request tallies and a cumulative "
-     "latency Histogram (Prometheus le buckets), wired by the metrics middleware "
-     "that times each request on the clock."),
-    ("tracing", "trace/trace.mbt", "Trace-id propagation",
-     "W3C traceparent parsing and formatting with SplitMix64-derived trace/span "
-     "ids, and the tracing middleware that continues an inbound trace or starts a "
-     "new one and stamps traceparent + x-trace-id onto the response."),
     ("clock", "clock/clock.mbt", "Clock abstraction",
      "A millisecond time source injected into the resilience middlewares so "
      "their timing is a pure function of an explicit clock; ManualClock drives "
      "them deterministically in tests."),
     ("ratelimit", "limit/ratelimit.mbt", "Rate limiting",
-     "go-zero's token-bucket limiter over moonward's bucket, on the millisecond "
-     "clock, and the rate_limit middleware, which answers 429 when it is empty."),
+     "A token-bucket limiter over moonward's bucket, on the millisecond clock, and "
+     "the rate_limit middleware, which answers 429 when it is empty."),
     ("breaker", "breaker/breaker.mbt", "Circuit breaker",
-     "go-zero's googleBreaker over moonward's: Google SRE client-side throttling "
-     "on the last ten seconds of outcomes, which sheds a computed fraction of calls "
-     "rather than opening, and the breaker middleware that answers 503 for a shed one."),
+     "The Google SRE client-side throttling breaker over moonward's: it reads the "
+     "last ten seconds of outcomes and sheds a computed fraction of calls rather "
+     "than opening, and the breaker middleware answers 503 for a shed one."),
     ("limits", "rest/handler/limits.mbt", "Timeout & max-bytes",
      "The timeout middleware, which starts a moonward Deadline per request and "
      "enforces it on the response path (preemptive cancel is the async boundary), "
@@ -80,48 +72,144 @@ SECTIONS = [
      "RequestLog captures typed access-log fields (method, path, status, "
      "duration, request-id, client-ip, user-agent) and renders one JSON line "
      "per request; the structured_logging middleware emits it, timed on the clock."),
-    ("etcd", ("etcd/message.mbt", "etcd/client.mbt", "etcd/discovery.mbt"), "etcd",
-     "The etcd v3 client and the discovery driver over it: leases keep a registered "
-     "instance alive, watches stream membership changes, and a lapsed lease is what "
-     "removes a dead instance."),
-    ("consul", ("consul/client.mbt", "consul/discovery.mbt"), "consul",
-     "The consul agent API and the discovery driver over it: a service registers "
-     "with a TTL check, a keep-alive passes that check, and deregistering removes "
-     "it — the lease pattern consul spells differently."),
-    ("redis", ("redis/client.mbt", "redis/discovery.mbt", "redis/resp.mbt"), "redis",
-     "The RESP protocol codec, the redis client over it, and the discovery driver "
-     "that keeps instances in a keyed set with an expiry."),
-    ("transports", ("discov/etcd_socket.mbt", "discov/consul_socket.mbt", "discov/redis_socket.mbt"),
-     "Native transports",
-     "What actually talks to a real server: the etcd gRPC socket, the consul HTTP "
-     "socket and the redis socket. The HTTP/1.1 messages are moonhttp's. "
-     "Native-only, which is why the portable core is written against traits instead."),
     ("limiting", ("limit/maxconns.mbt", "limit/periodlimit.mbt"), "Admission control",
      "The concurrency limiter that sheds load past a ceiling — releasing its permit "
      "with defer, so cancellation cannot wedge it shut — and the period limiter that "
      "counts requests per window."),
     ("conf", "conf/conf.mbt", "Config keys",
-     "go-zero's canonical key form: lowercased, `_` and `-` dropped, so MaxBytes, "
-     "maxBytes, max_bytes and max-bytes all name one field and a genuine etc/*.yaml "
-     "loads unchanged."),
+     "The canonical config-key form: lowercased, `_` and `-` dropped, so MaxBytes, "
+     "maxBytes, max_bytes and max-bytes all name one field and a config document "
+     "written in any of them loads unchanged."),
     ("restconf", "conf/rest.mbt", "Engine configuration",
-     "Which built-in layers the engine installs (<- MiddlewaresConf), every flag on by "
+     "Which built-in layers the engine installs (`MiddlewaresConf`), every flag on by "
      "default, so an etc/*.yaml that says nothing about middleware still gets the whole "
      "chain."),
     ("logx", "logx/logx.mbt", "Logging",
-     "go-zero's logx over moonlog's sink: the four level names its etc/*.yaml carries, "
-     "the @timestamp / content keys its collectors index, the WithDuration view, and a "
-     "logger whose level and destination move at runtime."),
+     "Structured logging over moonlog's sink: the four level names an etc/*.yaml "
+     "carries, the @timestamp / content keys a collector indexes, the WithDuration "
+     "view, and a logger whose level and destination move at runtime."),
     ("refusal", "rest/handler/refusal.mbt", "Turning a request away",
      "What a request refused by a middleware receives: 503 for an open breaker, a spent "
      "connection budget or a passed deadline, 429 for a rate limit, 413 for a body too "
      "large. Each is a parameter."),
     ("shedder", "shedder/shedder.mbt", "Load shedding",
-     "go-zero's load.AdaptiveShedder over moonward's, wired from RestConf.CpuThreshold: "
+     "The adaptive shedder over moonward's, wired from RestConf.CpuThreshold: "
      "while the CPU is above the threshold, or was within the last second, it sheds "
      "once more requests are in flight than recent throughput and latency can carry."),
+    ("route", "rest/route.mbt", "Route options",
+     "The settings a route carries into its own registration: a JWT with a rotation "
+     "window, a signature verifier, a deadline, a body cap, the priority shedder, a "
+     "prefix and server-sent events. Each is a field of RouteOptions and a hoop on "
+     "the route."),
+    ("hoops", "rest/hoops.mbt", "Route-level checks",
+     "One hoop per option that can refuse a request, applied where the route is "
+     "registered: the token, the signature, the declared body length, the deadline "
+     "enforced by racing the handler, the shedder's ticket, and the event-stream "
+     "headers."),
+    ("gunzip", "rest/handler/gunzip.mbt", "Compressed request bodies",
+     "Read a Content-Encoding: gzip body, inflate it, and hand the application the "
+     "plain bytes, with an optional cap on the inflated size so a compression bomb "
+     "stops at the limit rather than in memory."),
+    ("signature", "rest/handler/signature.mbt", "Content security",
+     "The X-Content-Security request signature: an RSA-sealed envelope carrying the "
+     "MAC key, the time and the payload type; a MAC over the timestamp, method, path, "
+     "query and body digest; a tolerance on the timestamp; and an AES-ECB payload when "
+     "the envelope says the body is sealed."),
+    ("rsa", "rest/handler/rsa.mbt", "The envelope key",
+     "The RSA decrypter a content-security key set is built from: raw RSA private "
+     "operation, PKCS#1 v1.5 unpadding, and a PEM or DER reader that is a pure "
+     "function of the text."),
+    ("files", "rest/handler/files.mbt", "Static files",
+     "A file-serving layer over an in-memory set: a GET under a prefix whose remaining "
+     "path names a registered file is answered with it, with a content-derived ETag and "
+     "a 304 for a conditional request. The bytes live in a value, so a test serves a "
+     "file it built and a deployment loads a directory once."),
+    ("metrics", "rest/handler/metrics.mbt", "Request metrics",
+     "Two Prometheus families over the process registry: a duration histogram and a "
+     "code counter, labelled path, method and code — three labels, so a dashboard can "
+     "select on any one of them."),
+    ("tracing", "rest/handler/tracing.mbt", "Tracing",
+     "A server span per request, joined to the trace the request arrived with and "
+     "written to whatever sink the tracer was built over, plus the convenience "
+     "x-trace-id header next to the standard traceparent."),
+    ("telemetry", "telemetry/telemetry.mbt", "The default tracer",
+     "The tracer a service runs on when nobody configured one: ids from the platform "
+     "entropy source, spans to a caller-named sink, and every request sampled."),
+    ("interceptor", "zrpc/interceptor.mbt", "The interceptor chain",
+     "One shape for both halves of the wire: an invoker turns a call into a result, an "
+     "interceptor wraps an invoker, and the transport is the innermost one."),
+    ("clientinterceptors", "zrpc/client_interceptors.mbt", "Client interceptors",
+     "Tracing, the duration log, the Prometheus families, the breaker and the "
+     "deadline — the five layers a call passes on its way out."),
+    ("serverinterceptors", "zrpc/server_interceptors.mbt", "Server interceptors",
+     "Authentication, tracing, recovery, the stat log, the Prometheus families, the "
+     "breaker, shedding and the deadline — the eight layers a call passes on its way "
+     "in, with authentication outermost so a refused peer cannot push the breaker "
+     "open."),
+    ("rpcconf", "conf/rpc.mbt", "zRPC configuration",
+     "The server and client blocks: the timeout, both CPU thresholds, authentication, "
+     "and one flag per interceptor, all loading from a config document with their "
+     "defaults."),
+    ("p2c", "balance/p2c.mbt", "Power of two choices",
+     "Choose two instances at random and take the less loaded: sqrt(lag + 1) * "
+     "(inflight + 1), with the lag and success counts moving averages that decay over "
+     "ten seconds and a one-second window after which an unpicked instance is forced."),
+    ("cache", "stores/cache/cache.mbt", "Cache aside",
+     "Read through a store, run the loader once per key however many callers arrive, "
+     "and write the answer back with a jittered lifetime. An absent value is not "
+     "cached."),
+    ("sql", "stores/sql/sql.mbt", "SQL",
+     "Statements, rows, single values and transactions over a database driver the "
+     "caller supplies; a transaction commits when its body returns and rolls back when "
+     "it raises."),
+    ("syncx", "syncx/singleflight.mbt", "One call in flight per key",
+     "A second caller asking for a key while the first is still running waits for that "
+     "answer instead of issuing a second call, and every one of them receives the same "
+     "result or the same failure."),
+    ("collection", "collection/cache.mbt", "Bounded containers",
+     "A cache with a size limit and an optional expiry over a doubly linked recency "
+     "list, so a hit is constant work, and a fixed-size ring that keeps the newest "
+     "samples."),
+    ("mr", "mr/mapreduce.mbt", "Map-reduce",
+     "A mapper that sees one item and emits any number of values, a finish step for "
+     "the aggregate that only makes sense at the end, and a reducer over everything "
+     "emitted — sequentially or across tasks, with the parallel run emitting in input "
+     "order."),
+    ("fx", "fx/retry.mbt", "Retrying and deadlines",
+     "Call a body until it stops raising, with a predicate that stops the ladder early "
+     "for a failure that will not change; the same over a backoff; and a deadline that "
+     "tells a slow answer (None) from a wrong one (an error)."),
+    ("threading", "threading/runner.mbt", "Tasks and queues",
+     "A fan-out group that is collected first and joined at wait, a queue drained by "
+     "one consumer for work that must not run on the request's own task, and a queue "
+     "that keeps only the newest pending item so a burst collapses to its last value."),
+    ("services", "service/group.mbt", "Running several services",
+     "A group whose members share one lifetime: every service is a task that runs "
+     "until it returns or is cancelled, so a failure cancels the rest instead of "
+     "leaving half a process running."),
+    ("redis", "stores/redis/store.mbt", "The redis store",
+     "The same Store contract the memory store implements, over a redis client and a "
+     "key prefix, so a cache moves from one process to a fleet by changing the value "
+     "passed in — plus the counter and expiry operations a cache does not use."),
+    ("once", "syncx/once.mbt", "One-time bodies and pools",
+     "A body that runs at most once, for the initialisation that must not happen "
+     "twice, and a pool that builds its objects on the first take and hands them back."),
 ]
 KIND = {"struct": "struct", "enum": "enum", "fn": "fn", "type": "type", "let": "let"}
+
+
+def top_level_brace(s):
+    """Where the declaration's body starts: the first `{` that is not inside a
+    parameter list. `len(s)` when the declaration ends before a brace."""
+    depth = 0
+    for at, ch in enumerate(s):
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+        elif ch == "{" and depth == 0:
+            return at
+    return len(s)
 
 
 def parse(path):
@@ -136,11 +224,18 @@ def parse(path):
             doc.append(s[3:].strip())
         elif s.startswith("pub"):
             buf = s
-            is_alias = re.match(r"pub\s+(type|let)\b", buf) is not None
-            while (not is_alias and "{" not in buf and i + 1 < len(lines)):
+            # A declaration runs until its parentheses close: a default value may
+            # carry a `catch { … }`, so a brace alone does not end it, and a doc
+            # comment or the next declaration never belongs to it.
+            depth = buf.count("(") - buf.count(")")
+            while depth > 0 and i + 1 < len(lines):
+                nxt = lines[i + 1].strip()
+                if nxt.startswith("//") or nxt.startswith("pub"):
+                    break
                 i += 1
-                buf += " " + lines[i].strip()
-            core = re.sub(r"\s*\{.*$", "", buf)
+                buf += " " + nxt
+                depth = buf.count("(") - buf.count(")")
+            core = buf[:top_level_brace(buf)]
             core = re.sub(r"^pub(?:\(all\))?\s+", "", core).strip()
             core = re.sub(r"\s+", " ", core).rstrip(",").rstrip()
             core = re.sub(r",\s*\)", ")", core)
@@ -276,15 +371,29 @@ document.addEventListener("DOMContentLoaded",()=>{
 });
 """
 
-CONTRACT = """let conf = ServiceConf::new(name="greet", port=8888)
-let server = Server::new(conf, app).use_(logging)
+CONTRACT = """let conf = RestConf::from_yaml(etc_yaml)   // one etc/*.yaml
+let server = RestEngine::new(conf).build(app)
 
-server.describe()                                 // "greet listening on 0.0.0.0:8888"
-@mooncat.serve(server.to_asgi(), port=conf.port)  // run it (native)"""
+server.describe()                    // "greet listening on 127.0.0.1:12000"
+server.to_asgi()                     // hand it to any ASGI host"""
+
+
+def neutral(t):
+    """Keep the page's prose about this library: the reference implementation is
+    named nowhere, and an ASGI host is not named either."""
+    for word, replacement in (
+        ("go-zero's", "the reference implementation's"),
+        ("go-zero", "the reference implementation"),
+        ("mooncat", "an ASGI host"),
+        ("moonapi", "the application layer"),
+        ("moonasgi", "the ASGI transport"),
+    ):
+        t = t.replace(word, replacement)
+    return t
 
 
 def esc(t):
-    return html.escape(t)
+    return html.escape(neutral(t))
 
 
 def main():
@@ -309,12 +418,10 @@ def main():
              '</div></aside>']
 
     hero = ('<main><header class="hero"><h1>moonzero</h1>'
-            '<p class="tag">A service framework for MoonBit &#8212; config-driven assembly of a moonapi '
-            'app with middleware into a runnable AsgiApp, the way go-zero does for Go. '
-            'Backend-agnostic; served by mooncat.</p>'
+            '<p class="tag">A service framework for MoonBit &#8212; configuration, middleware, zRPC, '
+            'resilience and discovery, assembled into one application the host can run.</p>'
             '<div class="badges">'
             '<a href="https://github.com/moonbitstack/moonzero/actions"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/moonbitstack/moonzero/ci.yml?branch=master&label=CI&logo=github"></a>'
-            '<img alt="tests" src="https://img.shields.io/badge/tests-110%20passing-0ca678">'
             '<a href="https://github.com/moonbitstack/moonzero"><img alt="GitHub" src="https://img.shields.io/badge/GitHub-source-24292f?logo=github"></a>'
             '<img alt="license" src="https://img.shields.io/badge/license-Apache--2.0-6d5efc"></div>'
             '<div class="install"><span class="prompt">$</span><code>moon add moonbitstack/moonzero</code>'
@@ -332,7 +439,7 @@ def main():
             total += 1
             body.append('<div class="item" data-k="%s"><span class="kind">%s</span>'
                         '<pre class="sig">%s</pre>%s</div>'
-                        % (kind, kind, tint(sig), ('<p class="doc">%s</p>' % prose(doc)) if doc else ''))
+                        % (kind, kind, tint(sig), ('<p class="doc">%s</p>' % prose(neutral(doc))) if doc else ''))
         body.append('</section>')
     body.append('<footer>Generated from source <code>///</code> doc-comments · '
                 '<a href="https://mooncakes.io/docs/moonbitstack/moonzero">mooncakes</a> · '
