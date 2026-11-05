@@ -6,7 +6,7 @@ fn scope_with(headers : Array[(String, String)]) -> @moonasgi.Scope {
     http_method: "GET",
     scheme: "http",
     path: "/",
-    raw_path: b"/",
+    raw_path: Some(b"/"),
     query_string: b"",
     root_path: "",
     headers,
