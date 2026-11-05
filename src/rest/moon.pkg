@@ -21,5 +21,6 @@ import {
 
 import {
   "moonbitstack/moonlog",
+  "moonbitstack/moonapi/ctx",
   "moonbitlang/async",
 } for "wbtest"
