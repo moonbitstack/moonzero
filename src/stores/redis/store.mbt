@@ -31,28 +31,6 @@ pub fn RedisStore::key_of(self : RedisStore, key : String) -> String {
 }
 
 ///|
-/// A byte string as a Latin-1 string: one character per octet, which is the only
-/// mapping a `String`-valued client can carry without losing a byte. A cached value
-/// is opaque here — it may be a serialised record or a compressed blob.
-pub fn to_latin1(bytes : BytesView) -> String {
-  let sb = StringBuilder()
-  for i = 0; i < bytes.length(); i = i + 1 {
-    sb.write_char(bytes[i].to_int().unsafe_to_char())
-  }
-  sb.to_string()
-}
-
-///|
-/// The inverse of `to_latin1`: the octets a Latin-1 string stands for.
-pub fn of_latin1(text : String) -> Bytes {
-  let buf = Buffer()
-  for i = 0; i < text.length(); i = i + 1 {
-    buf.write_byte((text[i].to_int() & 0xFF).to_byte())
-  }
-  buf.to_bytes()
-}
-
-///|
 pub impl @cache.Store for RedisStore with fn get(
   self : RedisStore,
   key : String,
@@ -69,20 +47,17 @@ pub impl @cache.Store for RedisStore with fn set(
   value : Bytes,
   ttl_ms : Int64,
 ) -> Unit raise {
-  let text = to_latin1(value[:])
-  let redis_key = self.key_of(key)
-  let wrote : Result[Bool, Error] = try {
-    if ttl_ms > 0L {
-      Ok(self.client.set(redis_key, text, px=ttl_ms))
-    } else {
-      Ok(self.client.set(redis_key, text))
-    }
-  } catch {
-    error => Err(error)
+  // The value goes out as the octets it is: `Client::set` takes a `String`, and a
+  // `String` argument is UTF-8 encoded on the wire, which would rewrite every octet
+  // above 0x7F and turn a serialised record or a compressed blob into something the
+  // reader can only guess at. The generic command form takes bytes.
+  let args : Array[Bytes] = [b"SET", @utf8.encode(self.key_of(key)), value]
+  if ttl_ms > 0L {
+    args.push(b"PX")
+    args.push(@utf8.encode(ttl_ms.to_string()))
   }
-  match wrote {
-    Ok(_) => ()
-    Err(_) => raise @cache.Refused("redis set failed for " + key)
+  let _ = self.client.command(args) catch {
+    _ => raise @cache.Refused("redis set failed for " + key)
   }
 }
 

@@ -4,4 +4,10 @@
 import {
   "moonbitstack/moonzero/stores/cache",
   "moonbitstack/moonredis",
+  "moonbitlang/core/encoding/utf8",
 }
+
+import {
+  "moonbitstack/moonredis/resp",
+  "moonbitlang/async",
+} for "wbtest"

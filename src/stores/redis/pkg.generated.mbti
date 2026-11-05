@@ -7,9 +7,6 @@ import {
 }
 
 // Values
-pub fn of_latin1(String) -> Bytes
-
-pub fn to_latin1(BytesView) -> String
 
 // Errors
 
