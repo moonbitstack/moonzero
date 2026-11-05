@@ -78,6 +78,7 @@ pub fn SignatureVerifier::strict(self : SignatureVerifier) -> Bool {
 ///|
 /// Split `key=value` pairs out of a header value: fields separated by `,`, name
 /// and value by the **first** `=`, because a base64 value carries padding `=`.
+/// Both sides of a field are trimmed, and a field with no name is skipped.
 pub fn parse_pairs(value : String) -> Map[String, String] {
   let out : Map[String, String] = Map([])
   for field in value.split(",").collect() {
@@ -85,7 +86,9 @@ pub fn parse_pairs(value : String) -> Map[String, String] {
     match field.find("=") {
       Some(at) =>
         if at > 0 {
-          out[field[0:at].to_owned()] = field[at + 1:].trim().to_owned()
+          // The name is trimmed as well as the value: a peer that writes
+          // `key = fp` has named the same field.
+          out[field[0:at].trim().to_owned()] = field[at + 1:].trim().to_owned()
         }
       None => ()
     }

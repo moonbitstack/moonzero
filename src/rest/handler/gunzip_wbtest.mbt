@@ -4,21 +4,21 @@
 
 ///|
 /// What the application underneath a layer saw.
-struct Seen {
+struct GzSeen {
   mut calls : Int32
   mut body : Bytes
   mut headers : Array[(String, String)]
 }
 
 ///|
-fn Seen::new() -> Seen {
+fn GzSeen::new() -> GzSeen {
   { calls: 0, body: b"", headers: [], }
 }
 
 ///|
 /// An app that records the request it was given and answers 200, so a test can
 /// tell whether a layer passed the request on and in what shape.
-fn recording(seen : Seen) -> @moonasgi.AsgiApp {
+fn gz_app(seen : GzSeen) -> @moonasgi.AsgiApp {
   (scope, receive, send) => {
     seen.calls = seen.calls + 1
     match scope {
@@ -39,7 +39,7 @@ fn recording(seen : Seen) -> @moonasgi.AsgiApp {
 
 ///|
 /// A scope for one request with `headers` and a declared body length.
-fn gzip_scope(headers : Array[(String, String)]) -> @moonasgi.Scope {
+fn gz_scope(headers : Array[(String, String)]) -> @moonasgi.Scope {
   @moonasgi.Scope::Http({
     http_version: "1.1",
     http_method: "POST",
@@ -59,7 +59,7 @@ fn gzip_scope(headers : Array[(String, String)]) -> @moonasgi.Scope {
 
 ///|
 /// Drive an app with one request whose body is `body`.
-async fn run_body(
+async fn gz_run(
   app : @moonasgi.AsgiApp,
   scope : @moonasgi.Scope,
   body : Bytes,
@@ -80,7 +80,7 @@ async fn run_body(
 
 ///|
 /// The status of an event list's response start.
-fn response_status(events : Array[@moonasgi.Event]) -> Int32 {
+fn gz_status(events : Array[@moonasgi.Event]) -> Int32 {
   for event in events {
     match event {
       HttpResponseStart(status~, ..) => return status
@@ -92,25 +92,25 @@ fn response_status(events : Array[@moonasgi.Event]) -> Int32 {
 
 ///|
 async test "a gzipped body reaches the handler as plain bytes" {
-  let seen = Seen::new()
-  let app = gunzip()(recording(seen))
-  let events = run_body(
+  let seen = GzSeen::new()
+  let app = gunzip()(gz_app(seen))
+  let events = gz_run(
     app,
-    gzip_scope([("content-encoding", "gzip")]),
+    gz_scope([("content-encoding", "gzip")]),
     @gzip.gzip(b"{\"hello\":\"world\"}"),
   )
-  assert_eq(response_status(events), 200)
+  assert_eq(gz_status(events), 200)
   assert_eq(seen.calls, 1)
   assert_eq(seen.body, b"{\"hello\":\"world\"}")
 }
 
 ///|
 async test "the headers that described the compressed body are gone" {
-  let seen = Seen::new()
-  let app = gunzip()(recording(seen))
-  let _ = run_body(
+  let seen = GzSeen::new()
+  let app = gunzip()(gz_app(seen))
+  let _ = gz_run(
     app,
-    gzip_scope([
+    gz_scope([
       ("content-encoding", "gzip"),
       ("content-length", "35"),
       ("content-type", "application/json"),
@@ -140,61 +140,57 @@ async test "the headers that described the compressed body are gone" {
 
 ///|
 async test "a body that will not inflate is refused before the handler" {
-  let seen = Seen::new()
-  let app = gunzip()(recording(seen))
-  let events = run_body(
+  let seen = GzSeen::new()
+  let app = gunzip()(gz_app(seen))
+  let events = gz_run(
     app,
-    gzip_scope([("content-encoding", "gzip")]),
+    gz_scope([("content-encoding", "gzip")]),
     b"not gzip at all",
   )
-  assert_eq(response_status(events), 400)
+  assert_eq(gz_status(events), 400)
   assert_eq(seen.calls, 0)
 }
 
 ///|
 async test "a declared coding with no body behind it passes through" {
-  let seen = Seen::new()
-  let app = gunzip()(recording(seen))
+  let seen = GzSeen::new()
+  let app = gunzip()(gz_app(seen))
   // A client that sets the header on an empty request is not sending a corrupt
   // body, and its handler still gets to run.
-  let events = run_body(app, gzip_scope([("content-encoding", "gzip")]), b"")
-  assert_eq(response_status(events), 200)
+  let events = gz_run(app, gz_scope([("content-encoding", "gzip")]), b"")
+  assert_eq(gz_status(events), 200)
   assert_eq(seen.calls, 1)
   assert_eq(seen.body, b"")
 }
 
 ///|
 async test "a request without the header is untouched" {
-  let seen = Seen::new()
-  let app = gunzip()(recording(seen))
-  let events = run_body(
-    app,
-    gzip_scope([("content-type", "text/plain")]),
-    b"raw",
-  )
-  assert_eq(response_status(events), 200)
+  let seen = GzSeen::new()
+  let app = gunzip()(gz_app(seen))
+  let events = gz_run(app, gz_scope([("content-type", "text/plain")]), b"raw")
+  assert_eq(gz_status(events), 200)
   assert_eq(seen.body, b"raw")
 }
 
 ///|
 async test "the decompressed size is what the cap is compared against" {
-  let seen = Seen::new()
-  let app = gunzip(limit=1_024)(recording(seen))
+  let seen = GzSeen::new()
+  let app = gunzip(limit=1_024)(gz_app(seen))
   // Ten kilobytes of one letter compresses to almost nothing: a body this size is
   // what a compression bomb looks like, and the cap is on the inflated side.
   let bomb = @gzip.gzip(Bytes::make(10_000, b'a'))
-  let events = run_body(app, gzip_scope([("content-encoding", "gzip")]), bomb)
-  assert_eq(response_status(events), 400)
+  let events = gz_run(app, gz_scope([("content-encoding", "gzip")]), bomb)
+  assert_eq(gz_status(events), 400)
   assert_eq(seen.calls, 0)
   // The same body under a cap that fits is served.
-  let ok_seen = Seen::new()
-  let roomy = gunzip(limit=20_000)(recording(ok_seen))
-  let ok = run_body(
+  let ok_seen = GzSeen::new()
+  let roomy = gunzip(limit=20_000)(gz_app(ok_seen))
+  let ok = gz_run(
     roomy,
-    gzip_scope([("content-encoding", "gzip")]),
+    gz_scope([("content-encoding", "gzip")]),
     @gzip.gzip(Bytes::make(10_000, b'a')),
   )
-  assert_eq(response_status(ok), 200)
+  assert_eq(gz_status(ok), 200)
   assert_eq(ok_seen.body.length(), 10_000)
 }
 
