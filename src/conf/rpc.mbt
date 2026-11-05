@@ -29,25 +29,21 @@ pub fn RpcServerConf::new(
 /// `,optional`/`,default=` config tags. Keys are matched canonically, so
 /// go-zero's `Name`/`Host`/`Port`/`Timeout` load as readily as moonzero's own
 /// `timeout_ms`.
-pub fn RpcServerConf::from_json(
-  src : String,
-) -> RpcServerConf raise ConfigError {
+pub fn RpcServerConf::from_json(src : String) -> RpcServerConf raise Refused {
   rpc_conf_of(Conf::of_json(src))
 }
 
 ///|
 /// Load an `RpcServerConf` from a YAML config string (self-built `yaml_parse`),
 /// with the same default-filling semantics as `from_json`.
-pub fn RpcServerConf::from_yaml(
-  src : String,
-) -> RpcServerConf raise ConfigError {
+pub fn RpcServerConf::from_yaml(src : String) -> RpcServerConf raise Refused {
   rpc_conf_of(Conf::of_yaml(src))
 }
 
 ///|
 /// Decode an `RpcServerConf` from a loaded document, filling omitted fields from
 /// `RpcServerConf::new()`. Shared by the JSON and YAML loaders.
-fn rpc_conf_of(c : Conf) -> RpcServerConf raise ConfigError {
+fn rpc_conf_of(c : Conf) -> RpcServerConf raise Refused {
   let def = RpcServerConf::new()
   {
     name: c.string("Name", default=def.name),

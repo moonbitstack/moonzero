@@ -30,7 +30,7 @@ test "a rest service must name itself and its port" {
     try {
       let _ = RestConf::from_yaml(src)
     } catch {
-      ConfigError(msg) => assert_eq(msg.has_suffix(" is not set"), true)
+      Refused(msg) => assert_eq(msg.has_suffix(" is not set"), true)
     } noraise {
       _ => fail("go-zero has no default for Name or Port")
     }
@@ -42,7 +42,7 @@ test "an out-of-range RestConf value is refused" {
   try {
     let _ = RestConf::from_yaml("Name: api\nPort: 8888\nCpuThreshold: 1200\n")
   } catch {
-    ConfigError(msg) =>
+    Refused(msg) =>
       assert_eq(
         msg, "value 1200 for field CpuThreshold is out of range [0:1000]",
       )
@@ -52,8 +52,7 @@ test "an out-of-range RestConf value is refused" {
   try {
     let _ = RestConf::from_yaml("Name: api\nPort: 8888\nMaxBytes: 33554433\n")
   } catch {
-    ConfigError(msg) =>
-      assert_eq(msg.has_suffix("out of range [0:33554432]"), true)
+    Refused(msg) => assert_eq(msg.has_suffix("out of range [0:33554432]"), true)
   } noraise {
     _ => fail("a body cap above 32 MiB must not load")
   }

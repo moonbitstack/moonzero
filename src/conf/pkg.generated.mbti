@@ -15,8 +15,8 @@ pub let port : Int32
 pub let rpc_port : Int32
 
 // Errors
-pub(all) suberror ConfigError {
-  ConfigError(String)
+pub(all) suberror Refused {
+  Refused(String)
 }
 
 // Types and methods
@@ -24,14 +24,14 @@ pub struct Conf {
   root : Map[String, @json.Json]
 }
 pub fn Conf::at(Self, String) -> @json.Json?
-pub fn Conf::bool(Self, String, default? : Bool, env? : String, also? : Array[String]) -> Bool raise ConfigError
-pub fn Conf::int(Self, String, default? : Int32, range? : String, env? : String, also? : Array[String]) -> Int32 raise ConfigError
-pub fn Conf::int64(Self, String, default? : Int64, range? : String, env? : String, also? : Array[String]) -> Int64 raise ConfigError
-pub fn Conf::list(Self, String) -> Array[Self] raise ConfigError
-pub fn Conf::of_json(String) -> Self raise ConfigError
-pub fn Conf::of_yaml(String) -> Self raise ConfigError
-pub fn Conf::string(Self, String, default? : String, options? : Array[String], env? : String, also? : Array[String]) -> String raise ConfigError
-pub fn Conf::strings(Self, String, default? : Array[String], env? : String, also? : Array[String]) -> Array[String] raise ConfigError
+pub fn Conf::bool(Self, String, default? : Bool, env? : String, also? : Array[String]) -> Bool raise Refused
+pub fn Conf::int(Self, String, default? : Int32, range? : String, env? : String, also? : Array[String]) -> Int32 raise Refused
+pub fn Conf::int64(Self, String, default? : Int64, range? : String, env? : String, also? : Array[String]) -> Int64 raise Refused
+pub fn Conf::list(Self, String) -> Array[Self] raise Refused
+pub fn Conf::of_json(String) -> Self raise Refused
+pub fn Conf::of_yaml(String) -> Self raise Refused
+pub fn Conf::string(Self, String, default? : String, options? : Array[String], env? : String, also? : Array[String]) -> String raise Refused
+pub fn Conf::strings(Self, String, default? : Array[String], env? : String, also? : Array[String]) -> Array[String] raise Refused
 
 #derive(Eq, @debug.Debug)
 pub(all) struct MiddlewaresConf {
@@ -73,8 +73,8 @@ pub(all) struct RestConf {
   middlewares : MiddlewaresConf
   trace_ignore_paths : Array[String]
 }
-pub fn RestConf::from_json(String) -> Self raise ConfigError
-pub fn RestConf::from_yaml(String) -> Self raise ConfigError
+pub fn RestConf::from_json(String) -> Self raise Refused
+pub fn RestConf::from_yaml(String) -> Self raise Refused
 pub fn RestConf::host(Self) -> String
 pub fn RestConf::new(service? : ServiceConf, cert_file? : String, key_file? : String, verbose? : Bool, max_conns? : Int32, max_bytes? : Int32, cpu_threshold? : Int64, signature? : SignatureConf, middlewares? : MiddlewaresConf, trace_ignore_paths? : Array[String]) -> Self
 pub fn RestConf::port(Self) -> Int32
@@ -89,8 +89,8 @@ pub(all) struct RpcServerConf {
   timeout_ms : Int32
 }
 pub fn RpcServerConf::equal(Self, Self) -> Bool
-pub fn RpcServerConf::from_json(String) -> Self raise ConfigError
-pub fn RpcServerConf::from_yaml(String) -> Self raise ConfigError
+pub fn RpcServerConf::from_json(String) -> Self raise Refused
+pub fn RpcServerConf::from_yaml(String) -> Self raise Refused
 pub fn RpcServerConf::new(name? : String, host? : String, port? : Int32, timeout_ms? : Int32) -> Self
 pub fn RpcServerConf::not_equal(Self, Self) -> Bool
 pub fn RpcServerConf::to_repr(Self) -> @debug.Repr
@@ -104,8 +104,8 @@ pub(all) struct ServiceConf {
   log_level : @logx.LogLevel
 }
 pub fn ServiceConf::equal(Self, Self) -> Bool
-pub fn ServiceConf::from_json(String) -> Self raise ConfigError
-pub fn ServiceConf::from_yaml(String) -> Self raise ConfigError
+pub fn ServiceConf::from_json(String) -> Self raise Refused
+pub fn ServiceConf::from_yaml(String) -> Self raise Refused
 pub fn ServiceConf::new(name? : String, host? : String, port? : Int32, timeout_ms? : Int32, log_level? : @logx.LogLevel) -> Self
 pub fn ServiceConf::not_equal(Self, Self) -> Bool
 

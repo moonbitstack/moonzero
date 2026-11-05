@@ -163,22 +163,22 @@ pub fn RestConf::tls(self : RestConf) -> Bool {
 ///
 /// `Name` and `Port` carry no default, exactly as in go-zero: a rest service that
 /// does not say who it is or where to listen fails to load.
-pub fn RestConf::from_yaml(src : String) -> RestConf raise ConfigError {
+pub fn RestConf::from_yaml(src : String) -> RestConf raise Refused {
   rest_conf_of(Conf::of_yaml(src))
 }
 
 ///|
 /// Load a `RestConf` from a JSON config string, with the same semantics as
 /// `from_yaml`.
-pub fn RestConf::from_json(src : String) -> RestConf raise ConfigError {
+pub fn RestConf::from_json(src : String) -> RestConf raise Refused {
   rest_conf_of(Conf::of_json(src))
 }
 
 ///|
 /// Decode a `RestConf` from a loaded document.
-fn rest_conf_of(c : Conf) -> RestConf raise ConfigError {
+fn rest_conf_of(c : Conf) -> RestConf raise Refused {
   let def = RestConf::new()
-  {
+  let conf = {
     service: service_conf_of(c),
     cert_file: c.string("CertFile", default=def.cert_file),
     key_file: c.string("KeyFile", default=def.key_file),
@@ -197,11 +197,18 @@ fn rest_conf_of(c : Conf) -> RestConf raise ConfigError {
       default=def.trace_ignore_paths,
     ),
   }
+  // A certificate without its key (or the reverse) would leave the service
+  // listening in the clear while its operator believes otherwise, so it is
+  // refused at load instead of silently downgraded.
+  if (conf.cert_file == "") != (conf.key_file == "") {
+    raise Refused("CertFile and KeyFile must be set together")
+  }
+  conf
 }
 
 ///|
 /// Decode the `Signature` block.
-fn signature_of(c : Conf) -> SignatureConf raise ConfigError {
+fn signature_of(c : Conf) -> SignatureConf raise Refused {
   let def = SignatureConf::new()
   let keys : Array[PrivateKeyConf] = []
   for k in c.list("Signature.PrivateKeys") {
@@ -219,7 +226,7 @@ fn signature_of(c : Conf) -> SignatureConf raise ConfigError {
 
 ///|
 /// Decode the `Middlewares` block.
-fn middlewares_of(c : Conf) -> MiddlewaresConf raise ConfigError {
+fn middlewares_of(c : Conf) -> MiddlewaresConf raise Refused {
   {
     trace: c.bool("Middlewares.Trace", default=true),
     log: c.bool("Middlewares.Log", default=true),

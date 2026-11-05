@@ -3,8 +3,8 @@
 /// YAML, a non-mapping root, a field of the wrong type, a required field with no
 /// value, or a value outside its `options=`/`range=` constraint, with a
 /// human-readable reason.
-pub(all) suberror ConfigError {
-  ConfigError(String)
+pub(all) suberror Refused {
+  Refused(String)
 }
 
 ///|
@@ -24,9 +24,9 @@ let log_levels : Array[String] = ["debug", "info", "error", "severe"]
 /// Keys are matched canonically, so go-zero's `Name`/`Host`/`Port`/`Timeout` and
 /// moonzero's own `timeout_ms`/`log_level` spellings all load.
 ///
-/// Raises `ConfigError` on malformed JSON, a non-object root, a field of the
+/// Raises `Refused` on malformed JSON, a non-object root, a field of the
 /// wrong type, or a log level outside `debug|info|error|severe`.
-pub fn ServiceConf::from_json(src : String) -> ServiceConf raise ConfigError {
+pub fn ServiceConf::from_json(src : String) -> ServiceConf raise Refused {
   let def = ServiceConf::new()
   service_conf_of(
     Conf::of_json(src),
@@ -44,9 +44,9 @@ pub fn ServiceConf::from_json(src : String) -> ServiceConf raise ConfigError {
 /// nesting, sequences, scalars, comments) into a `Json` object, then decoded by
 /// the shared field reader — so JSON and YAML configs agree field-for-field.
 ///
-/// Raises `ConfigError` on malformed YAML, a non-mapping root, a field of the
+/// Raises `Refused` on malformed YAML, a non-mapping root, a field of the
 /// wrong type, or a log level outside `debug|info|error|severe`.
-pub fn ServiceConf::from_yaml(src : String) -> ServiceConf raise ConfigError {
+pub fn ServiceConf::from_yaml(src : String) -> ServiceConf raise Refused {
   let def = ServiceConf::new()
   service_conf_of(
     Conf::of_yaml(src),
@@ -68,7 +68,7 @@ fn service_conf_of(
   c : Conf,
   name_default? : String,
   port_default? : Int32,
-) -> ServiceConf raise ConfigError {
+) -> ServiceConf raise Refused {
   let def = ServiceConf::new()
   let name = c.string("Name", default?=name_default, env="MOONZERO_NAME")
   let host = c.string("Host", default=def.host, env="MOONZERO_HOST")

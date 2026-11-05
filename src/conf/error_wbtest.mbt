@@ -10,7 +10,7 @@ test "a value outside options= is refused" {
   try {
     let _ = ServiceConf::from_yaml("Log:\n  Level: chatty\n")
   } catch {
-    ConfigError(msg) =>
+    Refused(msg) =>
       assert_eq(
         msg, "value \"chatty\" for field Log.Level is not defined in options",
       )
@@ -67,7 +67,7 @@ test "loader rejects malformed input" {
   try {
     let _ = ServiceConf::from_json("{not json")
   } catch {
-    ConfigError(_) => ()
+    Refused(_) => ()
   } noraise {
     _ => fail("expected invalid JSON to raise")
   }
@@ -75,7 +75,7 @@ test "loader rejects malformed input" {
   try {
     let _ = ServiceConf::from_json("[1,2,3]")
   } catch {
-    ConfigError(_) => ()
+    Refused(_) => ()
   } noraise {
     _ => fail("expected non-object root to raise")
   }
@@ -83,7 +83,7 @@ test "loader rejects malformed input" {
   try {
     let _ = ServiceConf::from_json("{\"port\":\"nope\"}")
   } catch {
-    ConfigError(_) => ()
+    Refused(_) => ()
   } noraise {
     _ => fail("expected wrong-typed port to raise")
   }
@@ -100,7 +100,7 @@ test "log level decodes from a JSON string, and only from the four names" {
   try {
     let _ = ServiceConf::from_json("{\"log_level\":\"chatty\"}")
   } catch {
-    ConfigError(_) => ()
+    Refused(_) => ()
   } noraise {
     _ => fail("an unknown level must not load as info")
   }

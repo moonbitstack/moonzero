@@ -26,7 +26,7 @@ test "a field with no default and no value is refused" {
   try {
     let _ = c.int("Port")
   } catch {
-    ConfigError(msg) => assert_eq(msg, "field Port is not set")
+    Refused(msg) => assert_eq(msg, "field Port is not set")
   } noraise {
     _ => fail("a required field must not fall back to anything")
   }
@@ -40,7 +40,7 @@ test "a value outside range= is refused, and the bound itself is not" {
   try {
     let _ = c.int64("CpuThreshold", default=900L, range="[0:1000]")
   } catch {
-    ConfigError(msg) =>
+    Refused(msg) =>
       assert_eq(
         msg, "value 1200 for field CpuThreshold is out of range [0:1000]",
       )
@@ -71,7 +71,7 @@ test "range spec brackets decide whether the bound is included" {
   try {
     let _ = range_parse("0:10")
   } catch {
-    ConfigError(_) => ()
+    Refused(_) => ()
   } noraise {
     _ => fail("a spec without brackets is not a range")
   }
@@ -99,14 +99,14 @@ test "typed readers coerce and refuse" {
   try {
     let _ = c.int("Name")
   } catch {
-    ConfigError(msg) => assert_eq(msg, "field Name must be a number")
+    Refused(msg) => assert_eq(msg, "field Name must be a number")
   } noraise {
     _ => fail("a non-numeric string is not a number")
   }
   try {
     let _ = c.bool("Name")
   } catch {
-    ConfigError(msg) => assert_eq(msg, "field Name must be a boolean")
+    Refused(msg) => assert_eq(msg, "field Name must be a boolean")
   } noraise {
     _ => fail("a non-boolean string is not a boolean")
   }

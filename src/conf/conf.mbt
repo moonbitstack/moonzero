@@ -30,25 +30,25 @@ pub struct Conf {
 }
 
 ///|
-/// Load a document from JSON. Raises `ConfigError` on malformed JSON or a
+/// Load a document from JSON. Raises `Refused` on malformed JSON or a
 /// non-object root.
-pub fn Conf::of_json(src : String) -> Conf raise ConfigError {
+pub fn Conf::of_json(src : String) -> Conf raise Refused {
   let root = @json.parse(src) catch {
-    err => raise ConfigError("invalid JSON: " + err.to_string())
+    err => raise Refused("invalid JSON: " + err.to_string())
   }
   match root {
     Object(m) => { root: m, }
-    _ => raise ConfigError("config root must be a JSON object")
+    _ => raise Refused("config root must be a JSON object")
   }
 }
 
 ///|
 /// Load a document from the YAML go-zero ships as `etc/*.yaml`. Raises
-/// `ConfigError` on malformed YAML or a non-mapping root.
-pub fn Conf::of_yaml(src : String) -> Conf raise ConfigError {
+/// `Refused` on malformed YAML or a non-mapping root.
+pub fn Conf::of_yaml(src : String) -> Conf raise Refused {
   let doc = @moonyaml.loads(src) catch {
     err =>
-      raise ConfigError(
+      raise Refused(
         "invalid YAML at line " +
         err.at().line.to_string() +
         ", column " +
@@ -57,7 +57,7 @@ pub fn Conf::of_yaml(src : String) -> Conf raise ConfigError {
   }
   match doc {
     Object(m) => { root: m, }
-    _ => raise ConfigError("config root must be a YAML mapping")
+    _ => raise Refused("config root must be a YAML mapping")
   }
 }
 
@@ -152,8 +152,8 @@ fn Conf::raw(
 
 ///|
 /// The error go-zero reports for a field with no value and no `default=`.
-fn missing(path : String) -> ConfigError {
-  ConfigError("field " + path + " is not set")
+fn missing(path : String) -> Refused {
+  Refused("field " + path + " is not set")
 }
 
 ///|
@@ -162,7 +162,7 @@ fn check_options(
   value : String,
   path : String,
   options : Array[String]?,
-) -> Unit raise ConfigError {
+) -> Unit raise Refused {
   match options {
     None => ()
     Some(allowed) => {
@@ -171,7 +171,7 @@ fn check_options(
           return
         }
       }
-      raise ConfigError(
+      raise Refused(
         "value \"" +
         value +
         "\" for field " +
@@ -198,10 +198,10 @@ priv struct RangeSpec {
 }
 
 ///|
-/// Parse a `range=` tag body. Raises `ConfigError` on a spec that is not one of
+/// Parse a `range=` tag body. Raises `Refused` on a spec that is not one of
 /// go-zero's four bracket forms.
-fn range_parse(spec : String) -> RangeSpec raise ConfigError {
-  let bad = ConfigError("bad range spec " + spec)
+fn range_parse(spec : String) -> RangeSpec raise Refused {
+  let bad = Refused("bad range spec " + spec)
   if spec.length() < 3 {
     raise bad
   }
@@ -267,12 +267,12 @@ fn check_range(
   value : Double,
   path : String,
   range : String?,
-) -> Unit raise ConfigError {
+) -> Unit raise Refused {
   match range {
     None => ()
     Some(spec) =>
       if !range_parse(spec).contains(value) {
-        raise ConfigError(
+        raise Refused(
           "value " +
           value.to_string() +
           " for field " +
@@ -287,15 +287,15 @@ fn check_range(
 ///|
 /// Coerce a config value to a number. A quoted scalar that reads as a number is
 /// accepted, so `Port: "8888"` and an env override both decode.
-fn as_number(v : Json, path : String) -> Double raise ConfigError {
+fn as_number(v : Json, path : String) -> Double raise Refused {
   match v {
     Number(n, ..) => n
     String(s) =>
       match parse_number(s) {
         Some(n) => n
-        None => raise ConfigError("field " + path + " must be a number")
+        None => raise Refused("field " + path + " must be a number")
       }
-    _ => raise ConfigError("field " + path + " must be a number")
+    _ => raise Refused("field " + path + " must be a number")
   }
 }
 
@@ -308,10 +308,10 @@ pub fn Conf::string(
   options? : Array[String],
   env? : String,
   also~ : Array[String] = [],
-) -> String raise ConfigError {
+) -> String raise Refused {
   let value = match self.raw(path, also, env) {
     Some(String(s)) => s
-    Some(_) => raise ConfigError("field " + path + " must be a string")
+    Some(_) => raise Refused("field " + path + " must be a string")
     None =>
       match default {
         Some(d) => d
@@ -332,7 +332,7 @@ pub fn Conf::int(
   range? : String,
   env? : String,
   also~ : Array[String] = [],
-) -> Int32 raise ConfigError {
+) -> Int32 raise Refused {
   let value = match self.raw(path, also, env) {
     Some(v) => as_number(v, path)
     None =>
@@ -354,7 +354,7 @@ pub fn Conf::int64(
   range? : String,
   env? : String,
   also~ : Array[String] = [],
-) -> Int64 raise ConfigError {
+) -> Int64 raise Refused {
   let value = match self.raw(path, also, env) {
     Some(v) => as_number(v, path)
     None =>
@@ -376,13 +376,13 @@ pub fn Conf::bool(
   default? : Bool,
   env? : String,
   also~ : Array[String] = [],
-) -> Bool raise ConfigError {
+) -> Bool raise Refused {
   match self.raw(path, also, env) {
     Some(True) => true
     Some(False) => false
     Some(String("true")) => true
     Some(String("false")) => false
-    Some(_) => raise ConfigError("field " + path + " must be a boolean")
+    Some(_) => raise Refused("field " + path + " must be a boolean")
     None =>
       match default {
         Some(d) => d
@@ -400,20 +400,20 @@ pub fn Conf::strings(
   default? : Array[String],
   env? : String,
   also~ : Array[String] = [],
-) -> Array[String] raise ConfigError {
+) -> Array[String] raise Refused {
   match self.raw(path, also, env) {
     Some(Array(items)) => {
       let out : Array[String] = []
       for item in items {
         match item {
           String(s) => out.push(s)
-          _ => raise ConfigError("field " + path + " must be a list of strings")
+          _ => raise Refused("field " + path + " must be a list of strings")
         }
       }
       out
     }
     Some(String(s)) => split_commas(s)
-    Some(_) => raise ConfigError("field " + path + " must be a list of strings")
+    Some(_) => raise Refused("field " + path + " must be a list of strings")
     None =>
       match default {
         Some(d) => d
@@ -451,7 +451,7 @@ fn split_commas(s : String) -> Array[String] {
 /// takes, each element read back through the same constraint-checked accessors.
 /// An absent path is an empty list; a non-list, or a list holding anything but
 /// mappings, is an error.
-pub fn Conf::list(self : Conf, path : String) -> Array[Conf] raise ConfigError {
+pub fn Conf::list(self : Conf, path : String) -> Array[Conf] raise Refused {
   match self.present(path) {
     None => []
     Some(Array(items)) => {
@@ -459,14 +459,12 @@ pub fn Conf::list(self : Conf, path : String) -> Array[Conf] raise ConfigError {
       for item in items {
         match item {
           Object(m) => out.push({ root: m, })
-          _ =>
-            raise ConfigError("field " + path + " must be a list of mappings")
+          _ => raise Refused("field " + path + " must be a list of mappings")
         }
       }
       out
     }
-    Some(_) =>
-      raise ConfigError("field " + path + " must be a list of mappings")
+    Some(_) => raise Refused("field " + path + " must be a list of mappings")
   }
 }
 
