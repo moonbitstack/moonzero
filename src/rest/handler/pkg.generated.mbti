@@ -20,6 +20,8 @@ import {
 }
 
 // Values
+pub fn as_layer((async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> &@mid.Layer
+
 pub fn auth(String, @clock.Clock) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
 
 pub fn breaker(@breaker.Breaker, refusal? : Refusal) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
@@ -74,6 +76,8 @@ pub fn metrics_handler(ServerMetrics) -> async (@ctx.Context) -> @http.Response
 
 pub fn mount_metrics(@moonapi.App, ServerMetrics) -> Unit
 
+pub fn of_layer(&@mid.Layer) -> (async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+
 pub fn parse_i64(String) -> Int64?
 
 pub fn parse_pairs(String) -> Map[String, String]
@@ -118,6 +122,8 @@ pub fn tracing(tracer? : @trace.Tracer, now? : () -> Int64, header? : String, ig
 
 pub let unavailable : Refusal
 
+pub let verbose_body_preview : Int32
+
 pub fn verify_signature(SignatureVerifier, SignatureInput, Int64) -> VerifiedContent raise Refused
 
 // Errors
@@ -136,6 +142,9 @@ pub(all) suberror Refused {
 }
 
 // Types and methods
+type AsLayer
+pub fn AsLayer::wrap(Self, async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit) -> async (@spec.Scope, async () -> @spec.Event, async (@spec.Event) -> Unit) -> Unit
+
 pub(all) struct CorsConf {
   origins : Array[String]
   methods : String

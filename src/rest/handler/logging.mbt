@@ -149,9 +149,11 @@ pub fn headers_json(headers : Array[(String, String)]) -> Json {
 /// process `logx` by default) when the response starts. Access logs are `info`, so
 /// a service configured at `error` or above emits none of them.
 ///
-/// `verbose` adds both header sets to the entry — what a debugging deployment
-/// switches on and an ordinary one leaves off. Non-HTTP scopes pass through
-/// without logging.
+/// `verbose` adds both header sets and a preview of the request body to the entry —
+/// what a debugging deployment switches on and an ordinary one leaves off. The
+/// preview is the first `verbose_body_preview` bytes: go-zero dumps the whole body,
+/// which for a service that accepts uploads means a log line the size of the
+/// upload. Non-HTTP scopes pass through without logging.
 pub fn structured_logging(
   clock : @clock.Clock,
   logger? : @logx.Logger,
@@ -162,6 +164,10 @@ pub fn structured_logging(
     (scope, receive, send) => {
       match scope {
         Http(hs) => {
+          // A verbose entry describes the body, so the body has to be read before
+          // the application runs; the application is then handed the same bytes it
+          // would have read itself.
+          let body = if verbose { read_body(receive) } else { b"" }
           let start = clock.now()
           let verb = hs.http_method
           let path = hs.path
@@ -188,6 +194,9 @@ pub fn structured_logging(
                   if verbose {
                     fields.push(("request_headers", request_headers))
                     fields.push(("response_headers", headers_json(headers)))
+                    fields.push(
+                      ("request_body", Json::string(body_preview(body))),
+                    )
                   }
                   lg
                   .with_duration(entry.duration_ms)
@@ -204,10 +213,43 @@ pub fn structured_logging(
               other => send(other)
             }
           }
-          inner(scope, receive, observed)
+          if verbose {
+            inner(scope, buffered_body(body), observed)
+          } else {
+            inner(scope, receive, observed)
+          }
         }
         _ => inner(scope, receive, send)
       }
     }
+  }
+}
+
+///|
+/// How much of a request body a verbose access entry carries. Named because it is a
+/// policy, not an arithmetic detail: enough to recognise a payload, short of a log
+/// line the size of an upload.
+pub let verbose_body_preview : Int32 = 1024
+
+///|
+/// The first `verbose_body_preview` bytes of `body` as text, or a count when the
+/// bytes are not UTF-8. A truncated body is marked so a reader does not mistake it
+/// for the whole one.
+fn body_preview(body : Bytes) -> String {
+  if body.length() == 0 {
+    return ""
+  }
+  let shown = if body.length() > verbose_body_preview {
+    body[:verbose_body_preview]
+  } else {
+    body[:]
+  }
+  let text = @utf8.decode(shown) catch {
+    _ => return "<" + body.length().to_string() + " bytes, not text>"
+  }
+  if body.length() > verbose_body_preview {
+    text + "…"
+  } else {
+    text
   }
 }
