@@ -63,6 +63,7 @@ no socket in sight.
 | `rest/handler` | the middlewares: CORS, recovery, request ids, deadlines, body caps, gzip, JWT, content signatures, breaker, shedding, rate limits, tracing, metrics, access logs |
 | `rest/files` | reading a directory into the static file set |
 | `zrpc` | the zRPC server, the client channel, the interceptor chains, per-method metrics |
+| `zrpc/socket` | serving a zRPC server on a port, and calling one over TCP (native) |
 | `balance` | round-robin, weighted and power-of-two-choices balancers, the load-balanced channel |
 | `conf` | the config loader and the service, REST, RPC and signature blocks |
 | `breaker` | the client-side adaptive breaker |
@@ -220,6 +221,24 @@ let reply = ch.call_through("/hello.Greeter/SayHello", b"world")
 
 `RpcServerConf` and `RpcClientConf` carry the timeout, both CPU thresholds,
 authentication and the per-side flags, so both chains are built from config.
+
+The channel above is in process — it drives a server object directly, which is
+what a test wants. `zrpc/socket` carries the same calls over TCP: `Listener` puts
+a `RpcServer` on a port with its interceptor chain intact, and `SocketChannel`
+speaks h2c to any gRPC peer.
+
+<!-- nocheck -->
+```moonbit
+// native: a listener is a socket
+let listener = @socket.Listener::new(rpc)
+@async.with_task_group(g => {
+  g.spawn_bg(() => listener.serve(port=12001))
+  let ch = @socket.SocketChannel::connect("127.0.0.1", 12001)
+  let reply = ch.call("/hello.Greeter/SayHello", b"world")
+  ch.close()
+  listener.stop()
+})
+```
 
 ## Balancing
 

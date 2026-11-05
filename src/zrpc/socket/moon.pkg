@@ -1,0 +1,15 @@
+// zRPC over a real socket: the same server and the same calls, carried on TCP
+// instead of inside one process. Native only, because a listener is.
+supported_targets = "native"
+
+import {
+  "moonbitstack/moonzero/zrpc",
+  "moonbitstack/moonrpc",
+  "moonbitstack/moonrpc/net",
+}
+
+import {
+  "moonbitstack/moonzero/conf",
+  "moonbitlang/async",
+  "moonbitlang/core/encoding/utf8",
+} for "wbtest"

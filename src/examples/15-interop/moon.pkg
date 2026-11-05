@@ -1,0 +1,14 @@
+// One end of the interoperability check: the same binary serves on a socket or
+// calls one, so a peer written against another implementation meets it over TCP.
+supported_targets = "native"
+
+import {
+  "moonbitstack/moonzero/conf",
+  "moonbitstack/moonzero/zrpc",
+  "moonbitstack/moonzero/zrpc/socket",
+  "moonbitlang/async",
+  "moonbitlang/core/env",
+  "moonbitlang/core/encoding/utf8",
+}
+
+pkgtype(kind: "executable")
