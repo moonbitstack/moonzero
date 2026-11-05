@@ -42,8 +42,12 @@
   --ease: cubic-bezier(0.2, 0.7, 0.3, 1);
   --fast: 0.15s;
   --base: 0.22s;
+  color-scheme: light;
 }
 
+/* Day is the default so a page with no resolved theme still renders; the script
+   in <head> only ever sets day or night on top of this. */
+:root,
 :root[data-theme="day"] {
   --page: #efede6;
   --paper: #fbfaf7;
@@ -67,6 +71,24 @@
   --rule-2: #2e3c49;
   --shadow: none;
   --accent: #8b7eff;
+  color-scheme: dark;
+}
+
+/* Before the head script runs — or if it cannot run at all — the system decides. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --page: #0a0e13;
+    --paper: #12181f;
+    --paper-2: #161d26;
+    --ink: #e7eaee;
+    --ink-2: #aeb8c2;
+    --ink-3: #7c8b99;
+    --rule: #202a35;
+    --rule-2: #2e3c49;
+    --shadow: none;
+    --accent: #8b7eff;
+    color-scheme: dark;
+  }
 }
 
 *,
@@ -94,22 +116,49 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* A control is not text. Anything you click, drag or slide gives up selection so
-   a gesture never leaves a highlight behind, and so a drag on the rail scrolls
-   instead of painting a selection. Prose, code and signatures keep theirs. */
+/* A control is not text. Rather than naming every decorative surface — and
+   missing one every time a new chip or readout is added — selection is refused
+   at the root and handed back only to the things a reader might want to quote. */
 
+html {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* The allow-list stays at zero specificity (:where) so a decorative label can
+   always be switched back off by name below without a specificity fight. */
+:where(.paper) :where(p, li, h1, h2, h3, h4, dt, dd, blockquote, pre, code, table, th, td),
+:where(.hero) :where(h1, p),
+:where(.section-head) :where(h1, h2, p),
+:where(.document, .signals) :where(dt, dd, p, h2, h3, code),
+.lab-note,
+.bench .src,
+.bench .out,
+.install code,
+.code pre {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Small caps that name a region, not prose: never a quote target. */
+.eyebrow,
+.section-label,
+.signals .label,
+.code .cap,
+.api .kind {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Long-press menus belong to the machine, not to the prose. */
 .bar,
 .rail,
 .minimap,
 .screen,
-.bench .controls,
+.path,
+.tiles,
 .pager,
-.palette,
-.btn,
-.copy,
-.theme {
-  -webkit-user-select: none;
-  user-select: none;
+.palette {
   -webkit-touch-callout: none;
 }
 

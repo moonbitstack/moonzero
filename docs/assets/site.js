@@ -4,8 +4,35 @@
   "use strict";
 
   var root = document.documentElement;
+  var scheme = window.matchMedia
+    ? window.matchMedia("(prefers-color-scheme: dark)")
+    : null;
 
   /* ---------- theme ---------- */
+
+  function normalise(value) {
+    return value === "day" || value === "night" ? value : null;
+  }
+
+  function systemTheme() {
+    return scheme && scheme.matches ? "night" : "day";
+  }
+
+  function storedTheme() {
+    try {
+      return normalise(localStorage.getItem("mz-theme"));
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function urlTheme() {
+    try {
+      return normalise(new URLSearchParams(location.search).get("theme"));
+    } catch (e) {
+      return null;
+    }
+  }
 
   function applyTheme(theme) {
     root.setAttribute("data-theme", theme);
@@ -18,24 +45,42 @@
     }
   }
 
-  function storedTheme() {
-    try {
-      return localStorage.getItem("mz-theme");
-    } catch (e) {
-      return null;
-    }
-  }
-
-  applyTheme(root.getAttribute("data-theme") || storedTheme() || "day");
-
-  document.addEventListener("click", function (event) {
-    var setter = event.target.closest && event.target.closest("[data-theme-set]");
-    if (!setter) return;
-    var theme = setter.getAttribute("data-theme-set");
+  function setTheme(theme) {
+    theme = normalise(theme);
+    if (!theme) return;
     applyTheme(theme);
     try {
       localStorage.setItem("mz-theme", theme);
     } catch (e) {}
+  }
+
+  applyTheme(
+    normalise(root.getAttribute("data-theme")) ||
+      urlTheme() ||
+      storedTheme() ||
+      systemTheme()
+  );
+
+  /* Until the reader picks a side, the page keeps listening to the system. */
+  if (scheme) {
+    var followSystem = function () {
+      if (urlTheme() || storedTheme()) return;
+      applyTheme(systemTheme());
+    };
+    if (scheme.addEventListener) scheme.addEventListener("change", followSystem);
+    else if (scheme.addListener) scheme.addListener(followSystem);
+  }
+
+  document.addEventListener("click", function (event) {
+    var setter = event.target.closest && event.target.closest("[data-theme-set]");
+    if (setter) {
+      setTheme(setter.getAttribute("data-theme-set"));
+      return;
+    }
+    // Keyboard activation lands on the button itself, not on a span.
+    if (event.target.closest && event.target.closest(".theme")) {
+      setTheme(root.getAttribute("data-theme") === "night" ? "day" : "night");
+    }
   });
 
   /* ---------- copy buttons ---------- */

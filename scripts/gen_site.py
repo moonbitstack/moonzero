@@ -187,11 +187,25 @@ def palette_entry(key):
 
 def head(depth, title, description):
     up = "../" if depth else ""
+    # No data-theme in the markup: the stylesheet reads the system preference,
+    # and this script resolves it before the first paint so nothing flashes.
+    # A stored choice wins over the system, a ?theme= wins over both.
+    theme_script = """<script>
+(function () {
+  var pick = function (v) { return v === "day" || v === "night" ? v : null; };
+  var t = null;
+  try { t = pick(new URLSearchParams(location.search).get("theme")); } catch (e) {}
+  if (!t) { try { t = pick(localStorage.getItem("mz-theme")); } catch (e) {} }
+  if (!t) t = window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "night" : "day";
+  document.documentElement.setAttribute("data-theme", t);
+})();
+</script>"""
     return f"""<!doctype html>
-<html lang="en" data-theme="day">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
 <title>{esc(title)}</title>
 <meta name="description" content="{esc(description)}">
 <link rel="icon" href="{up}assets/favicon.svg" type="image/svg+xml">
@@ -199,7 +213,7 @@ def head(depth, title, description):
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Space+Grotesk:wght@400;500;700&display=swap">
 <link rel="stylesheet" href="{up}assets/site.css">
-<script>try{{var q=new URLSearchParams(location.search).get('theme');var t=q||localStorage.getItem('mz-theme');document.documentElement.setAttribute('data-theme',t||(matchMedia('(prefers-color-scheme: dark)').matches?'night':'day'))}}catch(e){{}}</script>
+{theme_script}
 </head>
 <body data-up="{up}">"""
 
@@ -228,7 +242,7 @@ def bar(depth, crumbs=None, facts=True):
   <span class="spacer"></span>
   {crumb}
   <button class="plain" data-palette-open type="button" title="Search packages">⌘K</button>
-  <button class="theme" type="button" aria-label="Colour theme">
+  <button class="theme" type="button" aria-label="Colour theme — follows your system until you choose" title="Follows your system until you choose">
     <span data-theme-set="day">DAY</span><span data-theme-set="night">NIGHT</span>
   </button>
   <a href="https://github.com/moonbitstack/moonzero" title="Source on GitHub">GitHub</a>
