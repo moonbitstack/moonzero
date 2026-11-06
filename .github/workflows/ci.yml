@@ -94,9 +94,15 @@ jobs:
           curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
           echo "$HOME/.moon/bin" >> $GITHUB_PATH
 
+      - name: post install
+        run: |
+          moon version --all
+          moon update
+
       - uses: actions/setup-go@v5
         with:
           go-version-file: scripts/interop/go.mod
+          cache: false
 
       - name: both directions
         run: bash scripts/interop/check.sh
