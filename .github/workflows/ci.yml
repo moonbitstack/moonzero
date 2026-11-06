@@ -75,6 +75,15 @@ jobs:
         run: |
           moon info --target all && git diff --exit-code
 
+      - name: the skills are valid
+        if: runner.os == 'Linux'
+        run: |
+          for dir in docs/skills/*/; do
+            case "$dir" in *CHANGE-ME*) continue ;; esac
+            [ -f "$dir/SKILL.md" ] || continue
+            pipx run --spec skills-ref agentskills validate "$dir"
+          done
+
   # Two directions over a real socket, with a peer that shares no code with this
   # library: a gRPC client written against the Go implementation calls this
   # library's server, and this library's client calls that peer's server. A green
