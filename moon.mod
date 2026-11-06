@@ -1,6 +1,6 @@
 name = "moonbitstack/moonzero"
 
-version = "0.14.7"
+version = "0.14.8"
 
 readme = "README.md"
 
@@ -52,7 +52,7 @@ description = "A service framework for MoonBit."
 
 import {
   "moonbitstack/moonapi@0.17.9",
-  "moonbitstack/moonasgi@0.10.6",
+  "moonbitstack/moonasgi@0.10.7",
   "moonbitstack/moonrpc@0.21.13",
   "moonbitstack/mooncrypt@0.4.12",
   "moonbitstack/mooncred@0.6.10",
