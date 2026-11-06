@@ -26,7 +26,8 @@ case "$(uname -s)" in
 esac
 
 go_end="$work/go-interop$ext"
-moon_end="$root/_build/native/debug/build/examples/15-interop/15-interop$ext"
+# moon names a native executable `.exe` on every system.
+moon_end="$root/_build/native/debug/build/examples/15-interop/15-interop.exe"
 
 # Wait for a listener to answer on `port`, or fail rather than wait forever: a
 # server that never bound is a build problem, not a slow one.
