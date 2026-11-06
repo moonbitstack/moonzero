@@ -44,6 +44,9 @@ pub extend Blocking with @moondb.AsyncDriver::{
   rollback,
   close,
   ping,
+  prepare,
+  dialect,
+  capabilities,
 }
 
 ///|
@@ -87,6 +90,17 @@ pub impl @moondb.AsyncDriver for Blocking with fn close(self : Blocking) -> Unit
 ///|
 pub impl @moondb.AsyncDriver for Blocking with fn ping(self : Blocking) -> Bool {
   self.inner.ping()
+}
+
+///|
+/// The wrapped driver's dialect: the default would report SQLite for every backend.
+pub impl @moondb.AsyncDriver for Blocking with fn dialect(self : Blocking) -> @moondb.Dialect {
+  self.inner.dialect()
+}
+
+///|
+pub impl @moondb.AsyncDriver for Blocking with fn capabilities(self : Blocking) -> @moondb.Capabilities {
+  self.inner.capabilities()
 }
 
 ///|

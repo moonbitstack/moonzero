@@ -13,10 +13,13 @@ pub fn count_rows(Array[@moondb.Row], (@moondb.Row) -> Bool) -> Int32
 // Types and methods
 type Blocking
 pub async fn Blocking::begin(Self) -> Unit raise @moondb.DbError
+pub fn Blocking::capabilities(Self) -> @moondb.Capabilities
 pub async fn Blocking::close(Self) -> Unit
 pub async fn Blocking::commit(Self) -> Unit raise @moondb.DbError
+pub fn Blocking::dialect(Self) -> @moondb.Dialect
 pub async fn Blocking::execute(Self, String, Array[@moondb.Value]) -> @moondb.ExecResult raise @moondb.DbError
 pub async fn Blocking::ping(Self) -> Bool
+pub async fn Blocking::prepare(Self, String) -> &@moondb.AsyncStmt raise @moondb.DbError
 pub async fn Blocking::query(Self, String, Array[@moondb.Value]) -> Array[@moondb.Row] raise @moondb.DbError
 pub async fn Blocking::query_stream(Self, String, Array[@moondb.Value]) -> &@moondb.AsyncCursor raise @moondb.DbError
 pub async fn Blocking::rollback(Self) -> Unit raise @moondb.DbError

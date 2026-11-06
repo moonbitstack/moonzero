@@ -20,6 +20,9 @@ pub extend Recorder with @moondb.Driver::{
   rollback,
   close,
   ping,
+  prepare,
+  dialect,
+  capabilities,
 }
 
 ///|

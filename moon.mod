@@ -67,7 +67,7 @@ import {
   "moonbitstack/moonpool@0.3.3",
   "moonbitstack/moonredis@0.1.3",
   "moonbitstack/moonzip@0.3.6",
-  "moonbitstack/moondb@0.2.6",
+  "moonbitstack/moondb@0.2.7",
   "moonbitstack/moonetcd@0.1.2",
   "moonbitstack/moonconsul@0.1.2",
   "moonbitstack/moonseed@0.1.1",
