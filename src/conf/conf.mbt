@@ -32,32 +32,63 @@ pub struct Conf {
 ///|
 /// Load a document from JSON. Raises `Refused` on malformed JSON or a
 /// non-object root.
-pub fn Conf::of_json(src : String) -> Conf raise Refused {
-  let root = @json.parse(src) catch {
-    err => raise Refused("invalid JSON: " + err.to_string())
-  }
-  match root {
-    Object(m) => { root: m, }
-    _ => raise Refused("config root must be a JSON object")
-  }
+///
+/// With `vars`, `${NAME}` and `$NAME` in the text are replaced first (← go-zero's
+/// `conf.UseEnv()`); `knobs` says what an unset name becomes, an empty string by
+/// default as with Go's `os.ExpandEnv`.
+pub fn Conf::of_json(
+  src : String,
+  vars? : @expand.Vars,
+  knobs? : @expand.Knobs,
+) -> Conf raise Refused {
+  read(src, vars, knobs, "JSON", text => @moonconf.of_json(text))
 }
 
 ///|
 /// Load a document from the YAML go-zero ships as `etc/*.yaml`. Raises
-/// `Refused` on malformed YAML or a non-mapping root.
-pub fn Conf::of_yaml(src : String) -> Conf raise Refused {
-  let doc = @moonyaml.loads(src) catch {
-    err =>
-      raise Refused(
-        "invalid YAML at line " +
-        err.at().line.to_string() +
-        ", column " +
-        err.at().column.to_string(),
-      )
+/// `Refused` on malformed YAML or a non-mapping root. `vars` and `knobs` are as
+/// for `of_json`.
+pub fn Conf::of_yaml(
+  src : String,
+  vars? : @expand.Vars,
+  knobs? : @expand.Knobs,
+) -> Conf raise Refused {
+  read(src, vars, knobs, "YAML", text => @moonconf.of_yaml(text))
+}
+
+///|
+/// Load a document from TOML, the third format go-zero's `conf.Load` reads.
+/// Raises `Refused` on malformed TOML. `vars` and `knobs` are as for `of_json`.
+pub fn Conf::of_toml(
+  src : String,
+  vars? : @expand.Vars,
+  knobs? : @expand.Knobs,
+) -> Conf raise Refused {
+  read(src, vars, knobs, "TOML", text => @moonconf.of_toml(text))
+}
+
+///|
+/// Expand, read with moonconf, and keep the root mapping.
+fn read(
+  src : String,
+  vars : @expand.Vars?,
+  knobs : @expand.Knobs?,
+  format : String,
+  parse : (StringView) -> @moonconf.Node raise @moonconf.Refused,
+) -> Conf raise Refused {
+  let text = match vars {
+    Some(vars) =>
+      @expand.expand(src, vars, knobs=knobs.unwrap_or(@expand.lenient)) catch {
+        err => raise Refused("cannot expand the \{format}: \{err}")
+      }
+    None => src
   }
-  match doc {
+  let node = parse(text) catch {
+    err => raise Refused("invalid \{format}: \{err}")
+  }
+  match @moonconf.native(node) {
     Object(m) => { root: m, }
-    _ => raise Refused("config root must be a YAML mapping")
+    _ => raise Refused("config root must be a \{format} mapping")
   }
 }
 

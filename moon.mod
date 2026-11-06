@@ -58,6 +58,7 @@ import {
   "moonbitstack/mooncred@0.6.10",
   "moonbitstack/moonhttp@0.15.9",
   "moonbitstack/moonyaml@0.1.4",
+  "moonbitstack/moonconf@0.1.3",
   "moonbitstack/moonlog@0.1.6",
   "moonbitstack/moonbase@0.4.3",
   "moonbitlang/async@0.22.5",

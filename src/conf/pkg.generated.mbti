@@ -4,6 +4,7 @@ package "moonbitstack/moonzero/conf"
 import {
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
+  "moonbitstack/moonconf/expand",
   "moonbitstack/moonzero/logx",
 }
 
@@ -28,8 +29,9 @@ pub fn Conf::bool(Self, String, default? : Bool, env? : String, also? : Array[St
 pub fn Conf::int(Self, String, default? : Int32, range? : String, env? : String, also? : Array[String]) -> Int32 raise Refused
 pub fn Conf::int64(Self, String, default? : Int64, range? : String, env? : String, also? : Array[String]) -> Int64 raise Refused
 pub fn Conf::list(Self, String) -> Array[Self] raise Refused
-pub fn Conf::of_json(String) -> Self raise Refused
-pub fn Conf::of_yaml(String) -> Self raise Refused
+pub fn Conf::of_json(String, vars? : @expand.Vars, knobs? : @expand.Knobs) -> Self raise Refused
+pub fn Conf::of_toml(String, vars? : @expand.Vars, knobs? : @expand.Knobs) -> Self raise Refused
+pub fn Conf::of_yaml(String, vars? : @expand.Vars, knobs? : @expand.Knobs) -> Self raise Refused
 pub fn Conf::string(Self, String, default? : String, options? : Array[String], env? : String, also? : Array[String]) -> String raise Refused
 pub fn Conf::strings(Self, String, default? : Array[String], env? : String, also? : Array[String]) -> Array[String] raise Refused
 

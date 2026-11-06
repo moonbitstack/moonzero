@@ -106,6 +106,11 @@ blocks, `MOONZERO_*` environment overrides, and `default=`/`options=`/`range=`
 constraints. A missing required field, or a value outside its range, is an error
 rather than a silent default.
 
+`Conf` reads JSON, YAML and TOML through moonconf, the three formats go-zero's
+`conf.Load` takes. Given `vars`, it replaces `${NAME}` and `$NAME` first, as
+`conf.UseEnv()` does; an unset name becomes empty, and `knobs=@expand.strict`
+makes it an error instead.
+
 <!-- nocheck -->
 ```moonbit
 let conf = @moonzero.RestConf::from_yaml(

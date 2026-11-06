@@ -117,3 +117,39 @@ test "an explicit null falls back to the default" {
   let c = Conf::of_yaml("Host:\nPort: 9000\n")
   assert_eq(c.string("Host", default="0.0.0.0"), "0.0.0.0")
 }
+
+///|
+test "TOML reads into the same lookups as YAML" {
+  let c = Conf::of_toml(
+    "Name = \"api\"\nPort = 9000\n\n[Log]\nLevel = \"info\"\n",
+  )
+  assert_eq(c.string("Name"), "api")
+  assert_eq(c.int("Port"), 9000)
+  assert_eq(c.string("Log.Level"), "info")
+}
+
+///|
+test "vars fill ${NAME} before the document is read" {
+  let vars = @expand.Vars::of_map({ "PORT": "9100", "HOST": "10.0.0.1" })
+  let c = Conf::of_yaml("Host: ${HOST}\nPort: $PORT\n", vars~)
+  assert_eq(c.string("Host"), "10.0.0.1")
+  assert_eq(c.int("Port"), 9100)
+  // Without vars the text is read as written.
+  assert_eq(Conf::of_yaml("Host: ${HOST}\n").string("Host"), "${HOST}")
+}
+
+///|
+test "an unset name is empty, as with go-zero, unless the knobs say otherwise" {
+  let vars = @expand.Vars::of_map({})
+  let c = Conf::of_yaml("Name: \"api-${SUFFIX}\"\n", vars~)
+  assert_eq(c.string("Name"), "api-")
+  let strict = try {
+    ignore(
+      Conf::of_yaml("Name: \"api-${SUFFIX}\"\n", vars~, knobs=@expand.strict),
+    )
+    false
+  } catch {
+    Refused(_) => true
+  }
+  assert_true(strict)
+}
