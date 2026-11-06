@@ -1,6 +1,6 @@
 name = "moonbitstack/moonzero"
 
-version = "0.14.6"
+version = "0.14.7"
 
 readme = "README.md"
 
@@ -53,26 +53,26 @@ description = "A service framework for MoonBit."
 import {
   "moonbitstack/moonapi@0.17.9",
   "moonbitstack/moonasgi@0.10.6",
-  "moonbitstack/moonrpc@0.21.12",
-  "moonbitstack/mooncrypt@0.4.11",
-  "moonbitstack/mooncred@0.6.9",
-  "moonbitstack/moonhttp@0.15.8",
+  "moonbitstack/moonrpc@0.21.13",
+  "moonbitstack/mooncrypt@0.4.12",
+  "moonbitstack/mooncred@0.6.10",
+  "moonbitstack/moonhttp@0.15.9",
   "moonbitstack/moonyaml@0.1.4",
   "moonbitstack/moonlog@0.1.6",
   "moonbitstack/moonbase@0.4.3",
   "moonbitlang/async@0.22.5",
   "moonbitstack/moonward@0.2.1",
-  "moonbitstack/moondate@0.1.4",
+  "moonbitstack/moondate@0.1.5",
   "moonbitstack/moonsd@0.1.1",
   "moonbitstack/moonpool@0.3.3",
-  "moonbitstack/moonredis@0.1.3",
-  "moonbitstack/moonzip@0.3.6",
+  "moonbitstack/moonredis@0.1.4",
+  "moonbitstack/moonzip@0.3.7",
   "moonbitstack/moondb@0.2.7",
-  "moonbitstack/moonetcd@0.1.2",
-  "moonbitstack/moonconsul@0.1.2",
+  "moonbitstack/moonetcd@0.1.3",
+  "moonbitstack/moonconsul@0.1.3",
   "moonbitstack/moonseed@0.1.1",
-  "moonbitstack/moonp8s@0.1.0",
-  "moonbitstack/moontel@0.1.0",
+  "moonbitstack/moonp8s@0.1.1",
+  "moonbitstack/moontel@0.1.1",
 }
 
 source = "src"
