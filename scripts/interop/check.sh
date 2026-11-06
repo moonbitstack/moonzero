@@ -31,7 +31,7 @@ moon_end="$root/_build/native/debug/build/examples/15-interop/15-interop$ext"
 # Wait for a listener to answer on `port`, or fail rather than wait forever: a
 # server that never bound is a build problem, not a slow one.
 wait_for_port() {
-  local port=$1
+  local port=$1 log=${2:-}
   for _ in $(seq 1 100); do
     if (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null; then
       exec 3<&- 3>&-
@@ -40,6 +40,10 @@ wait_for_port() {
     sleep 0.1
   done
   echo "port $port never opened" >&2
+  if [ -n "$log" ] && [ -f "$log" ]; then
+    echo "--- what the server wrote:" >&2
+    cat "$log" >&2
+  fi
   return 1
 }
 
@@ -62,7 +66,7 @@ echo "== build this library's end"
 echo "== go client -> this library's server"
 "$moon_end" serve 12011 >"$work/moon-serve.log" 2>&1 &
 moon_pid=$!
-wait_for_port 12011
+wait_for_port 12011 "$work/moon-serve.log"
 reply=$("$go_end" -mode call -addr 127.0.0.1:12011 -msg "hi-from-go")
 kill "$moon_pid" 2>/dev/null || true
 wait "$moon_pid" 2>/dev/null || true
@@ -72,7 +76,7 @@ expect_reply "go client -> moonzero server" "reply hi-from-go" "$reply"
 echo "== this library's client -> go server"
 "$go_end" -mode serve -addr 127.0.0.1:12012 >"$work/go-serve.log" 2>&1 &
 go_pid=$!
-wait_for_port 12012
+wait_for_port 12012 "$work/go-serve.log"
 reply=$("$moon_end" call 12012 "hi-from-moonbit")
 kill "$go_pid" 2>/dev/null || true
 wait "$go_pid" 2>/dev/null || true
