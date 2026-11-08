@@ -27,29 +27,31 @@ flowchart LR
 
 ## Install
 
-<!-- nocheck -->
-```moonbit
+```sh
 moon add moonbitstack/moonzero
 ```
 
 ## Quickstart
 
-<!-- nocheck -->
 ```moonbit
 let app = @moonapi.App::new()
 let api = @moonzero.Group::new(app, "/api/v1")   // a prefix for a set of routes
 api.get("/ping", _ctx => @moonapi.text(200, "pong"))
 
-let conf = @moonzero.ServiceConf::new(
-  name="greet", host="127.0.0.1", port=12000, timeout_ms=3000, log_level=Info,
+let service = @moonzero.ServiceConf::new(
+  name="greet",
+  host="127.0.0.1",
+  port=12000,
+  timeout_ms=3000,
+  log_level=@logx.LogLevel::Info,
 )
-let server = @moonzero.Server::new(conf, app)
+let server = @moonzero.Server::new(service, app)
   .use_(@moonzero.cors(@moonzero.CorsConf::new()))   // Access-Control-* headers
   .use_(@moonzero.request_id())                      // x-request-id per request
   .use_(@moonzero.recovery)                          // 500 while nothing is sent
-  .use_(@moonzero.logging)
+  .use_(@moonzero.logging)                           // one access log line per call
 
-println(server.describe())   // "greet listening on 127.0.0.1:12000"
+assert_eq(server.describe(), "greet listening on 127.0.0.1:12000")
 ```
 
 `server.to_asgi()` is an `AsgiApp`: hand it to a server, or drive it in a test with
@@ -94,6 +96,10 @@ ordinary parameters over public presets (`@moonzero.port`, `@moonzero.rpc_port`)
 so a service that wants 8080 writes `ServiceConf::new(port=8080)`. A process that
 runs both binds them separately — two listeners cannot hold one port.
 
+Port **0** asks the operating system for a free one. `zrpc/socket`'s `Listener`
+reports the number it got — `port()` once it is bound, `bound_port()` to wait for
+it — so a test connects to the port it was told, never to one it wrote down.
+
 `CertFile` and `KeyFile` live in the same document and are validated as a pair: a
 document that names one without the other is refused at load, so a service cannot
 quietly listen in the clear while its operator believes otherwise. Terminating TLS
@@ -106,14 +112,13 @@ blocks, `MOONZERO_*` environment overrides, and `default=`/`options=`/`range=`
 constraints. A missing required field, or a value outside its range, is an error
 rather than a silent default.
 
-`Conf` reads JSON, YAML and TOML through moonconf, the three formats go-zero's
-`conf.Load` takes. Given `vars`, it replaces `${NAME}` and `$NAME` first, as
-`conf.UseEnv()` does; an unset name becomes empty, and `knobs=@expand.strict`
-makes it an error instead.
+`Conf` reads JSON, YAML and TOML through moonconf, the three formats an `etc/`
+directory is written in. Given `vars`, it substitutes `${NAME}` and `$NAME` before
+parsing; an unset name becomes empty, and `knobs=@expand.strict` makes it an error
+instead.
 
-<!-- nocheck -->
 ```moonbit
-let conf = @moonzero.RestConf::from_yaml(
+let yaml =
   #|Name: greet-api
   #|Host: 127.0.0.1
   #|Port: 12000
@@ -122,9 +127,12 @@ let conf = @moonzero.RestConf::from_yaml(
   #|  Gunzip: false
   #|Log:
   #|  Level: error
+let rest_conf = @moonzero.RestConf::from_yaml(yaml)
+let engine = @moonzero.RestEngine::new(rest_conf)
+assert_eq(
+  engine.names().join(", "),
+  "trace, log, prometheus, maxConns, breaker, shedding, timeout, recover, maxBytes",
 )
-let engine = @moonzero.RestEngine::new(conf)
-println(engine.names().join(", "))
 ```
 
 The engine installs exactly the layers the config's `Middlewares` flags ask for, in
@@ -146,17 +154,17 @@ without a CPU threshold, no deadline without a budget.
 
 A route carries its own settings, applied where it is registered:
 
-<!-- nocheck -->
 ```moonbit
 let api = @moonzero.Group::new(app, "/api/v1")
 let admin = api.sub("/admin").options_(
   @moonzero.RouteOptions::new()
-    .jwt(secret="current", prev_secret=Some("retiring"))
-    .timeout(500)
+    .jwt(secret="current", prev_secret="retiring")
+    .timeout(500L)
     .max_bytes(4096)
     .priority(engine.priority_shedder()),
 )
-admin.get("/stats", ctx => @moonapi.text(200, "ok"))
+admin.get("/stats", _ctx => @moonapi.text(200, "ok"))
+assert_eq(admin.options().max_bytes, 4096)
 ```
 
 | Option | Effect |
@@ -174,16 +182,17 @@ admin.get("/stats", ctx => @moonapi.text(200, "ok"))
 `rest/handler` exports each layer as an `AsgiApp` transformer, so they compose in
 any order and none needs the engine to exist:
 
-<!-- nocheck -->
 ```moonbit
 let clock = @moonzero.Clock::new(() => 0L)   // inject time; no hidden reads
-let server = @moonzero.Server::new(conf, app)
+let metrics = @moonzero.ServerMetrics::new()
+let guarded = @moonzero.Server::new(service, app)
   .use_(@moonzero.maxbytes(1 << 20))                     // 413 past 1 MiB
   .use_(@moonzero.rate_limit(@moonzero.TokenBucket::new(100.0), clock))
   .use_(@moonzero.breaker(@moonzero.Breaker::new(clock)))
   .use_(@moonzero.timeout(3000L, clock))
   .use_(@moonzero.tracing())                             // W3C traceparent in/out
   .use_(@moonzero.metrics(metrics, clock))               // path/method/code families
+assert_eq(guarded.describe(), "greet listening on 127.0.0.1:12000")
 ```
 
 - **`cors`** matches an origin against the allowed set and its subdomains, answers
@@ -209,14 +218,19 @@ alone answers `503`.
 Both halves of the wire run through one chain: an invoker turns a call into a
 result, an interceptor wraps an invoker, and the transport is the innermost one.
 
-<!-- nocheck -->
 ```moonbit
 let rpc = @moonzero.RpcServer::of(@moonzero.RpcServerConf::new(name="greeter"))
-rpc.group("hello.Greeter").register("SayHello", req => req)
+rpc.group("hello.Greeter").register("SayHello", request => request)
 
-let ch = @moonzero.RpcChannel::connect(rpc)
-  .with_interceptors(@moonzero.client_interceptors(conf.middlewares, deps))
-let reply = ch.call_through("/hello.Greeter/SayHello", b"world")
+let deps = @moonzero.ClientDeps::new()
+let channel = @moonzero.RpcChannel::connect(rpc)
+  .with_interceptors(
+    @moonzero.client_interceptors(@moonzero.RpcClientMiddlewaresConf::new(), deps),
+  )
+assert_eq(
+  channel.call_through("/hello.Greeter/SayHello", b"world"),
+  Ok(b"world"),
+)
 ```
 
 | Side | Interceptors |
@@ -232,15 +246,21 @@ what a test wants. `zrpc/socket` carries the same calls over TCP: `Listener` put
 a `RpcServer` on a port with its interceptor chain intact, and `SocketChannel`
 speaks h2c to any gRPC peer.
 
-<!-- nocheck -->
-```moonbit
-// native: a listener is a socket
+```mbt native
+// native: a listener is a socket. Port 0 asks the system for a free one, and
+// `bound_port` answers the number it picked once the socket exists.
+let rpc = @moonzero.RpcServer::of(@moonzero.RpcServerConf::new(name="greeter"))
+rpc.group("hello.Greeter").register("SayHello", request => request)
 let listener = @socket.Listener::new(rpc)
-@async.with_task_group(g => {
-  g.spawn_bg(() => listener.serve(port=12001))
-  let ch = @socket.SocketChannel::connect("127.0.0.1", 12001)
-  let reply = ch.call("/hello.Greeter/SayHello", b"world")
-  ch.close()
+@async.with_task_group(group => {
+  group.spawn_bg(() => listener.serve(port=0))
+  let port = listener.bound_port()
+  let socket_channel = @socket.SocketChannel::connect("127.0.0.1", port)
+  assert_eq(
+    socket_channel.call("/hello.Greeter/SayHello", b"world"),
+    Ok(b"world"),
+  )
+  socket_channel.close()
   listener.stop()
 })
 ```
@@ -253,26 +273,43 @@ where the lag and the success count are moving averages that decay over ten
 seconds. A `LoadBalancedChannel` resolves, picks, dials and calls, and reports the
 outcome back so the next pick is informed.
 
-<!-- nocheck -->
 ```moonbit
-let ch = @moonzero.LoadBalancedChannel::new(
-  _ => view.endpoints(),
+let endpoints = [@moonzero.Endpoint::new("10.0.0.1", 12001)]
+let cluster = @moonzero.RpcCluster::new()
+for endpoint in endpoints {
+  cluster.add(endpoint, rpc)
+}
+let load_balanced = @moonzero.LoadBalancedChannel::new(
+  _ => endpoints,
   cluster,
   "greeter",
   balancer=@moonzero.Balancer::p2c(),
+)
+assert_eq(
+  load_balanced.call("/hello.Greeter/SayHello", b"world"),
+  Ok(b"world"),
+)
+assert_eq(
+  @moonzero.Balancer::round_robin().pick(endpoints).unwrap().id,
+  "10.0.0.1:12001",
 )
 ```
 
 ## Stores
 
-<!-- nocheck -->
+`stores/cache` is cache-aside over any `Store`: a miss loads once, the answer is
+written back, and every other caller for that key waits for the one load.
+
 ```moonbit
-// with `moonbitstack/moonzero/stores/redis` as @redis and `.../stores/cache` as @cache
-let store = @redis.RedisStore::new(client, prefix="orders:")
-let cache : @cache.Cache[Order] = @cache.Cache::new(
-  store, encode=order_to_bytes, decode=order_of_bytes, ttl_ms=60_000L,
+let store = @cache.Memory::new()   // `@redis.RedisStore::new(client)` holds the same contract
+let orders : @cache.Cache[String] = @cache.Cache::new(
+  store,
+  encode=order => @utf8.encode(order[:]),
+  decode=bytes => Some(@utf8.decode_lossy(bytes[:])),
+  ttl_ms=60_000L,
 )
-let order = cache.take("42", () => load_order(42))
+let order = orders.take("42", () => Some("order-42"))
+assert_eq(order, Some("order-42"))
 ```
 
 `take` runs the loader once per key however many callers arrive, and writes the
@@ -302,11 +339,22 @@ reproducible:
 without waiting. Any registry that implements the discovery contract plugs in
 without a change here; the file-backed driver for native hosts ships in `discov`.
 
-<!-- nocheck -->
 ```moonbit
-@moonzero.hold(registry, "greeter", @moonzero.Endpoint::new("10.0.0.1", 12001))
+let registry = @memory.Registry::new()
 let view = @moonzero.View::new()
-group.spawn_bg(no_wait=true, () => view.follow(registry, "greeter"))
+let held = @moonzero.Endpoint::new("10.0.0.1", 12001)
+@async.with_task_group(group => {
+  // The registration lives as long as the task does; the view follows in its own.
+  group.spawn_bg(no_wait=true, () => @moonzero.hold(registry, "greeter", held))
+  group.spawn_bg(no_wait=true, () => view.follow(registry, "greeter"))
+  for _ in 0..<200 {
+    if !view.endpoints().is_empty() {
+      break
+    }
+    @async.sleep(10)
+  }
+  assert_eq(view.endpoints().map(e => e.id), ["10.0.0.1:12001"])
+})
 ```
 
 ## Observability
@@ -316,9 +364,9 @@ service emits are the ones the rest of the toolchain reads. The engine keeps the
 spans its default tracer records — `engine.spans()` — so a test can assert on a
 trace without a collector.
 
-<!-- nocheck -->
 ```moonbit
-mount_metrics(app, engine.metrics())     // GET /metrics
+@moonzero.mount_metrics(app, engine.metrics())   // GET /metrics
+assert_eq(engine.metrics().request_count("/api/v1/ping", "GET", 200), 0.0)
 ```
 
 ## Licence

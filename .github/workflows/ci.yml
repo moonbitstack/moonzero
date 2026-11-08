@@ -58,11 +58,11 @@ jobs:
         run: |
           moon fmt && git diff --exit-code
 
-      # The code in docs/skills is pasted by an agent into a project, so it has to
-      # compile as written, with the same settings the library is checked under.
-      - name: skill snippets compile
+      # A reader pastes the blocks of the README and the skills into a project, so they
+      # have to compile as written, against this commit's source.
+      - name: the code in the docs compiles
         if: runner.os == 'Linux'
-        run: python3 scripts/check_skill.py
+        run: python3 scripts/check_snippets.py
       # The site is generated from the sources, so a page that no longer matches
       # them is a stale page: regenerate and fail on any difference.
       - name: site is up to date
