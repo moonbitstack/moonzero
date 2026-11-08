@@ -44,6 +44,12 @@ SECTIONS = [
      "and the grpc-status trailer read back off the reply. A BidiCall keeps the "
      "stream open both ways — send returns the replies produced right then, "
      "close_send runs the server's on_end and reports the final grpc-status."),
+    ("socket", "zrpc/socket/net.mbt", "zRPC on a socket",
+     "A Listener puts an RpcServer on TCP with the same handler table and the same "
+     "interceptor chain the in-process transport runs; port 0 asks the system for a "
+     "free one and bound_port answers the number it picked, so a test connects to the "
+     "port it is told rather than to a number it chose. A SocketChannel multiplexes "
+     "calls as HTTP/2 streams over one connection and speaks h2c to any gRPC peer."),
     ("shutdown", "proc/shutdown.mbt", "Graceful shutdown",
      "A ShutdownCoordinator that drains in-flight zRPC calls: dispatch_graceful "
      "counts each call for its duration, initiate_shutdown makes new calls come "

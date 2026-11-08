@@ -37,7 +37,7 @@ LANES = {
     ],
     "RESILIENCE": ["breaker", "shedder", "ratelimit", "limits", "limiting"],
     "ROUTING": [
-        "rpc", "zrpc", "balance", "discov", "p2c", "interceptor",
+        "rpc", "zrpc", "socket", "balance", "discov", "p2c", "interceptor",
         "clientinterceptors", "serverinterceptors", "rpcconf",
     ],
     "DATA": [
@@ -218,6 +218,12 @@ def head(depth, title, description):
 <body data-up="{up}">"""
 
 
+def version():
+    """The module version, read from moon.mod so a page never carries a stale one."""
+    text = (ROOT / "moon.mod").read_text(encoding="utf-8")
+    return re.search(r'^version\s*=\s*"([^"]+)"', text, re.M).group(1)
+
+
 def bar(depth, crumbs=None, facts=True):
     up = "../" if depth else ""
     crumb = ""
@@ -230,8 +236,8 @@ def bar(depth, crumbs=None, facts=True):
                 parts.append(f"<b>{esc(label)}</b>")
         crumb = '<span class="crumb">' + "  /  ".join(parts) + "</span>"
     middle = (
-        '<span class="facts">v0.14.6  ·  %d packages  ·  4 targets  ·  Apache-2.0</span>'
-        % len(SECTIONS)
+        '<span class="facts">v%s  ·  %d packages  ·  4 targets  ·  Apache-2.0</span>'
+        % (esc(version()), len(SECTIONS))
         if facts
         else ""
     )
