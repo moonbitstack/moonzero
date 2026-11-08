@@ -44,6 +44,8 @@ pub fn Listener::new(server : @zrpc.RpcServer) -> Listener {
 ///|
 /// Listen on `host:port` and serve until `stop` drains the listener or the running
 /// task is cancelled.
+///
+/// Port 0 leaves the choice to the system; `bound_port` reports the number it picked.
 pub async fn Listener::serve(
   self : Listener,
   host~ : String = "127.0.0.1",
@@ -135,4 +137,44 @@ pub async fn SocketChannel::call_detailed(
 /// cancelled by this; the peer sees a GOAWAY and finishes what it started.
 pub fn SocketChannel::close(self : SocketChannel) -> Unit {
   self.inner.close()
+}
+
+///|
+/// The port this listener is bound to, or `None` before it has bound one.
+///
+/// A listener asked for port 0 gets the port the system chose, not the 0 it was
+/// given, so this is the only honest way to learn where it listens.
+pub fn Listener::port(self : Listener) -> Int32? {
+  match self.grpc.listener {
+    Some(l) => Some(l.addr().port())
+    None => None
+  }
+}
+
+///|
+/// A listener that held no socket when the wait ran out.
+pub(all) suberror Timeout
+
+///|
+/// Wait until the listener holds a listening socket and report the port it bound.
+///
+/// This is what makes port 0 usable: the caller does not know the number before
+/// the socket exists, and cannot guess it afterwards. A caller that named a port
+/// gets that number back. Connections queue from the moment the socket is bound,
+/// so a client may connect as soon as this returns.
+///
+/// `timeout_ms` bounds the wait rather than parking for ever — a `serve` task that
+/// never reached the bind, or one that could not bind at all, raises `Timeout`.
+pub async fn Listener::bound_port(
+  self : Listener,
+  timeout_ms~ : Int32 = 5_000,
+) -> Int32 raise Timeout {
+  let deadline = @async.now() + timeout_ms.to_int64()
+  for ;; {
+    match self.port() {
+      Some(port) => return port
+      None if @async.now() >= deadline => raise Timeout
+      None => @async.sleep(1)
+    }
+  }
 }

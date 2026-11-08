@@ -6,6 +6,7 @@ import {
   "moonbitstack/moonzero/zrpc",
   "moonbitstack/moonrpc",
   "moonbitstack/moonrpc/net",
+  "moonbitlang/async",
 }
 
 import {
