@@ -34,7 +34,7 @@ pub let p2c_default : P2cConf = {
 /// The load a node reports when its computed one is zero: the largest 32-bit value,
 /// so it loses every comparison. Named rather than written where it is used because
 /// it is a decision, not an arithmetic detail.
-pub let p2c_penalty : Int64 = 2147483647L
+pub let p2c_penalty : Int64 = 0x7FFFFFFFL
 
 ///|
 /// One instance's numbers.
