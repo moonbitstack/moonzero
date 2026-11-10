@@ -10,6 +10,7 @@ import {
   "moonbitstack/moonasgi/spec",
   "moonbitstack/mooncred/jwt",
   "moonbitstack/mooncrypt/rsa",
+  "moonbitstack/moonknob",
   "moonbitstack/moonp8s/metric",
   "moonbitstack/moontel/trace",
   "moonbitstack/moonzero/breaker",
@@ -56,7 +57,7 @@ pub fn is_gzip_encoding(String) -> Bool
 
 pub fn jwt_authorized(String?, String, Int64) -> Bool
 
-pub fn jwt_sign(Map[String, @json.Json], String, typ? : String?, extra? : Map[String, @json.Json], wins? : @jwt.Wins, clash? : @jwt.OnClash[Map[String, @json.Json]]) -> String
+pub fn jwt_sign(Map[String, @json.Json], String, typ? : String?, extra? : Map[String, @json.Json], wins? : @moonknob.Wins, clash? : @moonknob.OnClash[Map[String, @json.Json]]) -> String
 
 pub fn jwt_verify(String, String, Int64, policy? : @jwt.Policy) -> Map[String, @json.Json] raise @jwt.Refused
 

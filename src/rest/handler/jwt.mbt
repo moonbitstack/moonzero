@@ -22,15 +22,16 @@ fn hs256(secret : String) -> @jwt.Keyed {
 ///
 /// Configuration has three layers, later ones winning: the library preset <
 /// the `typ` given here < `extra`. `wins` turns the last two around and `clash`
-/// decides what a collision does — by default the reserved header fields we
-/// write are the ones that stand, and overwriting one raises.
+/// decides what a collision does: by default the header fields we write are
+/// the ones that stand, and giving one a different value in `extra` aborts.
+/// Both are moonknob's, as in every library of the family.
 pub fn jwt_sign(
   claims : Map[String, Json],
   secret : String,
   typ~ : String? = Some("JWT"),
   extra? : Map[String, Json],
-  wins? : @jwt.Wins,
-  clash? : @jwt.OnClash[Map[String, Json]],
+  wins? : @moonknob.Wins,
+  clash? : @moonknob.OnClash[Map[String, Json]],
 ) -> String {
   @jwt.sign(claims, HS256, hs256(secret), typ~, extra?, wins?, clash?)
 }

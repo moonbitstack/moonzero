@@ -27,6 +27,7 @@ import {
   "moonbitstack/mooncrypt/mac/hmac",
   "moonbitstack/mooncrypt/rsa",
   "moonbitstack/mooncred/jwt",
+  "moonbitstack/moonknob",
   "moonbitstack/moonzip",
   "moonbitstack/moonzip/gzip",
   "moonbitlang/core/encoding/utf8",

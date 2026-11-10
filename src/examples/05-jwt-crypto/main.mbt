@@ -98,6 +98,8 @@ fn jwt_reason(e : @jwt.Refused) -> String {
     IssuedAt(..) => "issued-in-the-future"
     Type(..) => "wrong-typ"
     Missing(claim~) => "missing claim: " + claim
+    Encoding(..) => "payload-encoding-mismatch"
+    Critical(name~) => "unknown critical header: " + name
   }
 }
 
