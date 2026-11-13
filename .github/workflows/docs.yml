@@ -1,0 +1,69 @@
+name: Docs
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - "docs/**"
+      - "src/**"
+      - "scripts/**"
+      - "moon.mod"
+      - ".github/workflows/docs.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-26.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: install moonbit
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+
+      # The pages are generated from the sources, so a page that no longer matches
+      # them must not be published.
+      - name: regenerate the pages and refuse a stale one
+        run: |
+          moon update
+          python3 scripts/gen_site.py
+          python3 scripts/check_api_pages.py
+          git diff --exit-code docs
+
+      # The lab page calls this module: the same picker and the same bucket a service
+      # runs, compiled here and left out of the repository.
+      - name: build the lab's engine
+        run: |
+          moon build --target wasm --release src/examples/browser
+          mkdir -p docs/engine
+          cp _build/wasm/release/build/examples/browser/browser.wasm docs/engine/lab.wasm
+
+      - name: configure pages
+        uses: actions/configure-pages@v6
+        with:
+          enablement: true
+
+      - name: upload the site
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: docs
+
+      - name: deploy
+        id: deployment
+        uses: actions/deploy-pages@v5

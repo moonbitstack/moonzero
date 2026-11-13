@@ -1,0 +1,28 @@
+// The lab page's two benches, compiled to wasm and called from docs/lab.html.
+//
+// Nothing here decides anything: the picker and the bucket are this library's, and
+// this package only drives them with the numbers the sliders hold and reports what
+// came back. That is the point of the page — a reader moving a slider is running the
+// shipped code, not a copy of it written in JavaScript.
+
+import {
+  "moonbitstack/moonzero/balance",
+  "moonbitstack/moonzero/clock",
+  "moonbitstack/moonzero/limit",
+  "moonbitstack/moonsd",
+}
+
+options(
+  link: {
+    "wasm": {
+      "exports": [
+        "mz_lab_p2c",
+        "mz_lab_p2c_picks",
+        "mz_lab_p2c_load",
+        "mz_lab_bucket",
+        "mz_lab_bucket_refused",
+      ],
+      "export-memory-name": "memory",
+    },
+  },
+)
