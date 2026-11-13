@@ -329,6 +329,54 @@
     });
   }
 
+  /* ---------- lab: the library, compiled to wasm ---------- */
+
+  // Both benches are this library's own code: the docs workflow builds
+  // src/examples/browser to engine/lab.wasm, and the page calls what it exports.
+  // There is no JavaScript copy of either algorithm on this page.
+  var benches = document.querySelectorAll("[data-bench]");
+  var launch = [];
+  function onEngine(fn) {
+    launch.push(fn);
+  }
+
+  function explainMissingEngine() {
+    for (var i = 0; i < benches.length; i++) {
+      var out = benches[i].querySelector(".out");
+      if (out) {
+        out.innerHTML =
+          '<span class="dim">this bench runs the library compiled to wasm; ' +
+          "engine/lab.wasm is not here. Build it with\n\n" +
+          "  moon build --target wasm --release src/examples/browser\n" +
+          "  cp _build/wasm/release/build/examples/browser/browser.wasm docs/engine/lab.wasm</span>";
+        out.style.whiteSpace = "pre-wrap";
+      }
+    }
+  }
+
+  if (benches.length) {
+    // The module reads the platform clock through one import; the benches are driven
+    // by a manual clock of their own, so the answer is never asked for.
+    fetch("engine/lab.wasm")
+      .then(function (res) {
+        if (!res.ok) throw new Error(String(res.status));
+        return res.arrayBuffer();
+      })
+      .then(function (buf) {
+        return WebAssembly.instantiate(buf, {
+          __moonbit_time_unstable: {
+            now: function () {
+              return BigInt(Date.now()) * 1000000n;
+            }
+          }
+        });
+      })
+      .then(function (mod) {
+        for (var i = 0; i < launch.length; i++) launch[i](mod.instance.exports);
+      })
+      .catch(explainMissingEngine);
+  }
+
   /* ---------- lab: p2c ---------- */
 
   var bench = document.querySelector("[data-bench='p2c']");
@@ -341,97 +389,58 @@
     var calls = bench.querySelector("#p2c-calls");
     var run = bench.querySelector("#p2c-run");
 
-    // The picker from src/balance/p2c.mbt: load = trunc(sqrt(lag_ms*1e6 + 1)) *
-    // (inflight + 1), two of three drawn, the lighter one taken, and a node nobody
-    // has picked for a second is forced back in.
-    function simulate() {
-      var lag = [0, 0, 0];
-      var success = [1000, 1000, 1000];
-      var pick = [0, 0, 0];
-      var picked = [0, 0, 0];
-      var now = 0;
-      var total = Number(calls.value);
-      var lat = latency.map(function (s) {
-        return Number(s.value);
+    onEngine(function (ex) {
+      // One call to the library per run: it draws the pairs, takes the lighter, moves
+      // the moving averages, and answers how many calls each instance received.
+      function draw() {
+        var lat = latency.map(function (s) {
+          return Number(s.value);
+        });
+        var total = Number(calls.value);
+        ex.mz_lab_p2c(lat[0], lat[1], lat[2], total);
+        var picked = [0, 1, 2].map(function (i) {
+          return ex.mz_lab_p2c_picks(i);
+        });
+        var loads = [0, 1, 2].map(function (i) {
+          return ex.mz_lab_p2c_load(i);
+        });
+        var sum = picked[0] + picked[1] + picked[2];
+        var bars = bench.querySelector(".bars");
+        var names = ["a", "b", "c"];
+        var html = "";
+        for (var i = 0; i < 3; i++) {
+          var share = sum ? picked[i] / sum : 0;
+          html +=
+            '<div class="barwrap"><div class="bar' +
+            (i === 2 && share < 0.05 ? " hi" : "") +
+            '" style="height:' +
+            Math.max(2, Math.round(share * 80)) +
+            'px" title="' +
+            Math.round(share * 100) +
+            '%"></div><span>' +
+            names[i] +
+            " · " +
+            Math.round(share * 100) +
+            "%</span></div>";
+        }
+        bars.innerHTML = html;
+        bench.querySelector(".out").textContent =
+          "a  " + picked[0] + " picks · load " + loads[0] + "\n" +
+          "b  " + picked[1] + " picks · load " + loads[1] + "\n" +
+          "c  " + picked[2] + " picks · load " + loads[2] + "\n" +
+          "of " + sum + " calls · c is the slow instance";
+        bench.querySelector("#lat-a-out").textContent = latency[0].value + " ms";
+        bench.querySelector("#lat-b-out").textContent = latency[1].value + " ms";
+        bench.querySelector("#lat-c-out").textContent = latency[2].value + " ms";
+      }
+
+      latency.forEach(function (s) {
+        s.addEventListener("input", draw);
       });
-
-      for (var i = 0; i < total; i++) {
-        var a = Math.floor(Math.random() * 3);
-        var b = Math.floor(Math.random() * 2);
-        if (b >= a) b += 1;
-        for (var attempt = 0; attempt < 3; attempt++) {
-          var healthy = function (n) {
-            return success[n] > 0 && now - pick[n] <= 1000;
-          };
-          if (healthy(a) && healthy(b)) break;
-          a = Math.floor(Math.random() * 3);
-          b = Math.floor(Math.random() * 2);
-          if (b >= a) b += 1;
-        }
-        if (now - pick[a] > 1000) {
-          // forced: this instance has been avoided for too long
-        } else if (now - pick[b] > 1000) {
-          var t = a;
-          a = b;
-          b = t;
-        }
-        var loadA = Math.trunc(Math.sqrt(lag[a] * 1e6 + 1)) * 1;
-        var loadB = Math.trunc(Math.sqrt(lag[b] * 1e6 + 1)) * 1;
-        var chosen = loadA <= loadB ? a : b;
-        pick[chosen] = now;
-        picked[chosen] += 1;
-        now += lat[chosen];
-        var weight = Math.exp(-lat[chosen] / 10000);
-        lag[chosen] = lag[chosen] * weight + lat[chosen] * (1 - weight);
-        success[chosen] = success[chosen] * weight + 1 * (1 - weight);
-      }
-      return picked;
-    }
-
-    function draw() {
-      var picked = simulate();
-      var total = picked[0] + picked[1] + picked[2];
-      var bars = bench.querySelector(".bars");
-      var names = ["a", "b", "c"];
-      var html = "";
-      for (var i = 0; i < 3; i++) {
-        var share = total ? picked[i] / total : 0;
-        html +=
-          '<div class="barwrap"><div class="bar' +
-          (i === 2 && share < 0.05 ? " hi" : "") +
-          '" style="height:' +
-          Math.max(2, Math.round(share * 80)) +
-          'px" title="' +
-          Math.round(share * 100) +
-          '%"></div><span>' +
-          names[i] +
-          " · " +
-          Math.round(share * 100) +
-          "%</span></div>";
-      }
-      bars.innerHTML = html;
-      bench.querySelector(".out").innerHTML =
-        "a  " +
-        picked[0] +
-        " picks\nb  " +
-        picked[1] +
-        " picks\nc  " +
-        picked[2] +
-        " picks\n" +
-        '<span class="dim">of ' +
-        total +
-        " calls · c is the slow instance</span>";
-      bench.querySelector("#lat-a-out").textContent = latency[0].value + " ms";
-      bench.querySelector("#lat-b-out").textContent = latency[1].value + " ms";
-      bench.querySelector("#lat-c-out").textContent = latency[2].value + " ms";
-    }
-
-    latency.forEach(function (s) {
-      s.addEventListener("input", draw);
+      calls.addEventListener("change", draw);
+      run.addEventListener("click", draw);
+      draw();
     });
-    calls.addEventListener("change", draw);
-    run.addEventListener("click", draw);
-    draw();
   }
 
   /* ---------- lab: token bucket ---------- */
@@ -443,54 +452,31 @@
     var demand = bucketBench.querySelector("#demand");
     var go = bucketBench.querySelector("#bucket-run");
 
-    // src/limit/ratelimit.mbt: the bucket holds up to `burst`, refills at `rate` a
-    // second, and every admitted request spends one token.
-    function bucket() {
-      var r = Number(rate.value);
-      var b = Number(burst.value);
-      var d = Number(demand.value);
-      var tokens = b;
-      var now = 0;
-      var step = 100; // ms
-      var admitted = 0;
-      var refused = 0;
-      var span = 5000;
-      var perStep = (d * step) / 1000;
-      var carry = 0;
-      for (var t = 0; t < span; t += step) {
-        tokens = Math.min(b, tokens + (r * step) / 1000);
-        carry += perStep;
-        while (carry >= 1) {
-          carry -= 1;
-          if (tokens >= 1) {
-            tokens -= 1;
-            admitted += 1;
-          } else {
-            refused += 1;
-          }
-        }
+    onEngine(function (ex) {
+      // The bucket is the library's: `rate` a second, room for `burst`, one token a
+      // request, and the clock handed in on each call.
+      function bucket() {
+        var r = Number(rate.value);
+        var b = Number(burst.value);
+        var d = Number(demand.value);
+        var admitted = ex.mz_lab_bucket(r, b, d);
+        var refused = ex.mz_lab_bucket_refused();
+        var total = admitted + refused;
+        bucketBench.querySelector(".out").textContent =
+          "admitted  " + admitted + "\n" +
+          "refused   " + refused + "\n" +
+          "of " + total + " requests over 5s · " +
+          Math.round((admitted / (total || 1)) * 100) + "% through";
+        bucketBench.querySelector("#rate-out").textContent = r + " /s";
+        bucketBench.querySelector("#burst-out").textContent = b + " tokens";
+        bucketBench.querySelector("#demand-out").textContent = d + " /s";
       }
-      var total = admitted + refused;
-      bucketBench.querySelector(".out").innerHTML =
-        "admitted  " +
-        admitted +
-        "\nrefused   " +
-        refused +
-        "\n" +
-        '<span class="dim">of ' +
-        total +
-        " requests over 5s · " +
-        Math.round((admitted / (total || 1)) * 100) +
-        "% through</span>";
-      bucketBench.querySelector("#rate-out").textContent = r + " /s";
-      bucketBench.querySelector("#burst-out").textContent = b + " tokens";
-      bucketBench.querySelector("#demand-out").textContent = d + " /s";
-    }
 
-    [rate, burst, demand].forEach(function (s) {
-      s.addEventListener("input", bucket);
+      [rate, burst, demand].forEach(function (s) {
+        s.addEventListener("input", bucket);
+      });
+      go.addEventListener("click", bucket);
+      bucket();
     });
-    go.addEventListener("click", bucket);
-    bucket();
   }
 })();

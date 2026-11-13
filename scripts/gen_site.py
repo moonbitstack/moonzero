@@ -28,12 +28,13 @@ ASSETS = DOCS / "assets"
 
 LANES = {
     "EDGE": [
-        "service", "middleware", "group", "route", "hoops", "files", "gunzip",
+        "service", "middleware", "group", "route", "hoops", "files", "mount",
+        "gunzip",
         "signature", "rsa", "jwt", "auth", "metrics", "tracing",
     ],
     "CONTROL": [
-        "config", "conf", "restconf", "logx", "logging", "refusal", "clock",
-        "shutdown", "telemetry",
+        "config", "engine", "conf", "restconf", "logx", "logging", "refusal",
+        "clock", "shutdown", "telemetry",
     ],
     "RESILIENCE": ["breaker", "shedder", "ratelimit", "limits", "limiting"],
     "ROUTING": [

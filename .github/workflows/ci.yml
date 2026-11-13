@@ -71,6 +71,13 @@ jobs:
           python3 scripts/gen_site.py
           git diff --exit-code docs
 
+      # The pages are generated from the files the section table names, so a
+      # declaration in a file no page reads is exported and undocumented while every
+      # other check stays green. This compares the interface files against the pages.
+      - name: the API reference covers every public item
+        if: runner.os == 'Linux'
+        run: python3 scripts/check_api_pages.py
+
       - name: interfaces are up to date
         run: |
           moon info --target all && git diff --exit-code

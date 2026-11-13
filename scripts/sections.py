@@ -10,17 +10,23 @@ import re, html, pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SECTIONS = [
+    ("engine", "rest/engine.mbt", "The engine",
+     "RestEngine reads a RestConf and assembles one ASGI application: it builds the "
+     "clock, the metrics, the connection budget, the breaker, the shaper, the tracer "
+     "and the span recorder the middlewares run on, installs the layers the config "
+     "asked for in a fixed order, and keeps the spans so a test can read a trace "
+     "without a collector."),
     ("service", "rest/server.mbt", "Service assembly",
      "ServiceConf (typed config: name, host, port, timeout, log level) + Server "
      "tie the application and a middleware onion into one runnable ASGI "
      "application; logging is a built-in layer."),
-    ("middleware", "rest/handler/middleware.mbt", "Middleware set",
+    ("middleware", ("rest/handler/middleware.mbt", "rest/handler/mid.mbt"), "Middleware set",
      "The onion layers that wrap the app: recovery (500 instead of a panic), "
      "cors (Access-Control-* headers), and request_id (x-request-id per request)."),
     ("group", "rest/group.mbt", "Route groups",
      "Group registers a set of routes under a shared path prefix, so "
      "related endpoints are declared without repeating the prefix."),
-    ("config", "conf/service.mbt", "Typed config loading",
+    ("config", ("conf/service.mbt", "conf/error.mbt"), "Typed config loading",
      "Parse a JSON or YAML config string into a ServiceConf: a strict derived "
      "FromJson path plus lenient ServiceConf::from_json / from_yaml loaders that "
      "fill omitted fields from the new() defaults, so a document may name only "
@@ -37,7 +43,7 @@ SECTIONS = [
      "An RpcServer (config-driven) registers moonrpc Method handlers by gRPC "
      "path and dispatches unary calls, returning Unimplemented for unknown "
      "methods; RpcGroup registers a set of methods under one package.Service."),
-    ("zrpc", "zrpc/client.mbt", "zRPC over the h2c transport",
+    ("zrpc", ("zrpc/client.mbt", "zrpc/metrics.mbt"), "zRPC over the h2c transport",
      "RpcServer::to_h2 exposes the registered handlers as a moonrpc H2Server, and "
      "RpcChannel drives real unary, server/client-streaming, and bidirectional "
      "calls over that transport: HPACK-coded HEADERS, length-prefixed DATA frames, "
@@ -47,8 +53,8 @@ SECTIONS = [
     ("socket", "zrpc/socket/net.mbt", "zRPC on a socket",
      "A Listener puts an RpcServer on TCP with the same handler table and the same "
      "interceptor chain the in-process transport runs; port 0 asks the system for a "
-     "free one and bound_port answers the number it picked, so a test connects to the "
-     "port it is told rather than to a number it chose. A SocketChannel multiplexes "
+     "free one and bind answers the number it picked, so a test connects to the "
+     "port that exists rather than to a number it chose. A SocketChannel multiplexes "
      "calls as HTTP/2 streams over one connection and speaks h2c to any gRPC peer."),
     ("shutdown", "proc/shutdown.mbt", "Graceful shutdown",
      "A ShutdownCoordinator that drains in-flight zRPC calls: dispatch_graceful "
@@ -70,7 +76,7 @@ SECTIONS = [
     ("ratelimit", "limit/ratelimit.mbt", "Rate limiting",
      "A token-bucket limiter over moonward's bucket, on the millisecond clock, and "
      "the rate_limit middleware, which answers 429 when it is empty."),
-    ("breaker", "breaker/breaker.mbt", "Circuit breaker",
+    ("breaker", ("breaker/breaker.mbt", "rest/handler/breaker.mbt"), "Circuit breaker",
      "The Google SRE client-side throttling breaker over moonward's: it reads the "
      "last ten seconds of outcomes and sheds a computed fraction of calls rather "
      "than opening, and the breaker middleware answers 503 for a shed one."),
@@ -82,7 +88,8 @@ SECTIONS = [
      "RequestLog captures typed access-log fields (method, path, status, "
      "duration, request-id, client-ip, user-agent) and renders one JSON line "
      "per request; the structured_logging middleware emits it, timed on the clock."),
-    ("limiting", ("limit/maxconns.mbt", "limit/periodlimit.mbt"), "Admission control",
+    ("limiting", ("limit/maxconns.mbt", "limit/periodlimit.mbt", "rest/handler/maxconns.mbt",
+                  "rest/handler/ratelimit.mbt", "rest/handler/periodlimit.mbt"), "Admission control",
      "The concurrency limiter that sheds load past a ceiling — releasing its permit "
      "with defer, so cancellation cannot wedge it shut — and the period limiter that "
      "counts requests per window."),
@@ -94,7 +101,7 @@ SECTIONS = [
      "Which built-in layers the engine installs (`MiddlewaresConf`), every flag on by "
      "default, so an etc/*.yaml that says nothing about middleware still gets the whole "
      "chain."),
-    ("logx", "logx/logx.mbt", "Logging",
+    ("logx", ("logx/logx.mbt", "logx/level.mbt"), "Logging",
      "Structured logging over moonlog's sink: the four level names an etc/*.yaml "
      "carries, the @timestamp / content keys a collector indexes, the WithDuration "
      "view, and a logger whose level and destination move at runtime."),
@@ -102,7 +109,7 @@ SECTIONS = [
      "What a request refused by a middleware receives: 503 for an open breaker, a spent "
      "connection budget or a passed deadline, 429 for a rate limit, 413 for a body too "
      "large. Each is a parameter."),
-    ("shedder", "shedder/shedder.mbt", "Load shedding",
+    ("shedder", ("shedder/shedder.mbt", "rest/handler/shedder.mbt"), "Load shedding",
      "The adaptive shedder over moonward's, wired from RestConf.CpuThreshold: "
      "while the CPU is above the threshold, or was within the last second, it sheds "
      "once more requests are in flight than recent throughput and latency can carry."),
@@ -134,6 +141,10 @@ SECTIONS = [
      "path names a registered file is answered with it, with a content-derived ETag and "
      "a 304 for a conditional request. The bytes live in a value, so a test serves a "
      "file it built and a deployment loads a directory once."),
+    ("mount", "rest/files/load.mbt", "Files from a directory",
+     "Read every regular file under a directory into the set `files` serves, keyed "
+     "by its path relative to that directory: one call at start-up turns a build "
+     "output, a fixture tree or a directory of assets into a mount."),
     ("metrics", "rest/handler/metrics.mbt", "Request metrics",
      "Two Prometheus families over the process registry: a duration histogram and a "
      "code counter, labelled path, method and code — three labels, so a dashboard can "
@@ -164,7 +175,7 @@ SECTIONS = [
      "Choose two instances at random and take the less loaded: sqrt(lag + 1) * "
      "(inflight + 1), with the lag and success counts moving averages that decay over "
      "ten seconds and a one-second window after which an unpicked instance is forced."),
-    ("cache", "stores/cache/cache.mbt", "Cache aside",
+    ("cache", ("stores/cache/cache.mbt", "stores/cache/store.mbt"), "Cache aside",
      "Read through a store, run the loader once per key however many callers arrive, "
      "and write the answer back with a jittered lifetime. An absent value is not "
      "cached."),
@@ -176,7 +187,7 @@ SECTIONS = [
      "A second caller asking for a key while the first is still running waits for that "
      "answer instead of issuing a second call, and every one of them receives the same "
      "result or the same failure."),
-    ("collection", "collection/cache.mbt", "Bounded containers",
+    ("collection", ("collection/cache.mbt", "collection/ring.mbt"), "Bounded containers",
      "A cache with a size limit and an optional expiry over a doubly linked recency "
      "list, so a hit is constant work, and a fixed-size ring that keeps the newest "
      "samples."),
@@ -189,7 +200,7 @@ SECTIONS = [
      "Call a body until it stops raising, with a predicate that stops the ladder early "
      "for a failure that will not change; the same over a backoff; and a deadline that "
      "tells a slow answer (None) from a wrong one (an error)."),
-    ("threading", "threading/runner.mbt", "Tasks and queues",
+    ("threading", ("threading/runner.mbt", "threading/group.mbt", "threading/stable.mbt"), "Tasks and queues",
      "A fan-out group that is collected first and joined at wait, a queue drained by "
      "one consumer for work that must not run on the request's own task, and a queue "
      "that keeps only the newest pending item so a burst collapses to its last value."),
@@ -201,7 +212,7 @@ SECTIONS = [
      "The same Store contract the memory store implements, over a redis client and a "
      "key prefix, so a cache moves from one process to a fleet by changing the value "
      "passed in — plus the counter and expiry operations a cache does not use."),
-    ("once", "syncx/once.mbt", "One-time bodies and pools",
+    ("once", ("syncx/once.mbt", "syncx/pool.mbt"), "One-time bodies and pools",
      "A body that runs at most once, for the initialisation that must not happen "
      "twice, and a pool that builds its objects on the first take and hands them back."),
 ]
@@ -232,6 +243,24 @@ def parse(path):
             doc = []
         elif s.startswith("///"):
             doc.append(s[3:].strip())
+        elif s.startswith("pub using"):
+            # A re-export block: the names it carries are the page's rows, and the
+            # block may span many lines, so it is read to its closing brace.
+            buf, depth = s, s.count("{") - s.count("}")
+            while depth > 0 and i + 1 < len(lines):
+                i += 1
+                nxt = lines[i].strip()
+                buf += " " + nxt
+                depth += nxt.count("{") - nxt.count("}")
+            alias = buf.split()[2] if len(buf.split()) > 2 else ""
+            body = buf[buf.find("{") + 1:buf.rfind("}")]
+            names = [
+                re.sub(r"^type\s+", "", n.strip())
+                for n in body.split(",")
+                if n.strip()
+            ]
+            items.append(("using", f"{alias} → {', '.join(names)}", " ".join(doc).strip()))
+            doc = []
         elif s.startswith("pub"):
             buf = s
             # A declaration runs until its parentheses close: a default value may
