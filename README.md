@@ -4,6 +4,8 @@
 
 **A service framework for MoonBit — configuration, middleware, zRPC, resilience and discovery in one place.**
 
+[Site](https://moonbitstack.github.io/moonzero/) · [Guide](https://moonbitstack.github.io/moonzero/guide.html) · [API](https://moonbitstack.github.io/moonzero/reference.html) · [mooncakes](https://mooncakes.io/docs/moonbitstack/moonzero)
+
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](./LICENSE)
 [![mooncakes](https://img.shields.io/badge/mooncakes-moonbitstack%2Fmoonzero-brightgreen)](https://mooncakes.io/docs/moonbitstack/moonzero)
 
@@ -97,8 +99,10 @@ so a service that wants 8080 writes `ServiceConf::new(port=8080)`. A process tha
 runs both binds them separately — two listeners cannot hold one port.
 
 Port **0** asks the operating system for a free one. `zrpc/socket`'s `Listener`
-reports the number it got — `port()` once it is bound, `bound_port()` to wait for
-it — so a test connects to the port it was told, never to one it wrote down.
+binds on demand — `bind()` opens the socket and answers the port — so a test
+connects to a number that already exists, never to one it wrote down. `port()`
+reports the same number afterwards, and `bound_port()` waits for it in a task other
+than the one serving.
 
 `CertFile` and `KeyFile` live in the same document and are validated as a pair: a
 document that names one without the other is refused at load, so a service cannot
@@ -247,14 +251,15 @@ a `RpcServer` on a port with its interceptor chain intact, and `SocketChannel`
 speaks h2c to any gRPC peer.
 
 ```mbt native
-// native: a listener is a socket. Port 0 asks the system for a free one, and
-// `bound_port` answers the number it picked once the socket exists.
+// native: a listener is a socket. Port 0 asks the system for a free one; `bind`
+// opens the socket and answers the number, so the client is pointed at a port that
+// already exists rather than at one the program hoped for.
 let rpc = @moonzero.RpcServer::of(@moonzero.RpcServerConf::new(name="greeter"))
 rpc.group("hello.Greeter").register("SayHello", request => request)
 let listener = @socket.Listener::new(rpc)
+let port = listener.bind(port=0)
 @async.with_task_group(group => {
-  group.spawn_bg(() => listener.serve(port=0))
-  let port = listener.bound_port()
+  group.spawn_bg(() => listener.serve())
   let socket_channel = @socket.SocketChannel::connect("127.0.0.1", port)
   assert_eq(
     socket_channel.call("/hello.Greeter/SayHello", b"world"),

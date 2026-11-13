@@ -104,17 +104,17 @@ test drives time instead of waiting for it.
 
 `zrpc/socket` carries the same server and the same calls over TCP instead of inside
 one process; it is native only, and needs `moonbitstack/moonzero/zrpc/socket` in
-`moon.pkg`. A listener that is asked for port 0 reads back the port the system chose
-with `bound_port`: a test connects to what the listener reports, so two runs of the
-same suite never contend for a number, and no sleep stands in for the bind.
+`moon.pkg`. `bind` opens the socket and answers the port the system chose, so a test
+connects to a number that already exists: two runs of the same suite never contend
+for a port, and no sleep stands in for the bind.
 
 ```mbt native
 let server = @moonzero.RpcServer::of(@moonzero.RpcServerConf::new(name="greeter"))
 server.group("greeter.Greeter").register("Say", request => request)
 let listener = @socket.Listener::new(server)
+let port = listener.bind(port=0)                    // what the system picked
 @async.with_task_group(group => {
-  group.spawn_bg(() => listener.serve(port=0))
-  let port = listener.bound_port()                 // what the system picked
+  group.spawn_bg(() => listener.serve())            // accepts on that socket
   let channel = @socket.SocketChannel::connect("127.0.0.1", port)
   assert_eq(channel.call("/greeter.Greeter/Say", b"hi"), Ok(b"hi"))
   channel.close()
@@ -122,9 +122,9 @@ let listener = @socket.Listener::new(server)
 })
 ```
 
-`port` answers `None` until the socket exists, `bound_port` waits for it and raises
-`Timeout` at the deadline, and `stop` drains the calls already running before it
-releases the socket.
+`port` answers `None` until the socket exists, `bound_port` waits for a bind made by
+another task and raises `Timeout` at the deadline, and `stop` drains the calls
+already running before it releases the socket.
 
 ## Resilience primitives
 

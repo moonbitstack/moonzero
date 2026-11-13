@@ -171,3 +171,56 @@ async test "a listener that never bound raises Timeout at the deadline" {
   }
   assert_eq(raised, true)
 }
+
+///|
+async test "bind reports the port before any accept loop is running" {
+  let listener = Listener::new(echo_server(["Call"]))
+  // The socket exists as soon as bind returns, so the client can be pointed at a
+  // number the system picked without waiting for a task to start serving.
+  let port = listener.bind(port=0)
+  assert_eq(port > 1023, true)
+  assert_eq(listener.port(), Some(port))
+  @async.with_task_group(g => {
+    g.spawn_bg(() => listener.serve())
+    let channel = SocketChannel::connect("127.0.0.1", port)
+    assert_eq(channel.call("/echo.Echo/Call", b"early"), Ok(b"early"))
+    channel.close()
+    listener.stop(grace=500)
+  })
+}
+
+///|
+async test "serve accepts on the socket bind already opened" {
+  let listener = Listener::new(echo_server(["Call"]))
+  let bound = listener.bind(port=0)
+  @async.with_task_group(g => {
+    g.spawn_bg(() => listener.serve(port=0))
+    // serve keeps the socket it was given: a second bind would either fail on the
+    // address or move the listener, and a client holding the reported number would
+    // then reach nothing.
+    assert_eq(listener.port(), Some(bound))
+    let channel = SocketChannel::connect("127.0.0.1", bound)
+    assert_eq(channel.call("/echo.Echo/Call", b"bound"), Ok(b"bound"))
+    channel.close()
+    listener.stop(grace=500)
+  })
+}
+
+///|
+async test "a second bind answers the socket that exists" {
+  let listener = Listener::new(echo_server(["Call"]))
+  let first = listener.bind(port=0)
+  let second = listener.bind(port=0)
+  assert_eq(second, first)
+  listener.stop(grace=500)
+}
+
+///|
+async test "bound_port on a listener this task bound answers without waiting" {
+  let listener = Listener::new(echo_server(["Call"]))
+  let bound = listener.bind(port=0)
+  // No task is serving: the answer comes from the bind, so a wait here would hang
+  // until the deadline rather than return.
+  assert_eq(listener.bound_port(timeout_ms=20), bound)
+  listener.stop(grace=500)
+}

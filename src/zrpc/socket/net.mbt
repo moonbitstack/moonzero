@@ -14,6 +14,9 @@
 /// and shut it down without cancelling a task that is parked in `accept`.
 pub struct Listener {
   grpc : @net.GrpcServer
+  // Released once the socket exists and never taken back, so a caller asking for the
+  // port waits on the bind itself rather than on a clock.
+  bound : @semaphore.Semaphore
 }
 
 ///|
@@ -38,20 +41,46 @@ pub fn Listener::new(server : @zrpc.RpcServer) -> Listener {
       }
     })
   }
-  { grpc, }
+  { grpc, bound: @semaphore.Semaphore(1, initial_value=0), }
+}
+
+///|
+/// Bind the listening socket now and report the port it got, so a caller reaches the
+/// server before any accept loop has started — and so port 0 answers the number the
+/// system chose instead of the 0 it was handed.
+///
+/// Connections queue from the moment this returns, so a client may connect at once;
+/// `serve` then accepts on the socket this opened instead of binding a second one.
+/// A listener that already holds a socket keeps it, and reports the port it has.
+pub async fn Listener::bind(
+  self : Listener,
+  host~ : String = "127.0.0.1",
+  port~ : Int32 = 12001,
+) -> Int32 {
+  match self.port() {
+    Some(bound) => bound
+    None => {
+      let port = self.grpc.bind(host~, port~).port()
+      self.bound.release()
+      port
+    }
+  }
 }
 
 ///|
 /// Listen on `host:port` and serve until `stop` drains the listener or the running
 /// task is cancelled.
 ///
-/// Port 0 leaves the choice to the system; `bound_port` reports the number it picked.
+/// Port 0 leaves the choice to the system; `bind` reports the number it picked, and
+/// `bound_port` answers it from another task. A socket that `bind` already opened is
+/// served as it is.
 pub async fn Listener::serve(
   self : Listener,
   host~ : String = "127.0.0.1",
   port~ : Int32 = 12001,
 ) -> Unit {
-  self.grpc.serve(host~, port~)
+  self.bind(host~, port~) |> ignore
+  self.grpc.serve()
 }
 
 ///|
@@ -145,8 +174,8 @@ pub fn SocketChannel::close(self : SocketChannel) -> Unit {
 /// A listener asked for port 0 gets the port the system chose, not the 0 it was
 /// given, so this is the only honest way to learn where it listens.
 pub fn Listener::port(self : Listener) -> Int32? {
-  match self.grpc.listener {
-    Some(l) => Some(l.addr().port())
+  match self.grpc.addr() {
+    Some(addr) => Some(addr.port())
     None => None
   }
 }
@@ -158,23 +187,44 @@ pub(all) suberror Timeout
 ///|
 /// Wait until the listener holds a listening socket and report the port it bound.
 ///
-/// This is what makes port 0 usable: the caller does not know the number before
-/// the socket exists, and cannot guess it afterwards. A caller that named a port
-/// gets that number back. Connections queue from the moment the socket is bound,
-/// so a client may connect as soon as this returns.
+/// This is what makes port 0 usable from a task other than the one serving: the
+/// caller does not know the number before the socket exists, and cannot guess it
+/// afterwards. A listener this task bound itself has the number already, and `bind`
+/// answers it directly.
 ///
-/// `timeout_ms` bounds the wait rather than parking for ever — a `serve` task that
-/// never reached the bind, or one that could not bind at all, raises `Timeout`.
+/// The wait ends on the bind, not on a poll: the socket releases it the moment it
+/// exists, so the answer costs one wakeup. `timeout_ms` bounds it rather than parking
+/// for ever — a `serve` task that never reached the bind, or one that could not bind
+/// at all, raises `Timeout`.
 pub async fn Listener::bound_port(
   self : Listener,
   timeout_ms~ : Int32 = 5_000,
 ) -> Int32 raise Timeout {
-  let deadline = @async.now() + timeout_ms.to_int64()
-  for ;; {
-    match self.port() {
-      Some(port) => return port
-      None if @async.now() >= deadline => raise Timeout
-      None => @async.sleep(1)
+  match self.port() {
+    Some(port) => port
+    None => {
+      // The deadline is the only error that can leave the wait: `acquire` answers a
+      // cancelled caller by raising the cancellation, not by failing. So anything
+      // arriving here as an `Error` is this listener's `Timeout`.
+      let waited : Result[Unit, Error] = try {
+        @async.with_timeout(
+          timeout_ms,
+          () => self.bound.acquire(),
+          error=Timeout,
+        )
+        Ok(())
+      } catch {
+        e => Err(e)
+      }
+      if waited is Err(_) {
+        raise Timeout
+      }
+      match self.port() {
+        Some(port) => port
+        // The socket is released once it exists, so this is reached only by a bind
+        // that let go of its socket before anyone read the number.
+        None => raise Timeout
+      }
     }
   }
 }

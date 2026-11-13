@@ -7,6 +7,7 @@ import {
   "moonbitstack/moonrpc",
   "moonbitstack/moonrpc/net",
   "moonbitlang/async",
+  "moonbitlang/async/semaphore",
 }
 
 import {
