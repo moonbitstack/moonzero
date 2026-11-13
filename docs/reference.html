@@ -22,13 +22,18 @@
 })();
 </script>
 </head>
-<body data-up=""><style>.api .row{display:grid;grid-template-columns:200px minmax(0,1fr);gap:8px 24px;padding:16px 0;border-top:1px solid var(--rule);color:inherit}.api .row:hover .sig{color:var(--accent)}.api .row:first-child{border-top-color:var(--rule-2)}</style>
+<body data-up=""><style>.api .row{display:grid;grid-template-columns:200px minmax(0,1fr);gap:8px 24px;padding:16px 0;border-top:1px solid var(--rule);color:inherit}.api .row .sig,.api .row .doc{overflow-wrap:anywhere}.api .row:hover .sig{color:var(--accent)}.api .row:first-child{border-top-color:var(--rule-2)}@media (width <= 640px){.api .row{grid-template-columns:minmax(0,1fr);gap:2px 0}}</style>
 <header class="bar">
   <a class="mark" href="index.html">moonzero</a>
   <span class="mode">· control plane</span>
   <span class="facts">v0.14.9  ·  49 packages  ·  4 targets  ·  Apache-2.0</span>
   <span class="spacer"></span>
   <span class="crumb"><b>docs</b></span>
+  <nav class="pages" aria-label="Sections">
+    <a href="guide.html">Guide</a>
+    <a href="reference.html">API</a>
+    <a href="lab.html">Lab</a>
+  </nav>
   <button class="plain" data-palette-open type="button" title="Search packages">⌘K</button>
   <button class="theme" type="button" aria-label="Colour theme — follows your system until you choose" title="Follows your system until you choose">
     <span data-theme-set="day">DAY</span><span data-theme-set="night">NIGHT</span>

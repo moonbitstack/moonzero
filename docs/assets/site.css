@@ -231,12 +231,22 @@ a:hover {
   .code ::-webkit-scrollbar-thumb {
     background-color: color-mix(in srgb, #c9d3db 22%, transparent);
   }
+
+  /* The station strip scrolls sideways on a narrow screen, and a bar under it would
+     be a second underline for the same thing. */
+  .rail::-webkit-scrollbar {
+    height: 0;
+  }
 }
 
 @supports not selector(::-webkit-scrollbar) {
   html {
     scrollbar-width: thin;
     scrollbar-color: color-mix(in srgb, var(--ink) 26%, transparent) transparent;
+  }
+
+  .rail {
+    scrollbar-width: none;
   }
 }
 
@@ -284,6 +294,23 @@ a:hover {
 
 .bar .spacer {
   flex: 1;
+}
+
+.bar .pages {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.bar .pages a {
+  color: var(--shell-ink-2);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 10px;
+}
+
+.bar .pages a:hover {
+  color: var(--shell-ink-bright);
 }
 
 .bar .crumb {
@@ -376,6 +403,25 @@ a:hover {
   }
 }
 
+@media (width <= 560px) {
+  .bar {
+    gap: 8px;
+  }
+
+  .bar .pages {
+    gap: 8px;
+  }
+
+  .bar .pages a {
+    font-size: 9px;
+    letter-spacing: 0.02em;
+  }
+
+  .theme {
+    font-size: 9px;
+  }
+}
+
 /* ---------- the request rail ---------- */
 
 .rail {
@@ -387,13 +433,8 @@ a:hover {
   border-bottom: 1px solid var(--shell-rule);
   overflow-x: auto;
   overflow-y: hidden;
-  scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
   box-shadow: 0 1px 0 color-mix(in srgb, #ffffff 4%, transparent);
-}
-
-.rail::-webkit-scrollbar {
-  height: 0;
 }
 
 .rail ol {

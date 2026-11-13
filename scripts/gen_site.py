@@ -248,6 +248,11 @@ def bar(depth, crumbs=None, facts=True):
   {middle}
   <span class="spacer"></span>
   {crumb}
+  <nav class="pages" aria-label="Sections">
+    <a href="{up}guide.html">Guide</a>
+    <a href="{up}reference.html">API</a>
+    <a href="{up}lab.html">Lab</a>
+  </nav>
   <button class="plain" data-palette-open type="button" title="Search packages">⌘K</button>
   <button class="theme" type="button" aria-label="Colour theme — follows your system until you choose" title="Follows your system until you choose">
     <span data-theme-set="day">DAY</span><span data-theme-set="night">NIGHT</span>
@@ -628,8 +633,11 @@ def reference_page():
     style = (
         "<style>.api .row{display:grid;grid-template-columns:200px minmax(0,1fr);"
         "gap:8px 24px;padding:16px 0;border-top:1px solid var(--rule);color:inherit}"
+        ".api .row .sig,.api .row .doc{overflow-wrap:anywhere}"
         ".api .row:hover .sig{color:var(--accent)}"
-        ".api .row:first-child{border-top-color:var(--rule-2)}</style>"
+        ".api .row:first-child{border-top-color:var(--rule-2)}"
+        "@media (width <= 640px){.api .row{grid-template-columns:minmax(0,1fr);"
+        "gap:2px 0}}</style>"
     )
 
     return (
