@@ -73,7 +73,7 @@ pub extend RequestLog with FromJson::{from_json}
 /// The record rendered as a single-line JSON string, ready to write to a log
 /// sink.
 pub fn RequestLog::render(self : RequestLog) -> String {
-  self.to_json().stringify()
+  @moonjson.dumps(self.to_json())
 }
 
 ///|

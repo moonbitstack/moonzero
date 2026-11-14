@@ -3,4 +3,5 @@ import {
   "moonbitstack/moonzero/clock",
   "moonbitstack/moonlog",
   "moonbitlang/core/json",
+  "moonbitstack/moonjson",
 }

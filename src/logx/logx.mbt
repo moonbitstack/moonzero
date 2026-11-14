@@ -64,7 +64,7 @@ pub fn entry(record : @moonlog.Record) -> String {
       out[field.0] = json_of(field.1)
     }
   }
-  Json::object(out).stringify()
+  @moonjson.dumps(Json::object(out))
 }
 
 ///|

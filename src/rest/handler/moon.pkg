@@ -10,6 +10,7 @@ import {
   "moonbitstack/moonzero/limit",
   "moonbitstack/moonzero/telemetry",
   "moonbitstack/moondate",
+  "moonbitstack/moonjson",
   "moonbitstack/moonp8s",
   "moonbitstack/moonp8s/metric",
   "moonbitstack/moontel",

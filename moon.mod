@@ -75,6 +75,7 @@ import {
   "moonbitstack/moonseed@0.1.3",
   "moonbitstack/moonp8s@0.1.2",
   "moonbitstack/moontel@0.2.0",
+  "moonbitstack/moonjson@0.5.0",
 }
 
 source = "src"
