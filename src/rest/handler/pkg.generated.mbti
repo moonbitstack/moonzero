@@ -187,7 +187,7 @@ pub(all) struct RequestLog {
   user_agent : String
 }
 pub fn RequestLog::fields(Self) -> Array[(String, @json.Json)]
-pub fn RequestLog::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn RequestLog::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn RequestLog::render(Self) -> String
 pub fn RequestLog::to_json(Self) -> @json.Json
 pub impl @json.FromJson for RequestLog

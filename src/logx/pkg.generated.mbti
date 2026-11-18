@@ -42,7 +42,7 @@ pub(all) enum LogLevel {
 pub fn LogLevel::as_level(Self) -> @moonlog.Level
 pub fn LogLevel::compare(Self, Self) -> Int32
 pub fn LogLevel::equal(Self, Self) -> Bool
-pub fn LogLevel::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn LogLevel::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn LogLevel::not_equal(Self, Self) -> Bool
 pub fn LogLevel::op_ge(Self, Self) -> Bool
 pub fn LogLevel::op_gt(Self, Self) -> Bool

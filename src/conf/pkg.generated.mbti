@@ -107,7 +107,7 @@ pub(all) struct RpcClientMiddlewaresConf {
   timeout : Bool
 }
 pub fn RpcClientMiddlewaresConf::equal(Self, Self) -> Bool
-pub fn RpcClientMiddlewaresConf::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn RpcClientMiddlewaresConf::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn RpcClientMiddlewaresConf::new(trace? : Bool, log? : Bool, prometheus? : Bool, breaker? : Bool, timeout? : Bool) -> Self
 pub fn RpcClientMiddlewaresConf::not_equal(Self, Self) -> Bool
 pub fn RpcClientMiddlewaresConf::to_repr(Self) -> @debug.Repr
@@ -143,7 +143,7 @@ pub(all) struct RpcServerMiddlewaresConf {
   auth : Bool
 }
 pub fn RpcServerMiddlewaresConf::equal(Self, Self) -> Bool
-pub fn RpcServerMiddlewaresConf::from_json(@json.Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn RpcServerMiddlewaresConf::from_json(@json.Json, @json.DecodeContext) -> Self raise @json.JsonDecodeError
 pub fn RpcServerMiddlewaresConf::new(trace? : Bool, recover? : Bool, stat? : Bool, prometheus? : Bool, breaker? : Bool, shedding? : Bool, timeout? : Bool, auth? : Bool) -> Self
 pub fn RpcServerMiddlewaresConf::not_equal(Self, Self) -> Bool
 pub fn RpcServerMiddlewaresConf::to_repr(Self) -> @debug.Repr
